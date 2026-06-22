@@ -1,0 +1,12 @@
+# Cloudflare Pages redirects
+/diagnostico-iri.html /diagnostico-iri/ 301
+/metodo.html /metodo/ 301
+/presencial.html /presencial/ 301
+/hibrido.html /hibrido/ 301
+/online.html /online/ 301
+/sobre.html /sobre-iberfit/ 301
+/sobre-iberfit.html /sobre-iberfit/ 301
+/contacto.html /contacto/ 301
+/privacidad.html /privacidad/ 301
+/en.html /en/ 301
+/* /404.html 404
