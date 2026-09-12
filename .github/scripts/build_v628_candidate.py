@@ -543,6 +543,58 @@ def humanize_brand_voice(text: str, rel: str) -> str:
     return text
 
 
+def refine_client_language(text: str, rel: str) -> str:
+    """Segunda pasada: hablar desde la experiencia del cliente, no desde la operación interna."""
+    replacements = {
+        "metodo/index.html": {
+            "La personalización comienza con información, no con preferencias del entrenador.": "No empezamos por lo que al entrenador le gusta hacer. Empezamos por lo que tú necesitas.",
+            "La estructura protege la calidad; el contenido responde a la persona.": "La estructura nos ayuda a mantener la calidad; lo que hacemos dentro de ella se adapta a ti.",
+            "Solo se registra aquello que puede ayudar a interpretar o ajustar.": "Guardamos solo la información que puede ayudarnos a entender cómo vas o a decidir un cambio.",
+            "Una rutina no se mantiene por inercia cuando el contexto cambia.": "Si tu contexto cambia, no seguimos con lo mismo por inercia.",
+            "Se detiene, adapta o sustituye el ejercicio y se registra el motivo.": "Paramos, adaptamos o cambiamos el ejercicio y dejamos claro por qué.",
+            "Se reorganiza la dosis para proteger continuidad y calidad.": "Reorganizamos la semana para que puedas mantener continuidad sin perder calidad.",
+            "Sesiones, respuesta y ajustes se conectan dentro del proceso.": "Lo que pasó en una sesión no se pierde: sirve para decidir la siguiente.",
+            "IBERFIT protege una forma común de evaluar y revisar.": "Aunque cambie la modalidad, queremos que la forma de evaluar y revisar siga siendo coherente.",
+        },
+        "diagnostico-iri/index.html": {
+            "La bioimpedancia aporta información orientativa y se interpreta junto con el resto de la evaluación.": "La bioimpedancia nos da una referencia más; nunca la leemos aislada del resto.",
+            "Mediciones útiles para establecer una referencia y revisar cambios cuando corresponde.": "Tomamos medidas que puedan servir como referencia cuando volvamos a revisar cómo vas.",
+            "Observación de movimientos relevantes para seleccionar y adaptar ejercicios.": "Te vemos moverte para elegir mejor qué ejercicios y variantes tienen sentido para ti.",
+            "Lectura por patrones para identificar una base funcional y prioridades de desarrollo.": "Miramos la fuerza por patrones para entender tu base y ordenar prioridades.",
+            "Respuesta al esfuerzo y recuperación mediante pruebas apropiadas al contexto.": "Vemos cómo respondes al esfuerzo y cómo recuperas con pruebas acordes a tu contexto.",
+            "No todo puede progresar a la vez. Se ordenan las necesidades más relevantes.": "No intentamos mejorar todo a la vez. Priorizamos lo que más puede ayudarte ahora.",
+            "Se define una dosis y una selección de ejercicios coherentes con el punto de partida.": "A partir de ahí definimos cuánto, cómo y con qué ejercicios conviene empezar.",
+        },
+        "presencial/index.html": {
+            "La sesión responde a prioridades definidas, no a una rutina improvisada.": "La sesión tiene un propósito claro; no llegamos a improvisar qué toca.",
+            "Correcciones y adaptaciones durante la ejecución.": "Corregimos y adaptamos mientras entrenas, no días después.",
+            "Volumen, intensidad y descansos se definen y registran.": "Definimos carga y descansos con un motivo y dejamos registro para poder ajustar.",
+            "Lo ocurrido en la sesión orienta la siguiente decisión.": "Lo que pasa hoy nos ayuda a decidir qué hacer la próxima vez.",
+            "Se revisa el objetivo de la sesión y el estado actual.": "Antes de empezar revisamos qué toca y cómo llegas ese día.",
+            "Se supervisa ejecución, esfuerzo y respuesta.": "Durante la sesión observamos técnica, esfuerzo y respuesta.",
+            "Se registra lo relevante y se ajusta lo siguiente.": "Después guardamos lo importante para no empezar de cero en la siguiente sesión.",
+        },
+        "hibrido/index.html": {
+            "El registro de la sesión permite conectar lo que ocurre hoy con la siguiente decisión.": "Lo que haces por tu cuenta no se pierde: lo usamos para decidir el siguiente paso.",
+            "Se utilizan donde la supervisión directa aporta mayor valor.": "Reservamos las sesiones presenciales para lo que realmente merece ser visto y corregido en directo.",
+            "Las sesiones autónomas incluyen instrucciones, carga y alternativas.": "Cuando entrenas por tu cuenta, recibes instrucciones, carga y alternativas claras.",
+            "La respuesta del cliente no queda fuera del proceso.": "Lo que nos cuentas después también forma parte del proceso.",
+            "Lo presencial y lo autónomo forman un mismo plan.": "Todo forma parte del mismo plan, aunque unas sesiones las hagamos juntos y otras no.",
+            "Se comprueba adherencia, respuesta y necesidad de cambios.": "Revisamos qué pudiste hacer, cómo respondiste y qué conviene cambiar.",
+        },
+        "online/index.html": {
+            "Cada sesión tiene estructura, objetivo y criterios de progresión.": "Cada sesión te dice qué hacer, para qué y cómo saber cuándo avanzar.",
+            "Repeticiones, tiempo, distancia o esfuerzo se definen según el ejercicio.": "La carga se expresa de una forma que puedas aplicar con claridad en cada ejercicio.",
+            "La sesión contempla espacio, material, experiencia y limitaciones.": "El plan parte del espacio, el material, la experiencia y las limitaciones que realmente tienes.",
+            "Recibes sesiones comprensibles y adaptadas a tu entorno.": "Recibes sesiones que puedes entender y aplicar en tu entorno real.",
+            "Se revisa lo realizado y se modifica la planificación cuando corresponde.": "Revisamos lo que hiciste y cambiamos el plan cuando hay una razón para hacerlo.",
+        },
+    }
+    for old, new in replacements.get(rel, {}).items():
+        text = text.replace(old, new)
+    return text
+
+
 def enrich_structured_data(text: str, rel: str) -> str:
     """Añade semántica específica por página sin inventar datos operativos."""
     pattern = re.compile(
@@ -944,6 +996,7 @@ def main() -> None:
             text=differentiate_local_page(text, rel)
             text=specialize_local_page(text, rel)
             text=humanize_brand_voice(text, rel)
+            text=refine_client_language(text, rel)
         if rel in {"contacto/index.html","en/contact/index.html"}:
             text=text.replace(
                 '<form class="orientador-card reveal" data-orientador-form="" novalidate="">',
