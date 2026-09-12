@@ -32,7 +32,9 @@ EN_REPORT = """<div aria-label="Illustrative IRI Report" class="report-preview r
 </div>"""
 
 CSS_ADD = """
-/* V6.28 · Vista longitudinal IRI: consciente del protocolo y sin puntuación global. */
+/* V6.28 · Interacción accesible y vista longitudinal IRI. */
+.lang-switch a{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:.35rem .25rem}
+/* Vista longitudinal IRI: consciente del protocolo y sin puntuación global. */
 .report-preview-v2 .report-profile-v2{grid-template-columns:minmax(180px,.55fr) minmax(0,1fr)}
 .report-status{align-self:stretch;display:flex;flex-direction:column;justify-content:center;padding:1rem 1.05rem;border-radius:18px;background:linear-gradient(145deg,#173827,#234d36);box-shadow:0 12px 28px rgba(20,43,30,.1)}
 .report-status small{color:var(--gold-light);font-size:.62rem;font-weight:850;text-transform:uppercase;letter-spacing:.1em}
