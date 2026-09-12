@@ -200,6 +200,44 @@ jobs:
                 const broken=await p.locator('img').evaluateAll(imgs=>imgs.filter(i=>i.getBoundingClientRect().width>0 && (!i.complete||i.naturalWidth===0)).map(i=>i.getAttribute('src')));
                 if(broken.length)fail(route+': broken images '+JSON.stringify(broken));
 
+                const contrastFailures=await p.evaluate(()=>{
+                  const parse=s=>{const m=String(s).match(/rgba?\\(([^)]+)\\)/i);if(!m)return null;const a=m[1].split(',').map(x=>parseFloat(x.trim()));return {r:a[0],g:a[1],b:a[2],a:a.length>3?a[3]:1}};
+                  const lin=c=>{c/=255;return c<=.03928?c/12.92:Math.pow((c+.055)/1.055,2.4)};
+                  const lum=c=>.2126*lin(c.r)+.7152*lin(c.g)+.0722*lin(c.b);
+                  const ratio=(a,b)=>{const A=lum(a),B=lum(b);return (Math.max(A,B)+.05)/(Math.min(A,B)+.05)};
+                  const blend=(fg,bg)=>({r:fg.r*fg.a+bg.r*(1-fg.a),g:fg.g*fg.a+bg.g*(1-fg.a),b:fg.b*fg.a+bg.b*(1-fg.a),a:1});
+                  const bgFor=el=>{
+                    let n=el;
+                    while(n){
+                      const s=getComputedStyle(n);
+                      if(s.backgroundImage&&s.backgroundImage!=='none') return null;
+                      const bg=parse(s.backgroundColor);
+                      if(bg&&bg.a>=.98)return bg;
+                      n=n.parentElement;
+                    }
+                    return parse(getComputedStyle(document.body).backgroundColor);
+                  };
+                  const out=[];
+                  const nodes=[...document.querySelectorAll('p,small,label,button,a,span,strong,h1,h2,h3,h4')];
+                  for(const el of nodes){
+                    if(el.closest('[aria-hidden="true"]'))continue;
+                    const own=[...el.childNodes].some(n=>n.nodeType===3&&n.textContent.trim());
+                    if(!own)continue;
+                    const s=getComputedStyle(el),r=el.getBoundingClientRect();
+                    if(s.display==='none'||s.visibility==='hidden'||+s.opacity<.85||r.width<1||r.height<1)continue;
+                    const bg=bgFor(el);let fg=parse(s.color);
+                    if(!bg||!fg)continue;
+                    if(fg.a<1)fg=blend(fg,bg);
+                    const size=parseFloat(s.fontSize),weight=parseInt(s.fontWeight)||400;
+                    const large=size>=24||(size>=18.66&&weight>=700);
+                    const min=large?3:4.5;
+                    const val=ratio(fg,bg);
+                    if(val+0.05<min)out.push({tag:el.tagName,cls:el.className,text:(el.textContent||'').trim().slice(0,70),size,weight,contrast:+val.toFixed(2),required:min,fg:s.color,bg:getComputedStyle(el).backgroundColor});
+                  }
+                  return out.slice(0,20);
+                });
+                if(contrastFailures.length)fail(route+': text contrast '+JSON.stringify(contrastFailures));
+
                 const dup=await p.evaluate(()=>{
                   const ids=[...document.querySelectorAll('[id]')].map(e=>e.id).filter(Boolean),seen=new Set(),dups=[];
                   for(const id of ids){if(seen.has(id))dups.push(id);seen.add(id)}
