@@ -200,7 +200,7 @@ def validate() -> None:
         if p.styles!=["/assets/styles.v628.css"]: fail(f"{rel}: CSS inesperado {p.styles}")
         expected={"/assets/analytics-config.js","/assets/analytics.v6211.js","/assets/app.v623.js"}
         if not expected.issubset(set(p.scripts)): fail(f"{rel}: scripts comunes incompletos")
-        if not p.official_mark: fail(f"{rel}: isotipo oficial ausente")
+        if "/assets/iberfit-isotipo-oficial.png" not in p.refs: fail(f"{rel}: isotipo oficial canónico ausente")
         for ref in p.refs:
             target=resolve_local(page,ref)
             if target is not None and not target.exists(): fail(f"{rel}: recurso local ausente {ref}")
@@ -242,6 +242,12 @@ def main() -> None:
     # Cloudflare transforma robots.txt en el borde; el repositorio conserva la política fuente.
     (DST/"robots.txt").write_text("User-agent: *\nAllow: /\n\nSitemap: https://iberfit.cl/sitemap.xml\n",encoding="utf-8")
 
+    # Fijar el isotipo oficial exacto aportado por IBERFIT.
+    official_logo = ROOT / "brand/Isotipo_IBERFIT_Oficial.png"
+    if not official_logo.exists():
+        raise SystemExit(f"No existe el isotipo oficial canónico: {official_logo}")
+    shutil.copy2(official_logo, DST / "assets/iberfit-isotipo-oficial.png")
+
     old_css=DST/"assets/styles.v626.css"
     new_css=DST/"assets/styles.v628.css"
     new_css.write_bytes(old_css.read_bytes())
@@ -257,6 +263,10 @@ def main() -> None:
         rel=page.relative_to(DST).as_posix()
         text=page.read_text("utf-8")
         text=text.replace("/assets/styles.v626.css","/assets/styles.v628.css")
+        text=text.replace("/assets/iberfit-isotipo-96.png","/assets/iberfit-isotipo-oficial.png")
+        text=text.replace("/assets/iberfit-isotipo-192.png","/assets/iberfit-isotipo-oficial.png")
+        text=text.replace("/assets/iberfit-isotipo-verde-96.png","/assets/iberfit-isotipo-oficial.png")
+        text=text.replace("/assets/iberfit-isotipo-verde-192.png","/assets/iberfit-isotipo-oficial.png")
         text=text.replace("No invented overall score and no anonymous testimonials.","No invented aggregate rating and no anonymous testimonials.")
         if not rel.startswith("en/"):
             text=localize_spanish(text)
