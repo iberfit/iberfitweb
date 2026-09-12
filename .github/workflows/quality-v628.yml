@@ -1,0 +1,130 @@
+name: Calidad profesional web V6.28
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/web-v6-28-recuperacion
+    paths:
+      - "candidate/v628/**"
+      - ".github/workflows/quality-v628.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  calidad:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Descargar rama
+        uses: actions/checkout@v4
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validar HTML y estructura
+        run: |
+          npx --yes html-validate@9 "candidate/v628/**/*.html" --rule no-inline-style:off --rule no-trailing-whitespace:off
+
+      - name: Servir candidata
+        run: |
+          python -m http.server 4173 --directory candidate/v628 > /tmp/iberfit-v628.log 2>&1 &
+          echo $! > /tmp/iberfit-v628.pid
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/iberfit-v628.log
+          exit 1
+
+      - name: Enlaces internos
+        run: |
+          npx --yes linkinator@6 http://127.0.0.1:4173/ --recurse --skip "^(https?:)?//" --verbosity error
+
+      - name: Accesibilidad
+        run: |
+          npx --yes pa11y-ci@4             http://127.0.0.1:4173/             http://127.0.0.1:4173/diagnostico-iri/             http://127.0.0.1:4173/metodo/             http://127.0.0.1:4173/presencial/             http://127.0.0.1:4173/hibrido/             http://127.0.0.1:4173/online/             http://127.0.0.1:4173/contacto/
+
+      - name: Lighthouse · Inicio
+        run: |
+          npx --yes lighthouse@12 http://127.0.0.1:4173/             --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage"             --only-categories=performance,accessibility,best-practices,seo             --output=json --output-path=/tmp/lighthouse-home.json
+          node - <<'NODE'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('/tmp/lighthouse-home.json','utf8'));
+          const wanted={performance:0.85,accessibility:0.95,'best-practices':0.95,seo:0.95};
+          let fail=false;
+          for(const [k,min] of Object.entries(wanted)){
+            const score=r.categories[k].score;
+            console.log(k,score,'mínimo',min);
+            if(score<min) fail=true;
+          }
+          if(fail) process.exit(1);
+          NODE
+
+      - name: Lighthouse · Diagnóstico IRI
+        run: |
+          npx --yes lighthouse@12 http://127.0.0.1:4173/diagnostico-iri/             --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage"             --only-categories=performance,accessibility,best-practices,seo             --output=json --output-path=/tmp/lighthouse-iri.json
+          node - <<'NODE'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('/tmp/lighthouse-iri.json','utf8'));
+          const wanted={performance:0.85,accessibility:0.95,'best-practices':0.95,seo:0.95};
+          let fail=false;
+          for(const [k,min] of Object.entries(wanted)){
+            const score=r.categories[k].score;
+            console.log(k,score,'mínimo',min);
+            if(score<min) fail=true;
+          }
+          if(fail) process.exit(1);
+          NODE
+
+      - name: Seguridad estática
+        run: |
+          grep -q "Content-Security-Policy:" candidate/v628/_headers
+          grep -q "Strict-Transport-Security:" candidate/v628/_headers
+          grep -q "X-Content-Type-Options: nosniff" candidate/v628/_headers
+          grep -q "Referrer-Policy:" candidate/v628/_headers
+          grep -q "Permissions-Policy:" candidate/v628/_headers
+          ! grep -R -E 'http://(?!127\.0\.0\.1)' candidate/v628 --include="*.html" --include="*.js" --include="*.css"
+
+      - name: SEO internacional
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from bs4 import BeautifulSoup
+          pages=list(Path("candidate/v628").rglob("*.html"))
+          errors=[]
+          for page in pages:
+              soup=BeautifulSoup(page.read_text(encoding="utf-8"),"html.parser")
+              if page.name=="404.html":
+                  continue
+              if not soup.find("link",rel="canonical"):
+                  errors.append(f"{page}: canonical ausente")
+              if not soup.find("meta",attrs={"name":"description"}):
+                  errors.append(f"{page}: description ausente")
+              if not soup.find("meta",attrs={"property":"og:title"}):
+                  errors.append(f"{page}: og:title ausente")
+              if not soup.find("meta",attrs={"property":"og:description"}):
+                  errors.append(f"{page}: og:description ausente")
+              if not soup.find("meta",attrs={"name":"viewport"}):
+                  errors.append(f"{page}: viewport ausente")
+          if errors:
+              print("\n".join(errors))
+              raise SystemExit(1)
+          print(f"SEO base validado en {len(pages)} HTML")
+          PY
+
+      - name: Guardar informes Lighthouse
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: calidad-v628-lighthouse
+          path: |
+            /tmp/lighthouse-home.json
+            /tmp/lighthouse-iri.json
+          if-no-files-found: ignore
+          retention-days: 30
