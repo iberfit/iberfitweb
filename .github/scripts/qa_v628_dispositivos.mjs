@@ -268,6 +268,16 @@ for (const device of devices) {
       add(device.name, reviewRoute, "REVEAL_NO_ACTIVADO", String(hiddenReveal));
     }
 
+    await reviewPage.evaluate(async () => {
+      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+      const step = Math.max(320, Math.floor(window.innerHeight * 0.72));
+      for (let y = 0; y < document.documentElement.scrollHeight; y += step) {
+        window.scrollTo(0, y);
+        await wait(70);
+      }
+      window.scrollTo(0, 0);
+      await wait(180);
+    });
     await reviewPage.screenshot({
       path: path.join(out, device.name + "-" + reviewLabel + "-sin-banner.png"),
       fullPage: true,
