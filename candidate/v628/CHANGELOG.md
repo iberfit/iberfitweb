@@ -6,4 +6,6 @@
 - Caché CSS corregida y versionada con styles.v628.css.
 - Controles automáticos contra regresiones de nomenclatura, IRI y versionado.
 - Fotografía responsive sensible a densidad para pantallas Retina/alta resolución.
+- SEO técnico reforzado: lastmod real, previews ampliadas de Google y datos estructurados preservados.
+- Medición de conversión reforzada con evento GA4 recomendado generate_lead, siempre posterior al consentimiento.
 - Interacción premium adaptativa: profundidad en escritorio, composición táctil específica en móvil/tableta y respeto estricto de reducir movimiento.
