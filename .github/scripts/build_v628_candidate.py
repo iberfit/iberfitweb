@@ -74,8 +74,7 @@ html{scroll-padding-top:96px}
 body{background:
   radial-gradient(circle at 8% 0%,rgba(184,151,58,.055),transparent 32rem),
   linear-gradient(180deg,#fbf8f1 0,#f7f4ee 42rem,#f7f4ee 100%)}
-h1,h2{text-wrap:balance}
-p{text-wrap:pretty}
+
 .hero{padding-block:clamp(4.5rem,8vw,7.75rem) clamp(3.5rem,7vw,6rem)}
 .hero-grid.hero-grid-no-media{max-width:1120px;position:relative}
 .hero-grid-no-media .hero-text{max-width:970px;padding-left:clamp(1rem,3vw,2.5rem);border-left:1px solid rgba(184,151,58,.38)}
@@ -177,10 +176,7 @@ p{text-wrap:pretty}
 
 PREMIUM_INTERACTION_CSS = r"""
 /* IBERFIT V6.28 · fidelidad e interacción adaptativa */
-html{text-rendering:optimizeLegibility}
 body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-h1,h2{text-wrap:balance}
-.lead,.hero-support,.photo-story-copy p,.client-review blockquote{text-wrap:pretty}
 .photo-story-media img{image-rendering:auto;transform:translateZ(0);transition:transform .8s cubic-bezier(.2,.7,.2,1),filter .8s ease}
 .premium-surface{--mx:50%;--my:50%;--rx:0deg;--ry:0deg;position:relative;isolation:isolate}
 .premium-surface:before{content:"";position:absolute;inset:0;z-index:2;border-radius:inherit;pointer-events:none;opacity:0;background:radial-gradient(420px circle at var(--mx) var(--my),rgba(217,181,104,.14),rgba(255,255,255,.035) 32%,transparent 66%);transition:opacity .35s ease}
