@@ -179,6 +179,76 @@ def localize_spanish(text: str) -> str:
     text=text.replace("modality_a distancia","modality_online")
     return text
 
+def humanize_brand_voice(text: str, rel: str) -> str:
+    """IBERFIT habla como marca: cercana, clara y profesional, nunca como marca personal."""
+    common = {
+        "La modalidad responde a tu contexto real.": "La modalidad tiene que encajar en tu vida real.",
+        "Una semana ilustrativa, no una plantilla fija.": "Así podría verse una semana, pero la tuya no tiene por qué ser igual.",
+        "La modalidad se recomienda después de entender el punto de partida.": "No elegimos la modalidad por comodidad ni por una plantilla: primero entendemos tu punto de partida.",
+        "El Diagnóstico IRI ayuda a definir el nivel de supervisión y la forma de trabajo más coherentes.": "El Diagnóstico IRI nos ayuda a decidir contigo cuánta supervisión necesitas y qué forma de trabajo tiene más sentido.",
+    }
+    for old, new in common.items():
+        text = text.replace(old, new)
+
+    per_page = {
+        "index.html": {
+            "Evaluamos tu punto de partida, planificamos según tus necesidades y revisamos tu evolución para que cada decisión tenga un motivo.": "Antes de decirte qué hacer, queremos entender dónde estás. Evaluamos tu punto de partida, construimos un plan que tenga sentido para ti y lo vamos ajustando a medida que avanzas.",
+            "Diagnóstico, planificación, control y seguimiento dentro de una misma experiencia.": "Tú ves el entrenamiento. Detrás hay diagnóstico, planificación, control y seguimiento para que no tengas que avanzar a ciegas.",
+            "El plan se observa, se registra y se ajusta contigo.": "Tu plan cambia contigo.",
+            "IBERFIT combina supervisión, herramientas de seguimiento y conversaciones claras para que sepas qué estás haciendo y por qué.": "Entrenar con IBERFIT significa saber qué estás haciendo, por qué lo haces y qué vamos a cambiar cuando tu cuerpo, tu semana o tus objetivos cambien.",
+            "La evaluación termina en una recomendación, no en una lista de resultados.": "No queremos darte una hoja llena de datos. Queremos que salgas sabiendo qué conviene hacer ahora.",
+            "Medir solo tiene valor cuando cambia una decisión.": "Medimos para tomar mejores decisiones, no para llenar gráficos.",
+            "El estándar se mantiene. Cambia la forma de recibirlo.": "La forma puede cambiar. El acompañamiento no.",
+            "El progreso se construye con un plan que también te ayuda a seguir.": "Avanzar también depende de sentir que el plan encaja contigo.",
+        },
+        "metodo/index.html": {
+            "Una estructura profesional que reduce improvisación sin convertir a las personas en números. Cada decisión debe poder explicarse, registrarse y revisarse.": "No entrenas para encajar en un sistema. El sistema existe para que podamos explicarte cada decisión, recordar lo que ha pasado y ajustar sin improvisar.",
+            "La estructura está para ayudarte, no para encasillarte.": "El método está para darte dirección, no para meterte en una plantilla.",
+            "Cada sesión parte de una intención, utiliza la información necesaria y deja una base para decidir el siguiente paso.": "Cada sesión tiene una intención, pero también espacio para escuchar lo que está pasando ese día. Usamos la información que hace falta y dejamos registro de lo importante para decidir contigo el siguiente paso.",
+            "El seguimiento no ocurre al final. Forma parte de cada vuelta.": "No esperamos al final para preguntarnos si está funcionando.",
+            "La calidad no depende de recordar qué ocurrió la semana anterior.": "No queremos depender de la memoria para saber cómo vas.",
+        },
+        "sobre-iberfit/index.html": {
+            "IBERFIT conecta evaluación, planificación, control y seguimiento para ayudarte a comprender tu punto de partida y avanzar hacia tus objetivos. Sabes qué estás trabajando, por qué se prioriza y cuándo conviene ajustar el plan.": "IBERFIT nace para que entrenar no sea seguir instrucciones que nadie te explica. Queremos que entiendas tu punto de partida, qué estamos priorizando y por qué el plan cambia cuando tú cambias.",
+            "El centro del proceso eres tú: tu contexto, tus objetivos y tu evolución.": "IBERFIT tiene una forma de trabajar. El centro sigues siendo tú: tu contexto, tus objetivos, tus dudas y tu evolución.",
+            "Una marca ordenada debe sentirse también en la forma de acompañar a cada persona.": "Queremos que esa claridad se note también en cómo te hablamos, cómo te explicamos el plan y cómo respondemos cuando algo cambia.",
+            "Una forma más clara de avanzar hacia tus objetivos.": "IBERFIT nace de una convicción sencilla.",
+            "IBERFIT nace de la experiencia de un entrenador español formado y con trayectoria profesional en Europa, donde desarrolló una forma de trabajar basada en evaluación, planificación, control y seguimiento.": "IBERFIT nace de una idea sencilla: entrenar bien no debería sentirse como seguir instrucciones que nadie te explica.",
+            "Ese enfoque se traduce en un servicio pensado para comprender tu punto de partida, definir prioridades claras y adaptar el entrenamiento a tus objetivos, tu contexto y tu evolución.": "Después de formarse y trabajar profesionalmente en Europa, su fundador llega a Chile con una forma de hacer las cosas ya muy clara: evaluar antes de prescribir, planificar con criterio, observar la respuesta y ajustar cuando hace falta.",
+            "No se trata de recibir una rutina genérica, sino de contar con una dirección clara, saber qué estás trabajando y poder ajustar el proceso cuando sea necesario.": "En Chile, esa forma de trabajar toma el nombre de IBERFIT: una marca con método, pero cercana. Queremos que entiendas lo que hacemos contigo, que puedas preguntar y que el plan tenga sentido en tu vida real.",
+        },
+        "diagnostico-iri/index.html": {
+            "Una evaluación estructurada que convierte información relevante en prioridades y decisiones prácticas. No busca etiquetarte. Busca orientar el primer plan y dejar una base para revisar la evolución.": "Antes de proponerte un plan, queremos conocerte un poco mejor. El IRI reúne la información que realmente puede ayudarnos a decidir contigo cómo empezar y deja una base clara para revisar cómo vas evolucionando.",
+            "La evaluación inicial reúne contexto, composición corporal y capacidades físicas. Después se interpreta contigo y se convierte en prioridades concretas.": "La evaluación reúne tu contexto, algunas medidas y capacidades físicas. Pero los datos no se quedan en una pantalla: los comentamos contigo y los convertimos en prioridades que puedas entender.",
+            "Recibes una lectura que conecta resultados, prioridades y próximos pasos.": "Queremos que salgas sabiendo qué conviene priorizar y cuál es el siguiente paso.",
+        },
+        "contacto/index.html": {
+            "Puedes escribir directamente o utilizar el orientador breve para ordenar la consulta. No pedimos datos personales en el orientador. Tus respuestas solo se incorporan al mensaje si decides abrir WhatsApp.": "Puedes escribirnos directamente, aunque todavía no tengas claro qué modalidad necesitas. Si prefieres ordenar un poco la idea, el orientador breve te ayuda a preparar el mensaje sin pedirte datos personales. Nada se envía hasta que tú decides abrir WhatsApp.",
+            "Ordena tu consulta en tres pasos.": "Cuéntanos lo esencial en tres pasos.",
+            "No reemplaza el Diagnóstico IRI ni emite una prescripción. Prepara un mensaje inicial más claro.": "No intenta evaluarte ni darte una respuesta automática. Solo nos ayuda a empezar la conversación con un poco más de contexto.",
+            "La vía más directa.": "Si prefieres hablar directamente, estamos aquí.",
+        },
+        "presencial/index.html": {
+            "Sesiones presenciales con planificación individual, control técnico y seguimiento entre decisiones. Disponible en comunas seleccionadas de Santiago, según sector, horario y condiciones del espacio.": "Si necesitas que estemos ahí contigo, la sesión presencial permite ver, corregir y adaptar en el momento. Antes de empezar confirmamos que la ubicación, el horario y el espacio tengan sentido para ti.",
+            "La sesión presencial facilita ajustar técnica, carga y variantes en el momento, sin perder la continuidad del plan.": "Estar contigo en la sesión nos permite corregir a tiempo, ajustar la carga y ver detalles que a veces no se cuentan con palabras.",
+            "Si la logística dificulta sostener la frecuencia, la modalidad híbrida u a distancia puede ofrecer más continuidad.": "Si la logística hace difícil mantener la frecuencia, la modalidad híbrida o a distancia puede darte más continuidad.",
+        },
+        "hibrido/index.html": {
+            "Combina sesiones presenciales estratégicas con trabajo independiente claramente pautado y revisado. La parte presencial depende de cobertura. La planificación y el seguimiento continúan entre sesiones.": "Hay momentos en los que vernos en persona aporta mucho y otros en los que lo importante es que puedas entrenar por tu cuenta sin quedarte sin dirección. La modalidad híbrida conecta ambas cosas.",
+            "Las sesiones estratégicas, el trabajo autónomo y la revisión quedan coordinados para que entrenar por tu cuenta no signifique hacerlo sin dirección.": "Lo que haces por tu cuenta sigue formando parte del mismo plan: sabes qué toca, por qué y qué revisaremos después.",
+        },
+        "online/index.html": {
+            "Dirección profesional desde cualquier lugar.": "Estar lejos no debería significar entrenar sin dirección.",
+            "Planificación individual, sesiones guiadas y seguimiento estructurado sin depender de una ubicación concreta. Disponible para cualquier persona, con independencia de su país, ciudad o experiencia previa.": "Te damos un plan claro, lo adaptamos a tu entorno y revisamos contigo lo que va pasando, estés donde estés. No necesitas vivir cerca ni tener experiencia avanzada.",
+            "El registro y el feedback orientan los ajustes periódicos.": "Lo que nos cuentas y lo que registras nos ayuda a decidir qué mantener y qué cambiar.",
+        },
+    }
+
+    for old, new in per_page.get(rel, {}).items():
+        text = text.replace(old, new)
+    return text
+
+
 def enrich_structured_data(text: str, rel: str) -> str:
     """Añade semántica específica por página sin inventar datos operativos."""
     pattern = re.compile(
@@ -578,6 +648,7 @@ def main() -> None:
         if not rel.startswith("en/"):
             text=localize_spanish(text)
             text=differentiate_local_page(text, rel)
+            text=humanize_brand_voice(text, rel)
         if rel in {"contacto/index.html","en/contact/index.html"}:
             text=text.replace(
                 '<form class="orientador-card reveal" data-orientador-form="" novalidate="">',
