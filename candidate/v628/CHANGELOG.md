@@ -5,3 +5,5 @@
 - Informe IRI rasterizado antiguo sustituido por HTML accesible y adaptable.
 - Caché CSS corregida y versionada con styles.v628.css.
 - Controles automáticos contra regresiones de nomenclatura, IRI y versionado.
+- Fotografía responsive sensible a densidad para pantallas Retina/alta resolución.
+- Interacción premium adaptativa: profundidad en escritorio, composición táctil específica en móvil/tableta y respeto estricto de reducir movimiento.
