@@ -468,12 +468,12 @@ def specialize_local_page(text: str, rel: str) -> str:
 
     bottom_cta = {
         "entrenador-personal-las-condes/index.html": "Ver qué opción encaja",
-        "entrenador-personal-vitacura/index.html": "Consultar modalidad",
-        "entrenamiento-personal-providencia/index.html": "Ordenar mi mejor opción",
-        "personal-trainer-nunoa/index.html": "Orientar mi modalidad",
-        "entrenador-personal-lo-barnechea/index.html": "Revisar frecuencia posible",
-        "entrenador-personal-la-reina/index.html": "Consultar opción",
-        "entrenador-personal-penalolen/index.html": "Revisar mi sector",
+        "entrenador-personal-vitacura/index.html": "Ver qué opción me conviene",
+        "entrenamiento-personal-providencia/index.html": "Ver cómo encajarlo en mi semana",
+        "personal-trainer-nunoa/index.html": "Ver qué modalidad encaja conmigo",
+        "entrenador-personal-lo-barnechea/index.html": "Revisar una frecuencia realista",
+        "entrenador-personal-la-reina/index.html": "Ver qué opción encaja conmigo",
+        "entrenador-personal-penalolen/index.html": "Revisar mi sector y frecuencia",
     }
     if rel in bottom_cta:
         text = text.replace(
@@ -496,6 +496,15 @@ def specialize_local_page(text: str, rel: str) -> str:
         text = re.sub(
             r'(<meta\b(?=[^>]*\bname="description")[^>]*\bcontent=")[^"]*(")',
             lambda match: match.group(1) + description + match.group(2),
+            text,
+            count=1,
+            flags=re.I,
+        )
+
+    if rel in local:
+        text = re.sub(
+            r'>Consultar disponibilidad en [^<]+</a>',
+            '>Hablar con IBERFIT</a>',
             text,
             count=1,
             flags=re.I,
@@ -574,7 +583,7 @@ def humanize_brand_voice(text: str, rel: str) -> str:
 
     refinements = {
         "index.html": {
-            "IBERFIT nació para que entrenar tenga una dirección que puedas entender. Por eso cada mejora de la marca tiene que ayudarte a entender mejor, decidir mejor o sostener mejor tu proceso.": "IBERFIT empezó con una pregunta sencilla: ¿cómo hacer que una persona no solo entrene, sino que entienda lo que está haciendo y pueda sostenerlo? Desde entonces, cada mejora tiene que aportar en una de tres cosas.",
+            "IBERFIT nació para que entrenar tenga una dirección que puedas entender. Por eso cada mejora de la marca tiene que ayudarte a entender mejor, decidir mejor o sostener mejor tu proceso.": "IBERFIT nació de una pregunta sencilla: ¿cómo hacer que una persona no solo entrene, sino que entienda lo que está haciendo y pueda sostenerlo? Desde entonces, cada mejora tiene que aportar en una de tres cosas.",
             "Antes de decirte qué hacer, queremos comprender dónde estás y qué necesitas.": "Escuchamos tu contexto antes de proponerte qué hacer.",
             "Medimos y registramos solo cuando esa información puede mejorar una decisión.": "Los datos solo valen si ayudan a tomar una decisión mejor.",
             "El plan tiene que poder vivir contigo cuando cambian tu semana, tu contexto o tus objetivos.": "El plan tiene que poder adaptarse cuando tu vida cambia.",
