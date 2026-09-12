@@ -1,2 +1,13 @@
 /* IBERFIT V6.30 · progressive enhancement fallback */
 .reveal{opacity:1!important;transform:none!important;visibility:visible!important}
+
+@media (max-width:860px){
+  .menu-toggle{display:none!important}
+  .nav{flex-wrap:wrap!important}
+  .navlinks{
+    display:flex!important;position:static!important;width:100%!important;
+    opacity:1!important;visibility:visible!important;pointer-events:auto!important;
+    transform:none!important;max-height:none!important
+  }
+  .nav-mobile-languages{display:flex!important}
+}
