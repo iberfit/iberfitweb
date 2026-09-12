@@ -248,20 +248,22 @@ for (const device of devices) {
       await reviewPage.goto(base + reviewRoute, { waitUntil: "networkidle", timeout: 30000 });
     }
 
-    // Recorrer la página para reproducir la experiencia real y activar IntersectionObserver.
-    await reviewPage.evaluate(async () => {
-      const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
-      const step = Math.max(280, Math.floor(window.innerHeight * 0.7));
-      const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-      for (let y = 0; y <= max; y += step) {
-        window.scrollTo(0, y);
-        await pause(55);
+    // Activar cada reveal como lo haría un usuario al recorrer la página.
+    // Evita depender de scroll suave/timings del navegador headless.
+    const revealItems = reviewPage.locator(".reveal");
+    const revealCount = await revealItems.count();
+    for (let index = 0; index < revealCount; index += 1) {
+      const item = revealItems.nth(index);
+      if (await item.isVisible()) {
+        await item.scrollIntoViewIfNeeded();
+        await reviewPage.waitForTimeout(45);
       }
-      window.scrollTo(0, max);
-      await pause(120);
+    }
+    await reviewPage.evaluate(() => {
+      document.documentElement.style.scrollBehavior = "auto";
       window.scrollTo(0, 0);
-      await pause(220);
     });
+    await reviewPage.waitForTimeout(180);
 
     const hiddenReveal = await reviewPage.locator(".reveal").evaluateAll(nodes =>
       nodes.filter(node => {
@@ -276,16 +278,11 @@ for (const device of devices) {
       add(device.name, reviewRoute, "REVEAL_NO_VISIBLE", String(hiddenReveal));
     }
 
-    await reviewPage.evaluate(async () => {
-      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-      const step = Math.max(320, Math.floor(window.innerHeight * 0.72));
-      for (let y = 0; y < document.documentElement.scrollHeight; y += step) {
-        window.scrollTo(0, y);
-        await wait(70);
-      }
+    await reviewPage.evaluate(() => {
+      document.documentElement.style.scrollBehavior = "auto";
       window.scrollTo(0, 0);
-      await wait(180);
     });
+    await reviewPage.waitForTimeout(120);
     await reviewPage.screenshot({
       path: path.join(out, device.name + "-" + reviewLabel + "-sin-banner.png"),
       fullPage: true,
