@@ -1453,7 +1453,7 @@ def main() -> None:
     sitemap_path = DST / "sitemap.xml"
     sitemap_text = sitemap_path.read_text("utf-8")
     sitemap_text, lastmod_count = re.subn(
-        r"<lastmod>\\d{4}-\\d{2}-\\d{2}</lastmod>",
+        r"<lastmod>\d{4}-\d{2}-\d{2}</lastmod>",
         f"<lastmod>{RELEASE_DATE}</lastmod>",
         sitemap_text,
     )
