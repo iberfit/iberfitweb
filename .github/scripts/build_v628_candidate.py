@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import json
 import re
 import shutil
 from html.parser import HTMLParser
@@ -177,6 +178,146 @@ def localize_spanish(text: str) -> str:
     text=text.replace("modality_a distancia","modality_online")
     return text
 
+def enrich_structured_data(text: str, rel: str) -> str:
+    """Añade semántica específica por página sin inventar datos operativos."""
+    pattern = re.compile(
+        r'(<script[^>]+type="application/ld\+json"[^>]*>)(.*?)(</script>)',
+        re.I | re.S,
+    )
+    match = pattern.search(text)
+    if not match:
+        return text
+
+    try:
+        payload = json.loads(match.group(2))
+    except json.JSONDecodeError:
+        return text
+
+    graph = payload.get("@graph")
+    if not isinstance(graph, list):
+        return text
+
+    if rel == "index.html":
+        canonical = "https://iberfit.cl/"
+    else:
+        canonical = "https://iberfit.cl/" + rel.removesuffix("index.html")
+
+    title_match = re.search(r"<title>(.*?)</title>", text, re.I | re.S)
+    title = re.sub(r"\s+", " ", title_match.group(1)).strip() if title_match else "IBERFIT"
+    desc_match = re.search(
+        r'<meta[^>]+name="description"[^>]+content="([^"]+)"',
+        text,
+        re.I,
+    )
+    description = desc_match.group(1).strip() if desc_match else ""
+
+    page_id = canonical + "#webpage"
+    breadcrumb_items = [
+        {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "IBERFIT",
+            "item": "https://iberfit.cl/",
+        }
+    ]
+
+    page_name = title.split("|")[0].strip()
+    if canonical != "https://iberfit.cl/":
+        breadcrumb_items.append(
+            {
+                "@type": "ListItem",
+                "position": 2,
+                "name": page_name,
+                "item": canonical,
+            }
+        )
+
+    graph.append(
+        {
+            "@type": "WebPage",
+            "@id": page_id,
+            "url": canonical,
+            "name": page_name,
+            "description": description,
+            "isPartOf": {"@id": "https://iberfit.cl/#website"},
+            "about": {"@id": "https://iberfit.cl/#business"},
+            "inLanguage": "en" if rel.startswith("en/") else "es",
+        }
+    )
+    graph.append(
+        {
+            "@type": "BreadcrumbList",
+            "@id": canonical + "#breadcrumb",
+            "itemListElement": breadcrumb_items,
+        }
+    )
+
+    service_pages = {
+        "diagnostico-iri/index.html": {
+            "name": "Diagnóstico IBERFIT IRI",
+            "description": description,
+            "offers": {
+                "@type": "Offer",
+                "price": "30000",
+                "priceCurrency": "CLP",
+                "url": canonical,
+            },
+        },
+        "presencial/index.html": {
+            "name": "Entrenamiento personal presencial",
+            "description": description,
+            "areaServed": {"@type": "City", "name": "Santiago"},
+        },
+        "hibrido/index.html": {
+            "name": "Entrenamiento personal híbrido",
+            "description": description,
+            "areaServed": {"@type": "City", "name": "Santiago"},
+        },
+        "online/index.html": {
+            "name": "Entrenamiento personal a distancia",
+            "description": description,
+            "areaServed": {"@type": "Place", "name": "Cobertura internacional"},
+        },
+    }
+
+    local_pages = {
+        "entrenador-personal-las-condes/index.html": "Las Condes",
+        "entrenador-personal-vitacura/index.html": "Vitacura",
+        "entrenamiento-personal-providencia/index.html": "Providencia",
+        "personal-trainer-nunoa/index.html": "Ñuñoa",
+        "entrenador-personal-lo-barnechea/index.html": "Lo Barnechea",
+        "entrenador-personal-la-reina/index.html": "La Reina",
+        "entrenador-personal-penalolen/index.html": "Peñalolén",
+    }
+    if rel in local_pages:
+        comuna = local_pages[rel]
+        service_pages[rel] = {
+            "name": f"Entrenamiento personal en {comuna}",
+            "description": description,
+            "areaServed": {"@type": "AdministrativeArea", "name": comuna},
+        }
+
+    service = service_pages.get(rel)
+    if service:
+        graph.append(
+            {
+                "@type": "Service",
+                "@id": canonical + "#service",
+                **service,
+                "url": canonical,
+                "provider": {"@id": "https://iberfit.cl/#business"},
+            }
+        )
+        graph[-3]["mainEntity"] = {"@id": canonical + "#service"}
+
+    if rel == "contacto/index.html":
+        graph[-2]["@type"] = "ContactPage"
+
+    payload["@graph"] = graph
+    encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    return text[:match.start()] + match.group(1) + encoded + match.group(3) + text[match.end():]
+
+
 def replace_spanish_report(text: str) -> str:
     start='<figure class="iri-showcase reveal">'
     s=text.index(start)
@@ -346,6 +487,7 @@ def main() -> None:
         text=text.replace("No invented overall score and no anonymous testimonials.","No invented aggregate rating and no anonymous testimonials.")
         if not rel.startswith("en/"):
             text=localize_spanish(text)
+        text=enrich_structured_data(text, rel)
         page.write_text(text,encoding="utf-8")
 
     for rel in ("index.html","diagnostico-iri/index.html"):
