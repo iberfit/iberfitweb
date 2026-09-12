@@ -209,9 +209,9 @@ published_version = None
 try:
     status, final, headers, body, ms = fetch("/VERSION")
     raw_version = text(body).strip()
-    match = re.search(r"(\\d+)\\.(\\d+)", raw_version)
-    if match:
-        published_version = tuple(map(int, match.groups()))
+    parsed_version = parse_version(raw_version)
+    if parsed_version != (0, 0):
+        published_version = parsed_version
         add("versión publicada", True, raw_version, ms)
     else:
         add("versión publicada", True, "no declarada; se mantienen solo controles operativos", ms)
