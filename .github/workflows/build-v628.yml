@@ -1,0 +1,47 @@
+name: Construir candidata web V6.28
+
+on:
+  push:
+    branches:
+      - work/web-v6-28-recuperacion
+    paths:
+      - ".github/scripts/build_v628_candidate.py"
+      - ".github/workflows/build-v628.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  construir:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Descargar rama
+        uses: actions/checkout@v4
+        with:
+          ref: work/web-v6-28-recuperacion
+          fetch-depth: 0
+
+      - name: Generar V6.28 desde producción certificada
+        run: python .github/scripts/build_v628_candidate.py
+
+      - name: Verificar invariantes
+        run: |
+          test -s candidate/v628/index.html
+          test -s candidate/v628/assets/styles.v628.css
+          test "$(cat candidate/v628/VERSION)" = "6.28"
+          ! grep -R -E -i "overall index|overall score|iri global|índice global|puntuación global" candidate/v628 --include="*.html"
+          ! grep -R -E ">Online<|>online<" candidate/v628 --include="*.html" | grep -v "/en/" || false
+
+      - name: Registrar candidata reproducible
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add candidate/v628
+          if git diff --cached --quiet; then
+            echo "La candidata ya coincide con la salida reproducible."
+            exit 0
+          fi
+          git commit -m "feat(web): generar candidata V6.28"
+          git push origin HEAD:work/web-v6-28-recuperacion
