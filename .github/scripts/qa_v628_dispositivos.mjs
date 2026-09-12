@@ -108,6 +108,35 @@ for (const device of devices) {
     );
     for (const src of brokenImages) add(device.name, route, "IMAGEN_ROTA", src);
 
+    const storyImages = await page.locator(".photo-story-media img").evaluateAll(nodes =>
+      nodes.map(img => ({
+        srcset: img.getAttribute("srcset") || "",
+        sizes: img.getAttribute("sizes") || "",
+      }))
+    );
+    for (const image of storyImages) {
+      if (!image.srcset.includes("640w") || !image.srcset.includes("960w") || !image.srcset.includes("1448w")) {
+        add(device.name, route, "IMAGEN_DENSIDAD", image.srcset || "srcset ausente");
+      }
+      if (!image.sizes) add(device.name, route, "IMAGEN_SIZES", "sizes ausente");
+    }
+
+    if (device.width <= 640 && (route === "/" || route === "/metodo/")) {
+      const selector = route === "/" ? ".system-rail" : ".method-cycle";
+      const railState = await page.locator(selector).evaluate(el => {
+        const style = getComputedStyle(el);
+        return {
+          scrollWidth: el.scrollWidth,
+          clientWidth: el.clientWidth,
+          snap: style.scrollSnapType,
+          columns: el.children.length,
+        };
+      });
+      if (railState.scrollWidth <= railState.clientWidth + 8 || !railState.snap.includes("x")) {
+        add(device.name, route, "RAIL_TACTIL", JSON.stringify(railState));
+      }
+    }
+
     const menuState = await page.evaluate(() => {
       const toggle = document.querySelector(".menu-toggle");
       const nav = document.querySelector(".navlinks");
@@ -312,6 +341,25 @@ for (const device of devices) {
     });
     await reviewPage.waitForTimeout(120);
 
+    const premiumState = await reviewPage.evaluate(() => ({
+      surfaces: document.querySelectorAll(".premium-surface").length,
+      rich: document.documentElement.classList.contains("motion-rich"),
+      finePointer: matchMedia("(hover:hover) and (pointer:fine) and (min-width:1024px)").matches,
+      reduced: matchMedia("(prefers-reduced-motion: reduce)").matches,
+    }));
+    if (premiumState.surfaces < 1) {
+      add(device.name, reviewRoute, "INTERACCION_PREMIUM", "superficies premium ausentes");
+    }
+    if (premiumState.reduced && premiumState.rich) {
+      add(device.name, reviewRoute, "INTERACCION_REDUCED_MOTION", JSON.stringify(premiumState));
+    }
+    if (!device.touch && device.width >= 1024 && premiumState.finePointer && !premiumState.rich) {
+      add(device.name, reviewRoute, "INTERACCION_ESCRITORIO", JSON.stringify(premiumState));
+    }
+    if (device.touch && premiumState.rich) {
+      add(device.name, reviewRoute, "INTERACCION_TOUCH", JSON.stringify(premiumState));
+    }
+
     const hiddenReveal = await reviewPage.locator(".reveal").evaluateAll(nodes =>
       nodes.flatMap((node, index) => {
         const style = getComputedStyle(node);
@@ -369,6 +417,10 @@ for (const device of devices) {
   );
   if (hiddenReduced) {
     add(device.name, "/", "REDUCED_MOTION_CONTENIDO_OCULTO", String(hiddenReduced));
+  }
+  const richReduced = await reducedPage.evaluate(() => document.documentElement.classList.contains("motion-rich"));
+  if (richReduced) {
+    add(device.name, "/", "REDUCED_MOTION_INTERACCION", "motion-rich activo con reducir movimiento");
   }
   await reducedContext.close();
 }
