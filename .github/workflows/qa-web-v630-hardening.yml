@@ -147,7 +147,7 @@ jobs:
                 await new Promise(r=>setTimeout(r,35));
               }
               scrollTo(0,max);
-              await new Promise(r=>setTimeout(r,180));
+              await new Promise(r=>setTimeout(r,750));
             });
           }
 
