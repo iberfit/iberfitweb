@@ -169,6 +169,20 @@ for (const device of devices) {
           return s.display !== "none" && s.visibility !== "hidden" && Number.parseFloat(s.opacity || "1") > .95;
         });
         if (!open) add(device.name, route, "MENU_MOVIL", "no abre");
+        const panelBox = await page.locator(".navlinks").boundingBox();
+        if (!panelBox) {
+          add(device.name, route, "MENU_PANEL", "sin geometría");
+        } else {
+          if (panelBox.x < -1 || panelBox.x + panelBox.width > device.width + 1) {
+            add(device.name, route, "MENU_PANEL_VIEWPORT", JSON.stringify(panelBox));
+          }
+          if (device.width >= 641 && device.width <= 860 && panelBox.width > 460) {
+            add(device.name, route, "MENU_PANEL_TABLET", "panel demasiado ancho: " + Math.round(panelBox.width));
+          }
+          if (device.width <= 480 && panelBox.width < device.width - 48) {
+            add(device.name, route, "MENU_PANEL_MOVIL", "panel demasiado estrecho: " + Math.round(panelBox.width));
+          }
+        }
         const backdrop = page.locator(".nav-panel-backdrop");
         if (await backdrop.count() !== 1 || !(await backdrop.isVisible())) add(device.name, route, "MENU_MOVIL", "backdrop ausente");
         const bodyLocked = await page.evaluate(() => document.body.classList.contains("nav-panel-open") && getComputedStyle(document.body).overflow === "hidden");
@@ -452,13 +466,13 @@ for (const device of devices) {
       path: path.join(out, device.name + "-" + reviewLabel + "-sin-banner.png"),
       fullPage: true,
     });
-    if (device.name === "movil-390" && reviewRoute === "/") {
+    if (["movil-390","tableta-vertical"].includes(device.name) && reviewRoute === "/") {
       const toggle = reviewPage.locator(".menu-toggle");
       if (await toggle.count() === 1 && await toggle.isVisible()) {
         await toggle.click();
         await reviewPage.waitForTimeout(180);
         await reviewPage.screenshot({
-          path: path.join(out, "movil-390-menu-abierto.png"),
+          path: path.join(out, device.name + "-menu-abierto.png"),
           fullPage: false,
         });
         await reviewPage.keyboard.press("Escape");
