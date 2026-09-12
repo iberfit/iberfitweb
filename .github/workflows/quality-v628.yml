@@ -44,11 +44,15 @@ jobs:
 
       - name: Enlaces internos
         run: |
-          npx --yes linkinator@6 http://127.0.0.1:4173/ --recurse --skip "^(https?:)?//" --verbosity error
+          npx --yes linkinator@6 http://127.0.0.1:4173/ --recurse --skip "https://wa.me|https://www.google.com|https://share.google|mailto:|tel:" --verbosity error
+
+      - name: Preparar Chromium para calidad
+        run: |
+          npm install --no-save playwright@1.62.1 @axe-core/playwright@4.10.2
+          npx playwright install --with-deps chromium
 
       - name: Accesibilidad
-        run: |
-          npx --yes pa11y-ci@4             http://127.0.0.1:4173/             http://127.0.0.1:4173/diagnostico-iri/             http://127.0.0.1:4173/metodo/             http://127.0.0.1:4173/presencial/             http://127.0.0.1:4173/hibrido/             http://127.0.0.1:4173/online/             http://127.0.0.1:4173/contacto/
+        run: node .github/scripts/qa_v628_accesibilidad.mjs
 
       - name: Lighthouse · Inicio
         run: |
