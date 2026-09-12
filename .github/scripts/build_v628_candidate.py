@@ -363,6 +363,30 @@ def differentiate_local_page(text: str, rel: str) -> str:
     }
     for old, new in variants.get(rel, {}).items():
         text = text.replace(old, new)
+
+    meta_descriptions = {
+        "entrenador-personal-las-condes/index.html": "Entrenamiento personal en Las Condes según sector, espacio y horarios, con diagnóstico, planificación y seguimiento IBERFIT.",
+        "entrenador-personal-vitacura/index.html": "Entrenamiento personal en Vitacura con opciones presenciales e híbridas según acceso, disponibilidad y nivel de autonomía.",
+        "entrenamiento-personal-providencia/index.html": "Entrenamiento personal en Providencia con modalidad presencial, híbrida o a distancia según acceso, rutina y tiempos de traslado.",
+        "personal-trainer-nunoa/index.html": "Entrenamiento personal en Ñuñoa con Diagnóstico IRI para definir modalidad, espacio, equipamiento y frecuencia de forma realista.",
+        "entrenador-personal-lo-barnechea/index.html": "Entrenamiento personal en Lo Barnechea según sector y desplazamiento, con opciones híbridas para sostener continuidad y seguimiento.",
+        "entrenador-personal-la-reina/index.html": "Entrenamiento personal en La Reina según espacio y disponibilidad, combinando supervisión, autonomía, planificación y seguimiento.",
+        "entrenador-personal-penalolen/index.html": "Entrenamiento personal en Peñalolén según sector y frecuencia posible, con alternativas híbridas y a distancia para mantener continuidad.",
+    }
+    description = meta_descriptions.get(rel)
+    if description:
+        text = re.sub(
+            r'(<meta\b(?=[^>]*\bname="description")[^>]*\bcontent=")[^"]*(")',
+            lambda match: match.group(1) + description + match.group(2),
+            text,
+            count=1,
+            flags=re.I,
+        )
+
+    text = text.replace(
+        "Presencial, híbrido u a distancia se recomiendan por necesidad y contexto, no por una plantilla.",
+        "Las modalidades presencial, híbrida o a distancia se recomiendan según la necesidad y el contexto, no por una plantilla.",
+    )
     return text
 
 
