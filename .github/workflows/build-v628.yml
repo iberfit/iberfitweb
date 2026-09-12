@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Descargar rama
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: work/web-v6-28-recuperacion
           fetch-depth: 0
