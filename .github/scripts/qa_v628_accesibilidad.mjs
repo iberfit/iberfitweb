@@ -41,6 +41,17 @@ for (const route of routes) {
   }
 
   if (route === '/contacto/') {
+    const necessary = page.locator('[data-consent-necessary]');
+    if (await necessary.count() === 1 && await necessary.isVisible()) {
+      await necessary.click();
+      await page.waitForTimeout(80);
+    }
+    const centerAndClick = async selector => {
+      const target = page.locator(selector);
+      await target.evaluate(el => el.scrollIntoView({ block:'center', inline:'nearest', behavior:'instant' }));
+      await page.waitForTimeout(80);
+      await target.click();
+    };
     const guideForm = page.locator('[data-orientador-form]');
     await guideForm.scrollIntoViewIfNeeded();
     await page.waitForFunction(() => {
@@ -63,7 +74,7 @@ for (const route of routes) {
       if (await firstGoal.getAttribute('aria-pressed') !== 'true') {
         findings.push({ route, id:'orientador-aria-pressed', impact:'serious', description:'La selección nativa no sincroniza aria-pressed en las opciones táctiles.' });
       }
-      await page.locator('[data-step="1"] [data-next-step]').click();
+      await centerAndClick('[data-step="1"] [data-next-step]');
       await page.waitForTimeout(60);
       const step2 = page.locator('[data-step="2"]');
       const liveText = (await status.textContent() || '').trim();
@@ -74,8 +85,8 @@ for (const route of routes) {
         findings.push({ route, id:'orientador-step-announcement', impact:'moderate', description:'El cambio de paso no se anuncia correctamente.' });
       }
 
-      await page.locator('[data-step="2"] [data-next-step]').click();
-      await page.locator('[data-step="3"] button[type="submit"]').click();
+      await centerAndClick('[data-step="2"] [data-next-step]');
+      await centerAndClick('[data-step="3"] button[type="submit"]');
       await page.waitForTimeout(60);
       const result = page.locator('[data-orientador-result]');
       if (await result.isHidden() || await result.getAttribute('role') !== 'region' || await result.getAttribute('aria-live') !== 'polite') {
