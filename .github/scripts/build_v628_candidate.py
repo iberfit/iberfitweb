@@ -1325,6 +1325,12 @@ def main() -> None:
     # Cloudflare transforma robots.txt en el borde; el repositorio conserva la política fuente.
     (DST/"robots.txt").write_text("User-agent: *\nAllow: /\n\nSitemap: https://iberfit.cl/sitemap.xml\n",encoding="utf-8")
 
+    # Mantener la fuente canónica para descubrimiento y contexto de agentes de IA.
+    llms_source = ROOT / "llms.txt"
+    if not llms_source.exists():
+        raise SystemExit(f"No existe llms.txt canónico: {llms_source}")
+    shutil.copy2(llms_source, DST / "llms.txt")
+
     # Fijar el isotipo oficial exacto aportado por IBERFIT.
     official_logo = ROOT / "brand/Isotipo_IBERFIT_Oficial.png"
     if not official_logo.exists():
