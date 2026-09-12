@@ -9,7 +9,6 @@ on:
       - '.github/workflows/monitor-produccion.yml'
       - '.github/scripts/audit_live_visual.mjs'
       - '.github/workflows/audit-live-ai.yml'
-      - 'llms.txt'
   workflow_dispatch:
 
 permissions:
@@ -56,6 +55,11 @@ jobs:
           grep -Fq -- '--gold-dark:#806216' candidate/v628/assets/hardening.v630.css
           grep -Fq '.cta-panel-inner h1' candidate/v628/assets/hardening.v630.css
           grep -Fq '.site-header .brand-mark' candidate/v628/assets/hardening.v630.css
+          test -s candidate/v628/llms.txt
+          grep -q '^# IBERFIT' candidate/v628/llms.txt
+          grep -q 'Diagnóstico IRI' candidate/v628/llms.txt
+          grep -q 'https://iberfit.cl/sitemap.xml' candidate/v628/llms.txt
+          grep -q 'https://app.iberfit.cl/' candidate/v628/llms.txt
 
       - name: Verificar variables CSS
         shell: bash
