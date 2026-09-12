@@ -85,11 +85,11 @@ HEADERS = """/*
   Cache-Control: public, max-age=31536000, immutable
   Content-Type: text/css; charset=utf-8
 
-/assets/app.v623.js
+/assets/app.v628.js
   Cache-Control: public, max-age=31536000, immutable
   Content-Type: text/javascript; charset=utf-8
 
-/assets/analytics.v6211.js
+/assets/analytics.v628.js
   Cache-Control: public, max-age=31536000, immutable
   Content-Type: text/javascript; charset=utf-8
 
@@ -215,7 +215,7 @@ def validate() -> None:
         else: descriptions.setdefault(p.desc.strip(),[]).append(rel)
         if not p.canonical: fail(f"{rel}: sin canonical")
         if p.styles!=["/assets/styles.v628.css"]: fail(f"{rel}: CSS inesperado {p.styles}")
-        expected={"/assets/analytics-config.js","/assets/analytics.v6211.js","/assets/app.v623.js"}
+        expected={"/assets/analytics-config.js","/assets/analytics.v628.js","/assets/app.v628.js"}
         if not expected.issubset(set(p.scripts)): fail(f"{rel}: scripts comunes incompletos")
         if "/assets/iberfit-isotipo-oficial.png" not in p.refs: fail(f"{rel}: isotipo oficial canónico ausente")
         for ref in p.refs:
@@ -296,16 +296,39 @@ def main() -> None:
         path=DST/"assets"/name
         if path.exists(): path.unlink()
 
-    app_js = DST / "assets/app.v623.js"
-    app_text = app_js.read_text("utf-8")
+    old_app_js = DST / "assets/app.v623.js"
+    app_js = DST / "assets/app.v628.js"
+    app_text = old_app_js.read_text("utf-8")
     app_text = app_text.replace("/assets/iberfit-isotipo-96.png","/assets/iberfit-isotipo-oficial.png")
     app_text = app_text.replace("/assets/iberfit-isotipo-192.png","/assets/iberfit-isotipo-oficial.png")
     app_js.write_text(app_text,encoding="utf-8")
+    old_app_js.unlink()
+
+    old_analytics_js = DST / "assets/analytics.v6211.js"
+    analytics_js = DST / "assets/analytics.v628.js"
+    analytics_text = old_analytics_js.read_text("utf-8")
+    analytics_text = analytics_text.replace(
+        "const parse = value => { try { return JSON.parse(value); } catch (_) { return null; } };\n  let consent = parse(localStorage.getItem(storageKey));",
+        "const parse = value => { try { return JSON.parse(value); } catch (_) { return null; } };\n"
+        "  const safeStorage = {\n"
+        "    get(key){ try { return window.localStorage.getItem(key); } catch (_) { return null; } },\n"
+        "    set(key,value){ try { window.localStorage.setItem(key,value); return true; } catch (_) { return false; } }\n"
+        "  };\n"
+        "  let consent = parse(safeStorage.get(storageKey));"
+    )
+    analytics_text = analytics_text.replace(
+        "localStorage.setItem(storageKey, JSON.stringify(consent));",
+        "safeStorage.set(storageKey, JSON.stringify(consent));"
+    )
+    analytics_js.write_text(analytics_text,encoding="utf-8")
+    old_analytics_js.unlink()
 
     for page in sorted(DST.rglob("*.html")):
         rel=page.relative_to(DST).as_posix()
         text=page.read_text("utf-8")
         text=text.replace("/assets/styles.v626.css","/assets/styles.v628.css")
+        text=text.replace("/assets/app.v623.js","/assets/app.v628.js")
+        text=text.replace("/assets/analytics.v6211.js","/assets/analytics.v628.js")
         text=re.sub(
             r'(<img\b(?=[^>]*class="brand-mark")[^>]*?)height="48"([^>]*?)width="48"',
             r'\1height="48"\2width="43"',
