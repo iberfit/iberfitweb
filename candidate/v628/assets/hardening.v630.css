@@ -1,0 +1,46 @@
+/* IBERFIT WEB · V6.30 visual/accessibility hardening */
+:root{--gold-dark:#806216}
+
+/* Conserva el isotipo oficial y mejora su contraste en cabecera. */
+.site-header .brand-mark{
+  width:50px!important;height:50px!important;padding:6px!important;
+  object-fit:contain!important;background:var(--green)!important;
+  border:1px solid rgba(217,181,104,.34)!important;
+  border-radius:14px!important;
+  box-shadow:0 9px 24px rgba(4,22,16,.18)!important;
+}
+.site-header.scrolled .brand-mark{box-shadow:0 7px 18px rgba(4,22,16,.16)!important}
+@media (max-width:560px){
+  .site-header .brand-mark{width:44px!important;height:44px!important;padding:5px!important;border-radius:12px!important}
+}
+
+/* Contraste suficiente para microcopy dorada sobre fondos claros. */
+.kicker,.eyebrow{color:var(--gold-dark)}
+.local-coverage-link:after,
+.local-service-chip b,
+body:is([data-page="local"],[data-page="local_en"]) .cards-4 .card-index{color:var(--gold-dark)}
+
+/* Los títulos de CTA oscuros no deben heredar el verde global. */
+.cta-panel-inner h1,.cta-panel-inner h2,.cta-panel-inner h3,.cta-panel-inner h4{color:#fff}
+.cta-panel-inner .kicker{color:var(--gold-light)}
+
+/* Contraste y objetivos táctiles. */
+.footer-consent{color:rgba(255,255,255,.78)!important}
+.consent-close{width:44px;height:44px;min-width:44px;min-height:44px}
+.consent-link{min-height:44px;display:inline-flex;align-items:center}
+
+/* Robustez tipográfica. */
+.hero-text,.page-hero .container,.cta-panel-inner>div{min-width:0}
+h1,h2,h3,h4{overflow-wrap:break-word}
+
+/* Focus visible consistente. */
+.review-carousel-btn:focus-visible,.review-carousel-dot:focus-visible,
+.consent-close:focus-visible,.menu-toggle:focus-visible,.lang-switch a:focus-visible{
+  outline:3px solid rgba(128,98,22,.36);outline-offset:3px
+}
+
+/* En footer el fondo ya aporta contraste al isotipo. */
+.footer .brand-mark{
+  background:transparent!important;border-color:transparent!important;
+  padding:0!important;border-radius:0!important;box-shadow:none!important
+}
