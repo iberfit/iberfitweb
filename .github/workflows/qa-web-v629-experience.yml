@@ -1,0 +1,206 @@
+name: QA WEB IBERFIT V6.29 experience
+
+on:
+  push:
+    branches:
+      - work/web-v6-29-experience
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-web-v629-experience
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.62.1
+          npx playwright install --with-deps chromium
+
+      - name: Servir candidata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v629-server.log 2>&1 &
+          echo $! >/tmp/v629-server.pid
+          for i in $(seq 1 30); do
+            curl --fail --silent http://127.0.0.1:4173/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/v629-server.log
+          exit 1
+
+      - name: QA funcional y visual V6.29
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v629-evidence
+          cat > /tmp/qa-v629.js <<'NODE'
+          const { chromium } = require('playwright');
+          const fs = require('fs');
+          const base = 'http://127.0.0.1:4173';
+          const localRoutes = [
+            ['/entrenador-personal-las-condes/', 'Las Condes'],
+            ['/entrenador-personal-vitacura/', 'Vitacura'],
+            ['/entrenamiento-personal-providencia/', 'Providencia'],
+            ['/personal-trainer-nunoa/', 'Ñuñoa'],
+            ['/entrenador-personal-lo-barnechea/', 'Lo Barnechea'],
+            ['/entrenador-personal-la-reina/', 'La Reina'],
+            ['/entrenador-personal-penalolen/', 'Peñalolén']
+          ];
+          const failures = [];
+          const notes = [];
+
+          const assert = (condition, message) => {
+            if (!condition) throw new Error(message);
+          };
+
+          async function openPage(context, path, label) {
+            const page = await context.newPage();
+            const errors = [];
+            page.on('pageerror', e => errors.push('pageerror: ' + e.message));
+            page.on('console', m => {
+              if (m.type() === 'error') errors.push('console: ' + m.text());
+            });
+            const response = await page.goto(base + path, { waitUntil: 'networkidle' });
+            assert(response && response.ok(), label + ': HTTP no OK');
+            await page.waitForTimeout(450);
+            const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+            assert(overflow <= 2, label + ': overflow horizontal ' + overflow + 'px');
+            if (errors.length) throw new Error(label + ': ' + errors.join(' | '));
+            return page;
+          }
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            try {
+              const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
+
+              const home = await openPage(desktop, '/', 'home desktop');
+              await home.locator('.review-carousel-shell').waitFor();
+              assert(await home.locator('.review-slide').count() === 2, 'home: deben existir 2 reseñas reales');
+              assert(await home.locator('.review-slide.is-active').count() === 1, 'home: debe haber una sola reseña activa');
+              assert(await home.locator('.review-source-row a[href*="google"]').count() === 0, 'home: reseñas no deben enviar a Google');
+              const first = await home.locator('.review-slide.is-active').getAttribute('data-review-index');
+              await home.waitForTimeout(2250);
+              const second = await home.locator('.review-slide.is-active').getAttribute('data-review-index');
+              assert(first !== second, 'home: el carrusel no avanzó a los 2 s');
+              await home.locator('[data-review-pause]').click();
+              const paused = await home.locator('.review-slide.is-active').getAttribute('data-review-index');
+              await home.waitForTimeout(2250);
+              const pausedAfter = await home.locator('.review-slide.is-active').getAttribute('data-review-index');
+              assert(paused === pausedAfter, 'home: la pausa no detuvo el carrusel');
+              await home.screenshot({ path: '/tmp/v629-evidence/home-desktop.png', fullPage: true });
+              notes.push('home: carrusel 2s + pausa + sin salida Google PASS');
+              await home.close();
+
+              const online = await openPage(desktop, '/online/', 'online desktop');
+              await online.locator('[data-country-selector]').waitFor();
+              assert(await online.locator('.country-option').count() === 7, 'online: selector debe tener 7 opciones');
+              assert(await online.locator('.country-option .flag').count() === 7, 'online: faltan banderas');
+              await online.locator('.country-option[data-country="ES"]').click();
+              assert((await online.locator('[data-country-name]').textContent()).trim() === 'España', 'online: España no quedó seleccionada');
+              assert((await online.locator('[data-country-currency]').textContent()).trim() === 'EUR', 'online: EUR no se mostró');
+              const waHref = await online.locator('a[href*="wa.me/56944040032"]').first().getAttribute('href');
+              const waText = new URL(waHref).searchParams.get('text') || '';
+              assert(waText.includes('País: España'), 'online: WhatsApp no conserva el país seleccionado');
+              await online.screenshot({ path: '/tmp/v629-evidence/online-desktop.png', fullPage: true });
+              notes.push('online: 7 países + banderas + contexto EUR + WhatsApp PASS');
+              await online.close();
+
+              for (const [route, place] of localRoutes) {
+                const page = await openPage(desktop, route, place + ' desktop');
+                await page.locator('.local-place-badge').waitFor();
+                const badge = (await page.locator('.local-place-badge strong').textContent()).trim();
+                assert(badge === place, route + ': badge esperado ' + place + ', obtenido ' + badge);
+                assert(await page.locator('.local-service-chip').count() === 3, route + ': faltan 3 opciones de cobertura');
+                const cards = page.locator('.cards-4');
+                if (await cards.count()) {
+                  const columns = await cards.evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').filter(Boolean).length);
+                  assert(columns === 2, route + ': tarjetas locales deben ser 2x2 en escritorio');
+                }
+                await page.screenshot({ path: '/tmp/v629-evidence/' + place.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-') + '-desktop.png', fullPage: true });
+                notes.push(route + ': identidad local + cobertura PASS');
+                await page.close();
+              }
+              await desktop.close();
+
+              const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+              for (const [path, label] of [['/', 'home mobile'], ['/online/', 'online mobile'], ...localRoutes.map(([r,p]) => [r, p + ' mobile'])]) {
+                const page = await openPage(mobile, path, label);
+                if (path === '/') {
+                  assert(await page.locator('.review-slide.is-active').count() === 1, 'home mobile: más de una reseña activa');
+                } else if (path === '/online/') {
+                  assert(await page.locator('.country-option').count() === 7, 'online mobile: selector incompleto');
+                  const cols = await page.locator('.country-grid').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').filter(Boolean).length);
+                  assert(cols === 2, 'online mobile: selector debe ser 2 columnas');
+                } else {
+                  assert(await page.locator('.local-place-badge').count() === 1, label + ': badge local ausente');
+                  assert(await page.locator('.local-service-chip').count() === 3, label + ': cobertura local incompleta');
+                }
+                await page.close();
+              }
+              notes.push('mobile 390px: home + online + 7 comunas sin overflow PASS');
+              await mobile.close();
+
+              const reduced = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+              const reducedHome = await openPage(reduced, '/', 'home reduced motion');
+              const r1 = await reducedHome.locator('.review-slide.is-active').getAttribute('data-review-index');
+              await reducedHome.waitForTimeout(2250);
+              const r2 = await reducedHome.locator('.review-slide.is-active').getAttribute('data-review-index');
+              assert(r1 === r2, 'reduced-motion: el carrusel no debe autoavanzar');
+              notes.push('prefers-reduced-motion: autoavance desactivado PASS');
+              await reducedHome.close();
+              await reduced.close();
+
+              fs.writeFileSync('/tmp/v629-evidence/report.json', JSON.stringify({ ok: true, notes }, null, 2));
+              console.log('QA V6.29 EXPERIENCE: PASS');
+              notes.forEach(n => console.log('PASS · ' + n));
+            } catch (e) {
+              failures.push(e.stack || String(e));
+              fs.writeFileSync('/tmp/v629-evidence/report.json', JSON.stringify({ ok: false, failures, notes }, null, 2));
+              console.error(e.stack || e);
+              process.exitCode = 1;
+            } finally {
+              await browser.close();
+            }
+          })();
+          NODE
+          node /tmp/qa-v629.js
+
+      - name: Verificar referencias y contenido
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s candidate/v628/assets/experience.v629.css
+          test -s candidate/v628/assets/experience.v629.js
+          grep -Fq 'data-review-carousel' candidate/v628/index.html
+          grep -Fq 'experience.v629.css' candidate/v628/index.html
+          grep -Fq 'experience.v629.js' candidate/v628/online/index.html
+          for f in             candidate/v628/entrenador-personal-la-reina/index.html             candidate/v628/entrenador-personal-las-condes/index.html             candidate/v628/entrenador-personal-lo-barnechea/index.html             candidate/v628/entrenador-personal-penalolen/index.html             candidate/v628/entrenador-personal-vitacura/index.html             candidate/v628/entrenamiento-personal-providencia/index.html             candidate/v628/personal-trainer-nunoa/index.html; do
+            grep -Fq 'experience.v629.css' "$f"
+            grep -Fq 'experience.v629.js' "$f"
+          done
+
+      - name: Guardar evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-web-v629-experience-${{ github.run_id }}
+          path: /tmp/v629-evidence
+          if-no-files-found: warn
+          retention-days: 30
