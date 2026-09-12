@@ -259,11 +259,21 @@ for (const device of devices) {
         await reviewPage.waitForTimeout(45);
       }
     }
+    await reviewPage.waitForFunction(() => {
+      return Array.from(document.querySelectorAll(".reveal")).every(node => {
+        const style = getComputedStyle(node);
+        const rect = node.getBoundingClientRect();
+        const rendered = style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+        if (!rendered || !node.classList.contains("visible")) return true;
+        return Number.parseFloat(style.opacity || "1") >= 0.95;
+      });
+    }, null, { timeout: 2500 }).catch(() => {});
+
     await reviewPage.evaluate(() => {
       document.documentElement.style.scrollBehavior = "auto";
       window.scrollTo(0, 0);
     });
-    await reviewPage.waitForTimeout(180);
+    await reviewPage.waitForTimeout(120);
 
     const hiddenReveal = await reviewPage.locator(".reveal").evaluateAll(nodes =>
       nodes.flatMap((node, index) => {
