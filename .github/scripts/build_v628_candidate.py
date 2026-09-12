@@ -181,6 +181,128 @@ def localize_spanish(text: str) -> str:
     text=text.replace("modality_a distancia","modality_online")
     return text
 
+def specialize_local_page(text: str, rel: str) -> str:
+    """Hace que cada landing local hable desde su realidad urbana, sin estereotipos socioeconómicos."""
+    local = {
+        "entrenador-personal-las-condes/index.html": {
+            "<h1>Entrenamiento personal con criterio en Las Condes.</h1>": "<h1>Entrenar en Las Condes sin que la agenda mande sobre tu plan.</h1>",
+            '<p class="lead">Cobertura prioritaria para entrenamiento a domicilio y en gimnasios de edificios, sujeta a disponibilidad y condiciones del espacio.</p>': '<p class="lead">Si entre horarios, desplazamientos y cambios de agenda el entrenamiento siempre queda para después, buscamos una forma que puedas sostener de verdad.</p>',
+            '<p class="hero-support">Entrenamiento personal con criterio: diagnóstico, planificación, control y seguimiento.</p>': '<p class="hero-support">Domicilio, gimnasio de edificio o modalidad híbrida: primero entendemos tu semana y después decidimos contigo qué formato tiene sentido.</p>',
+            '<div class="kicker">Cobertura y modalidad</div><h2>Entrenar en Las Condes: espacio, horarios y continuidad.</h2>': '<div class="kicker">Entrenar aquí</div><h2>En una comuna extensa, la constancia empieza por reducir fricción.</h2>',
+            '<p class="lead">Cobertura prioritaria para entrenamiento a domicilio y en gimnasios de edificios, sujeta a disponibilidad y condiciones del espacio.</p>': '<p class="lead">Un plan puede ser perfecto sobre el papel y fracasar si cada sesión exige una logística imposible. Por eso sector, horario y espacio forman parte del plan desde el principio.</p>',
+            "<h2>La modalidad depende del espacio y de cómo encaja en tu semana.</h2>": "<h2>Decidimos contigo cómo hacer que entrenar encaje en tu semana.</h2>",
+            "<h3>Ubicación</h3><p>Sectores residenciales extensos hacen importante coordinar horarios y desplazamiento con precisión.</p>": "<h3>Tu semana real</h3><p>Miramos cuándo puedes entrenar de verdad y cuánto margen tienes para desplazarte sin convertir cada sesión en una carrera.</p>",
+            "<h3>Objetivo</h3><p>La prioridad puede ser fuerza, salud, composición corporal, rendimiento o retorno progresivo.</p>": "<h3>Qué quieres conseguir</h3><p>El objetivo ordena el plan, pero también cuánto tiempo y frecuencia necesitas para que sea realista.</p>",
+            "<h3>Autonomía</h3><p>La logística suele favorecer sesiones presenciales o híbridas cuando existe un espacio adecuado en domicilio o condominio.</p>": "<h3>Dónde puedes entrenar</h3><p>Si tienes un espacio útil en casa o en tu edificio, lo aprovechamos. Si no, buscamos otra opción que mantenga la calidad.</p>",
+            "<h3>Seguimiento</h3><p>Toda modalidad incluye planificación, control y revisión, no solo ejecución de sesiones.</p>": "<h3>Cuánta supervisión necesitas</h3><p>No todo tiene que ser presencial. Reservamos la supervisión directa para los momentos en que realmente aporta valor.</p>",
+            "<h2>Primero confirmamos sector, espacio y horario.</h2>": "<h2>Primero vemos si podemos hacerlo bien, no solo si podemos ir.</h2>",
+            '<p class="lead">IBERFIT no promete disponibilidad automática en toda la comuna. Primero se revisan sector, horarios, espacio y modalidad adecuada para proteger la calidad del servicio.</p>': '<p class="lead">Cuéntanos tu sector, horarios y dónde podrías entrenar. Si la frecuencia presencial no es la mejor opción, te lo diremos y buscaremos una alternativa más sostenible.</p>',
+            "<h2>Revisa cobertura y horarios en Las Condes.</h2>": "<h2>Cuéntanos en qué sector de Las Condes estás y cómo es tu semana.</h2>",
+            "<p>Comparte sector, objetivo y horarios para recibir una orientación inicial.</p>": "<p>Con esa información podemos orientarte sin hacerte perder tiempo.</p>",
+        },
+        "entrenador-personal-vitacura/index.html": {
+            "<h1>Entrenamiento personal con criterio en Vitacura.</h1>": "<h1>Entrenar en Vitacura con un plan que encaje en tu entorno, no al revés.</h1>",
+            '<p class="lead">Servicio presencial según sector, acceso y disponibilidad, con alternativas híbridas para sostener frecuencia.</p>': '<p class="lead">En una comuna residencial y verde, entrenar cerca puede ser una ventaja. La clave es convertir esa comodidad en continuidad y no en improvisación.</p>',
+            '<p class="hero-support">Entrenamiento personal con criterio: diagnóstico, planificación, control y seguimiento.</p>': '<p class="hero-support">Podemos trabajar en domicilio, espacios residenciales o combinar sesiones presenciales con trabajo guiado, según lo que realmente te ayude a avanzar.</p>',
+            '<div class="kicker">Cobertura y modalidad</div><h2>Entrenar en Vitacura: supervisión y continuidad según tu agenda.</h2>': '<div class="kicker">Entrenar aquí</div><h2>Estar cerca ayuda. Tener dirección marca la diferencia.</h2>',
+            '<p class="lead">Servicio presencial según sector, acceso y disponibilidad, con alternativas híbridas para sostener frecuencia.</p>': '<p class="lead">Si tu entorno ya facilita moverte, caminar, usar bicicleta o entrenar cerca de casa, lo tenemos en cuenta. El plan parte de lo que ya forma parte de tu vida.</p>',
+            "<h2>La combinación adecuada depende de tu autonomía y disponibilidad.</h2>": "<h2>No necesitas más supervisión de la necesaria; necesitas la adecuada.</h2>",
+            "<h3>Ubicación</h3><p>La evaluación inicial permite revisar el espacio disponible y el nivel de autonomía.</p>": "<h3>Tu entorno cuenta</h3><p>Revisamos el espacio que ya tienes disponible y qué podemos aprovechar sin añadir complicaciones.</p>",
+            "<h3>Objetivo</h3><p>La prioridad puede ser fuerza, salud, composición corporal, rendimiento o retorno progresivo.</p>": "<h3>Qué quieres mejorar</h3><p>Fuerza, salud, composición corporal o rendimiento requieren prioridades distintas. No empezamos por una rutina estándar.</p>",
+            "<h3>Autonomía</h3><p>La combinación presencial y guiada en app puede aportar continuidad cuando la agenda cambia.</p>": "<h3>Autonomía bien guiada</h3><p>Si puedes entrenar parte de la semana por tu cuenta, diseñamos esa parte para que siga conectada con lo que hacemos juntos.</p>",
+            "<h3>Seguimiento</h3><p>Toda modalidad incluye planificación, control y revisión, no solo ejecución de sesiones.</p>": "<h3>Revisar sin esperar a que algo falle</h3><p>Seguimos tu respuesta y ajustamos antes de que una semana difícil se convierta en abandono.</p>",
+            "<h2>La disponibilidad se revisa junto con acceso y entorno.</h2>": "<h2>Antes de coordinar, vemos cómo encaja el servicio en tu día a día.</h2>",
+            '<p class="lead">IBERFIT no promete disponibilidad automática en toda la comuna. Primero se revisan sector, horarios, espacio y modalidad adecuada para proteger la calidad del servicio.</p>': '<p class="lead">Sector, acceso, horario y espacio importan. Los revisamos contigo y te proponemos solo una modalidad que podamos sostener bien.</p>',
+            "<h2>Consulta una modalidad viable en Vitacura.</h2>": "<h2>Cuéntanos cómo te gustaría entrenar en Vitacura.</h2>",
+            "<p>Comparte sector, objetivo y horarios para recibir una orientación inicial.</p>": "<p>Con tu sector, objetivo y disponibilidad podemos decirte qué opción tiene más sentido.</p>",
+        },
+        "entrenamiento-personal-providencia/index.html": {
+            "<h1>Entrenamiento personal con criterio en Providencia.</h1>": "<h1>Un plan que quepa en una semana que se mueve.</h1>",
+            '<p class="lead">Atención según sector y condiciones de acceso, con opciones presenciales, híbridas y a distancia.</p>': '<p class="lead">En Providencia la vida diaria ya implica moverse mucho. El entrenamiento no debería convertirse en otro traslado que compite con tu tiempo.</p>',
+            '<p class="hero-support">Entrenamiento personal con criterio: diagnóstico, planificación, control y seguimiento.</p>': '<p class="hero-support">Domicilio, gimnasio de edificio, una combinación híbrida o trabajo a distancia: buscamos la opción más eficiente sin perder seguimiento.</p>',
+            '<div class="kicker">Cobertura y modalidad</div><h2>Entrenar en Providencia: una modalidad que funcione con tu rutina.</h2>': '<div class="kicker">Entrenar aquí</div><h2>En Providencia, la eficiencia también forma parte del plan.</h2>',
+            '<p class="lead">Atención según sector y condiciones de acceso, con opciones presenciales, híbridas y a distancia.</p>': '<p class="lead">Si ya caminas, usas bicicleta o te mueves mucho durante el día, esa actividad también forma parte del contexto. No empezamos suponiendo que todo ocurre dentro de un gimnasio.</p>',
+            "<h2>Domicilio, edificio o distancia: elegimos lo sostenible.</h2>": "<h2>Menos fricción. Más continuidad.</h2>",
+            "<h3>Ubicación</h3><p>El servicio puede adaptarse a domicilio, gimnasio de edificio o entrenamiento a distancia.</p>": "<h3>Tu tiempo disponible</h3><p>Buscamos la frecuencia y duración que puedas sostener sin que entrenar dependa de una semana perfecta.</p>",
+            "<h3>Objetivo</h3><p>La prioridad puede ser fuerza, salud, composición corporal, rendimiento o retorno progresivo.</p>": "<h3>Tu objetivo real</h3><p>Definimos qué merece prioridad para que el tiempo que dediques tenga una intención clara.</p>",
+            "<h3>Autonomía</h3><p>La densidad urbana y los tiempos de traslado hacen especialmente útil planificar una modalidad sostenible.</p>": "<h3>El espacio que ya tienes</h3><p>Casa, edificio, gimnasio o trabajo guiado a distancia: usamos lo que haga más fácil repetir la semana siguiente.</p>",
+            "<h3>Seguimiento</h3><p>Toda modalidad incluye planificación, control y revisión, no solo ejecución de sesiones.</p>": "<h3>Una semana difícil no borra el plan</h3><p>Si cambia tu agenda, ajustamos la dosis y protegemos lo importante en vez de empezar de cero.</p>",
+            "<h2>La cobertura se revisa junto con tiempos y acceso.</h2>": "<h2>Primero revisamos qué opción te ahorra fricción sin perder calidad.</h2>",
+            '<p class="lead">IBERFIT no promete disponibilidad automática en toda la comuna. Primero se revisan sector, horarios, espacio y modalidad adecuada para proteger la calidad del servicio.</p>': '<p class="lead">Cuéntanos dónde estás, qué horarios manejas y con qué espacio cuentas. La mejor modalidad es la que te permite entrenar bien y repetirlo.</p>',
+            "<h2>Busca una opción sostenible en Providencia.</h2>": "<h2>Cuéntanos cómo es tu semana en Providencia.</h2>",
+            "<p>Comparte sector, objetivo y horarios para recibir una orientación inicial.</p>": "<p>Te orientamos hacia una forma de entrenar que no pelee con tu agenda.</p>",
+        },
+        "personal-trainer-nunoa/index.html": {
+            "<h1>Entrenamiento personal con criterio en Ñuñoa.</h1>": "<h1>Un plan que se adapte a tu barrio, tu espacio y tu semana.</h1>",
+            '<p class="lead">Atención presencial en sectores compatibles, además de modalidades híbrida y a distancia.</p>': '<p class="lead">Ñuñoa combina casas, departamentos, espacios comunes y mucha vida de barrio. No hay una sola forma correcta de entrenar aquí.</p>',
+            '<p class="hero-support">Entrenamiento personal con criterio: diagnóstico, planificación, control y seguimiento.</p>': '<p class="hero-support">Primero entendemos tu punto de partida y el entorno que realmente tienes; después decidimos contigo cómo entrenar.</p>',
+            '<div class="kicker">Cobertura y modalidad</div><h2>Entrenar en Ñuñoa: decidir el plan después de evaluar.</h2>': '<div class="kicker">Entrenar aquí</div><h2>Tu entorno puede cambiar mucho a pocas cuadras. El plan también puede adaptarse.</h2>',
+            '<p class="lead">Atención presencial en sectores compatibles, además de modalidades híbrida y a distancia.</p>': '<p class="lead">El espacio, el equipamiento y la facilidad para desplazarte importan tanto como el objetivo. El Diagnóstico IRI nos ayuda a ordenarlo antes de contratar un plan.</p>',
+            "<h2>El Diagnóstico IRI orienta la modalidad antes de contratar.</h2>": "<h2>Primero entendemos cómo puedes entrenar; después elegimos la modalidad.</h2>",
+            "<h3>Ubicación</h3><p>El Diagnóstico IRI permite definir una estrategia realista antes de contratar un plan.</p>": "<h3>Tu punto de partida</h3><p>El IRI nos ayuda a saber qué necesitas y cuánto acompañamiento aporta valor al principio.</p>",
+            "<h3>Objetivo</h3><p>La prioridad puede ser fuerza, salud, composición corporal, rendimiento o retorno progresivo.</p>": "<h3>Lo que quieres conseguir</h3><p>No todo tiene que mejorar a la vez. Elegimos prioridades que puedas notar y sostener.</p>",
+            "<h3>Autonomía</h3><p>La elección de modalidad considera espacio, equipamiento, autonomía y frecuencia posible.</p>": "<h3>Tu espacio real</h3><p>Casa, departamento, gimnasio o material básico: partimos de lo que tienes, no de lo que te falta.</p>",
+            "<h3>Seguimiento</h3><p>Toda modalidad incluye planificación, control y revisión, no solo ejecución de sesiones.</p>": "<h3>Tu ritmo semanal</h3><p>La frecuencia se construye alrededor de tu semana para que avanzar no dependa de hacerlo todo perfecto.</p>",
+            "<h2>Primero revisamos sector, objetivo y entorno.</h2>": "<h2>Antes de coordinar, queremos entender dónde y cómo podrías entrenar.</h2>",
+            '<p class="lead">IBERFIT no promete disponibilidad automática en toda la comuna. Primero se revisan sector, horarios, espacio y modalidad adecuada para proteger la calidad del servicio.</p>': '<p class="lead">Sector, espacio y horarios nos ayudan a proponerte una modalidad realista. Si lo presencial no es la mejor combinación, te lo explicamos.</p>',
+            "<h2>Define tu punto de partida en Ñuñoa.</h2>": "<h2>Cuéntanos cómo te gustaría entrenar en Ñuñoa.</h2>",
+            "<p>Comparte sector, objetivo y horarios para recibir una orientación inicial.</p>": "<p>Empezamos por entender tu contexto, no por venderte una modalidad.</p>",
+        },
+        "entrenador-personal-lo-barnechea/index.html": {
+            "<h1>Entrenamiento personal con criterio en Lo Barnechea.</h1>": "<h1>En Lo Barnechea, la logística también forma parte del plan.</h1>",
+            '<p class="lead">Cobertura presencial condicionada por sector, tiempos de desplazamiento y disponibilidad.</p>': '<p class="lead">Las distancias dentro de la comuna pueden cambiar mucho la viabilidad de una frecuencia presencial. Preferimos diseñarlo bien desde el principio.</p>',
+            '<p class="hero-support">Entrenamiento personal con criterio: diagnóstico, planificación, control y seguimiento.</p>': '<p class="hero-support">Elegimos contigo qué momentos necesitan presencia directa y cuáles pueden resolverse con trabajo guiado sin perder continuidad.</p>',
+            '<div class="kicker">Cobertura y modalidad</div><h2>Entrenar en Lo Barnechea: coordinar bien para sostener el plan.</h2>': '<div class="kicker">Entrenar aquí</div><h2>Cuando las distancias importan, la frecuencia tiene que ser inteligente.</h2>',
+            '<p class="lead">Cobertura presencial condicionada por sector, tiempos de desplazamiento y disponibilidad.</p>': '<p class="lead">Lo Barnechea combina zonas urbanas con una relación muy cercana con la montaña y grandes diferencias de desplazamiento. El plan tiene que convivir con esa realidad.</p>',
+            "<h2>La frecuencia presencial debe ser compatible con la logística.</h2>": "<h2>No todo tiene que ser presencial para sentirse acompañado.</h2>",
+            "<h3>Ubicación</h3><p>La coordinación previa es esencial para mantener puntualidad y continuidad.</p>": "<h3>Tu sector</h3><p>La ubicación cambia cuánto tiempo tiene sentido dedicar a traslados y qué frecuencia podemos sostener bien.</p>",
+            "<h3>Objetivo</h3><p>La prioridad puede ser fuerza, salud, composición corporal, rendimiento o retorno progresivo.</p>": "<h3>Tu actividad real</h3><p>Si además haces deporte al aire libre, bicicleta, trekking u otra actividad, lo incorporamos al contexto en vez de ignorarlo.</p>",
+            "<h3>Autonomía</h3><p>La modalidad híbrida puede reducir desplazamientos sin perder evaluación ni supervisión periódica.</p>": "<h3>Presencial cuando aporta</h3><p>Usamos las sesiones directas para técnica, evaluaciones y ajustes que merece la pena observar en persona.</p>",
+            "<h3>Seguimiento</h3><p>Toda modalidad incluye planificación, control y revisión, no solo ejecución de sesiones.</p>": "<h3>Continuidad entre sesiones</h3><p>El trabajo guiado mantiene el plan vivo entre encuentros y evita depender de un traslado para cada entrenamiento.</p>",
+            "<h2>Sector y desplazamiento se confirman antes de reservar.</h2>": "<h2>Antes de reservar, vemos qué frecuencia podemos sostener bien.</h2>",
+            '<p class="lead">IBERFIT no promete disponibilidad automática en toda la comuna. Primero se revisan sector, horarios, espacio y modalidad adecuada para proteger la calidad del servicio.</p>': '<p class="lead">Cuéntanos tu sector y horarios. Si una frecuencia presencial alta añade más fricción que valor, te propondremos otra combinación.</p>',
+            "<h2>Revisa viabilidad presencial en Lo Barnechea.</h2>": "<h2>Cuéntanos en qué sector de Lo Barnechea estás.</h2>",
+            "<p>Comparte sector, objetivo y horarios para recibir una orientación inicial.</p>": "<p>Con eso podemos proponerte una frecuencia realista antes de que organices tu semana.</p>",
+        },
+        "entrenador-personal-la-reina/index.html": {
+            "<h1>Entrenamiento personal con criterio en La Reina.</h1>": "<h1>Entrenar cerca, con continuidad y sin complicarlo de más.</h1>",
+            '<p class="lead">Servicio a domicilio o en espacios acordados, sujeto a sector y disponibilidad.</p>': '<p class="lead">La escala residencial y los espacios verdes de La Reina permiten pensar el entrenamiento cerca de tu vida cotidiana. Nuestro trabajo es darle estructura.</p>',
+            '<p class="hero-support">Entrenamiento personal con criterio: diagnóstico, planificación, control y seguimiento.</p>': '<p class="hero-support">Domicilio, espacio acordado o modalidad híbrida: elegimos contigo la forma que puedas repetir sin perder seguimiento.</p>',
+            '<div class="kicker">Cobertura y modalidad</div><h2>Entrenar en La Reina: aprovechar el entorno sin improvisar.</h2>': '<div class="kicker">Entrenar aquí</div><h2>La cercanía puede convertirse en una ventaja si el plan tiene dirección.</h2>',
+            '<p class="lead">Servicio a domicilio o en espacios acordados, sujeto a sector y disponibilidad.</p>': '<p class="lead">Si ya caminas, pedaleas o haces actividad al aire libre, también lo tenemos en cuenta. El entrenamiento no empieza y termina en una sesión.</p>',
+            "<h2>El espacio y tu autonomía determinan la mejor combinación.</h2>": "<h2>Aprovechamos lo que tienes cerca sin perder criterio.</h2>",
+            "<h3>Ubicación</h3><p>La evaluación inicial confirma si el entorno permite trabajar con seguridad y continuidad.</p>": "<h3>Tu espacio</h3><p>Revisamos qué se puede hacer bien en casa o en un espacio cercano antes de pedirte más equipamiento o desplazamientos.</p>",
+            "<h3>Objetivo</h3><p>La prioridad puede ser fuerza, salud, composición corporal, rendimiento o retorno progresivo.</p>": "<h3>Tu objetivo</h3><p>El entorno ayuda, pero la prioridad la marca lo que quieres mejorar y tu punto de partida.</p>",
+            "<h3>Autonomía</h3><p>Las opciones presencial e híbrida permiten combinar supervisión y autonomía según experiencia.</p>": "<h3>Tu autonomía</h3><p>Podemos combinar supervisión y trabajo por tu cuenta a medida que ganas seguridad y control.</p>",
+            "<h3>Seguimiento</h3><p>Toda modalidad incluye planificación, control y revisión, no solo ejecución de sesiones.</p>": "<h3>Lo que ocurre fuera de la sesión</h3><p>Actividad, recuperación y cambios de semana también cuentan cuando decidimos qué hacer después.</p>",
+            "<h2>Antes de reservar, validamos espacio y disponibilidad.</h2>": "<h2>Primero vemos cómo entrenar cerca sin comprometer la calidad.</h2>",
+            '<p class="lead">IBERFIT no promete disponibilidad automática en toda la comuna. Primero se revisan sector, horarios, espacio y modalidad adecuada para proteger la calidad del servicio.</p>': '<p class="lead">Cuéntanos sector, horarios y espacio disponible. Te diremos con claridad qué modalidad podemos sostener bien.</p>',
+            "<h2>Consulta cobertura y modalidad en La Reina.</h2>": "<h2>Cuéntanos cómo sería más fácil entrenar en La Reina.</h2>",
+            "<p>Comparte sector, objetivo y horarios para recibir una orientación inicial.</p>": "<p>La idea es encontrar una forma que puedas mantener, no añadir otra obligación a tu semana.</p>",
+        },
+        "entrenador-personal-penalolen/index.html": {
+            "<h1>Entrenamiento personal con criterio en Peñalolén.</h1>": "<h1>Peñalolén no se entrena igual en todos sus sectores.</h1>",
+            '<p class="lead">Cobertura selectiva según sector y logística, con alternativas híbrida y a distancia.</p>': '<p class="lead">La comuna cambia mucho entre sectores y también cambia la facilidad para desplazarse. Por eso aquí la ubicación no es un detalle: forma parte de la decisión.</p>',
+            '<p class="hero-support">Entrenamiento personal con criterio: diagnóstico, planificación, control y seguimiento.</p>': '<p class="hero-support">Primero entendemos dónde estás, qué espacio tienes y qué frecuencia es viable; después decidimos contigo la modalidad.</p>',
+            '<div class="kicker">Cobertura y modalidad</div><h2>Entrenar en Peñalolén: continuidad cuando la logística importa.</h2>': '<div class="kicker">Entrenar aquí</div><h2>Tu sector cambia la logística. No debería cambiar la calidad del seguimiento.</h2>',
+            '<p class="lead">Cobertura selectiva según sector y logística, con alternativas híbrida y a distancia.</p>': '<p class="lead">Peñalolén tiene realidades distintas entre barrios y zonas cercanas al pie de monte. No usamos una única respuesta para toda la comuna.</p>',
+            "<h2>La distancia puede cambiar la frecuencia, no el seguimiento.</h2>": "<h2>La modalidad se decide sector por sector, persona por persona.</h2>",
+            "<h3>Ubicación</h3><p>La recomendación se realiza después de revisar ubicación, objetivo y capacidad de entrenamiento autónomo.</p>": "<h3>Tu sector</h3><p>Primero vemos dónde estás y cuánto esfuerzo supone llegar o coordinar una sesión presencial.</p>",
+            "<h3>Objetivo</h3><p>La prioridad puede ser fuerza, salud, composición corporal, rendimiento o retorno progresivo.</p>": "<h3>Qué quieres conseguir</h3><p>La prioridad del plan no cambia por vivir más lejos; cambia la forma más inteligente de acompañarte.</p>",
+            "<h3>Autonomía</h3><p>Cuando la distancia limita la frecuencia presencial, las sesiones guiadas a distancia pueden sostener el plan.</p>": "<h3>Qué puedes hacer por tu cuenta</h3><p>Si puedes entrenar algunos días con guía clara, la modalidad híbrida puede proteger continuidad sin multiplicar desplazamientos.</p>",
+            "<h3>Seguimiento</h3><p>Toda modalidad incluye planificación, control y revisión, no solo ejecución de sesiones.</p>": "<h3>Seguimiento sin desaparecer</h3><p>Que una semana tenga menos presencialidad no significa perder contacto ni entrenar sin dirección.</p>",
+            "<h2>Primero revisamos sector y frecuencia posible.</h2>": "<h2>Primero revisamos tu sector y la frecuencia que de verdad podemos sostener.</h2>",
+            '<p class="lead">IBERFIT no promete disponibilidad automática en toda la comuna. Primero se revisan sector, horarios, espacio y modalidad adecuada para proteger la calidad del servicio.</p>': '<p class="lead">Cuéntanos en qué sector estás, tus horarios y dónde podrías entrenar. Con eso podemos proponerte una opción honesta antes de coordinar.</p>',
+            "<h2>Encuentra una frecuencia sostenible en Peñalolén.</h2>": "<h2>Cuéntanos en qué sector de Peñalolén estás.</h2>",
+            "<p>Comparte sector, objetivo y horarios para recibir una orientación inicial.</p>": "<p>No asumimos que toda la comuna funciona igual. Empezamos por tu realidad concreta.</p>",
+        },
+    }
+
+    for old, new in local.get(rel, {}).items():
+        text = text.replace(old, new)
+    return text
+
+
 def humanize_brand_voice(text: str, rel: str) -> str:
     """IBERFIT habla como marca: cercana, clara y profesional, nunca como marca personal."""
     common = {
@@ -716,6 +838,7 @@ def main() -> None:
         if not rel.startswith("en/"):
             text=localize_spanish(text)
             text=differentiate_local_page(text, rel)
+            text=specialize_local_page(text, rel)
             text=humanize_brand_voice(text, rel)
         if rel in {"contacto/index.html","en/contact/index.html"}:
             text=text.replace(
