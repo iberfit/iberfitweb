@@ -8,11 +8,13 @@ const browser = await chromium.launch({ headless: true });
 const findings = [];
 
 for (const route of routes) {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const page = await context.newPage();
   const response = await page.goto(base + route, { waitUntil: 'networkidle', timeout: 30000 });
   if (!response || !response.ok()) {
     findings.push({ route, id: 'http', impact: 'critical', description: response ? String(response.status()) : 'sin respuesta' });
     await page.close();
+    await context.close();
     continue;
   }
 
@@ -31,6 +33,7 @@ for (const route of routes) {
     });
   }
   await page.close();
+  await context.close();
 }
 
 await browser.close();
