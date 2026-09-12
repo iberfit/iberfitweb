@@ -263,9 +263,17 @@ for (const device of devices) {
       await pause(220);
     });
 
-    const hiddenReveal = await reviewPage.locator(".reveal:not(.visible)").count();
+    const hiddenReveal = await reviewPage.locator(".reveal").evaluateAll(nodes =>
+      nodes.filter(node => {
+        const style = getComputedStyle(node);
+        const rect = node.getBoundingClientRect();
+        const rendered = style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+        const hidden = Number.parseFloat(style.opacity || "1") < 0.95;
+        return rendered && hidden;
+      }).length
+    );
     if (hiddenReveal) {
-      add(device.name, reviewRoute, "REVEAL_NO_ACTIVADO", String(hiddenReveal));
+      add(device.name, reviewRoute, "REVEAL_NO_VISIBLE", String(hiddenReveal));
     }
 
     await reviewPage.evaluate(async () => {
@@ -284,6 +292,31 @@ for (const device of devices) {
     });
   }
   await reviewContext.close();
+
+  // Accesibilidad: con movimiento reducido ningún contenido reveal renderizado
+  // puede depender del IntersectionObserver para ser legible.
+  const reducedContext = await browser.newContext({
+    viewport: { width: device.width, height: device.height },
+    hasTouch: device.touch,
+    isMobile: device.mobile,
+    deviceScaleFactor: 1,
+    locale: "es-CL",
+    reducedMotion: "reduce",
+  });
+  const reducedPage = await reducedContext.newPage();
+  await reducedPage.goto(base + "/", { waitUntil: "networkidle", timeout: 30000 });
+  const hiddenReduced = await reducedPage.locator(".reveal").evaluateAll(nodes =>
+    nodes.filter(node => {
+      const style = getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      const rendered = style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+      return rendered && Number.parseFloat(style.opacity || "1") < 0.95;
+    }).length
+  );
+  if (hiddenReduced) {
+    add(device.name, "/", "REDUCED_MOTION_CONTENIDO_OCULTO", String(hiddenReduced));
+  }
+  await reducedContext.close();
 }
 
 await browser.close();
