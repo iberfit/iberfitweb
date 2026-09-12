@@ -1,5 +1,5 @@
 name: Calidad profesional web V6.28
-# Gate final V6.28 · accesibilidad + Lighthouse + SEO
+# Certificación candidata a800 · gate integral
 
 on:
   workflow_dispatch:
