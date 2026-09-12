@@ -163,96 +163,6 @@
     start();
   };
 
-  const countries = [
-    { code: 'CL', flag: '🇨🇱', name: 'Chile', currency: 'CLP' },
-    { code: 'CO', flag: '🇨🇴', name: 'Colombia', currency: 'COP' },
-    { code: 'MX', flag: '🇲🇽', name: 'México', currency: 'MXN' },
-    { code: 'AR', flag: '🇦🇷', name: 'Argentina', currency: 'ARS' },
-    { code: 'PE', flag: '🇵🇪', name: 'Perú', currency: 'PEN' },
-    { code: 'ES', flag: '🇪🇸', name: 'España', currency: 'EUR' },
-    { code: 'OT', flag: '🌍', name: 'Otro país', currency: 'A convenir' }
-  ];
-
-  const initCountrySelector = () => {
-    if (document.body.dataset.page !== 'online' || document.querySelector('[data-country-selector]')) return;
-    const hero = document.querySelector('.hero');
-    if (!hero) return;
-
-    const section = document.createElement('section');
-    section.className = 'country-experience';
-    section.dataset.countrySelector = '1';
-    section.innerHTML = `
-      <div class="container">
-        <div class="country-panel">
-          <div>
-            <div class="country-panel-heading">
-              <div>
-                <div class="kicker">Cobertura internacional</div>
-                <h2>Elige tu país</h2>
-              </div>
-              <p>La modalidad a distancia mantiene el mismo criterio de planificación y seguimiento. El país nos ayuda a contextualizar horarios y pago.</p>
-            </div>
-            <div class="country-grid" role="radiogroup" aria-label="País desde el que entrenas"></div>
-          </div>
-          <aside class="country-summary" aria-live="polite">
-            <div>
-              <small>País seleccionado</small>
-              <strong><span class="country-summary-flag" data-country-flag>🇨🇱</span><span data-country-name>Chile</span></strong>
-              <p>Acompañamiento a distancia disponible. La propuesta final se confirma contigo antes de contratar.</p>
-            </div>
-            <div class="country-currency"><span>Moneda local habitual</span><b data-country-currency>CLP</b></div>
-          </aside>
-        </div>
-      </div>
-    `;
-    hero.insertAdjacentElement('afterend', section);
-
-    const grid = section.querySelector('.country-grid');
-    const stored = (() => { try { return localStorage.getItem('iberfit-country-v629'); } catch (_) { return null; } })();
-    let selected = countries.some(c => c.code === stored) ? stored : 'CL';
-
-    countries.forEach(country => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'country-option';
-      button.dataset.country = country.code;
-      button.setAttribute('role', 'radio');
-      button.innerHTML = `<span class="flag" aria-hidden="true">${country.flag}</span><span class="country-name">${country.name}</span>`;
-      button.addEventListener('click', () => select(country.code, true));
-      grid.appendChild(button);
-    });
-
-    const updateWhatsApp = (country) => {
-      document.querySelectorAll('a[href*="wa.me/56944040032"]').forEach(link => {
-        if (!link.dataset.v629BaseHref) link.dataset.v629BaseHref = link.href;
-        try {
-          const url = new URL(link.dataset.v629BaseHref);
-          const original = url.searchParams.get('text') || 'Hola IBERFIT, quiero recibir orientación.';
-          url.searchParams.set('text', `${original}\nPaís: ${country.name}`);
-          link.href = url.toString();
-        } catch (_) {}
-      });
-    };
-
-    function select(code, userInitiated = false) {
-      const country = countries.find(c => c.code === code) || countries[0];
-      selected = country.code;
-      grid.querySelectorAll('.country-option').forEach(button => {
-        const active = button.dataset.country === selected;
-        button.classList.toggle('is-active', active);
-        button.setAttribute('aria-checked', String(active));
-      });
-      section.querySelector('[data-country-flag]').textContent = country.flag;
-      section.querySelector('[data-country-name]').textContent = country.name;
-      section.querySelector('[data-country-currency]').textContent = country.currency;
-      updateWhatsApp(country);
-      try { localStorage.setItem('iberfit-country-v629', selected); } catch (_) {}
-      if (userInitiated) track('country_selector_change', { country: country.code, currency: country.currency });
-    }
-
-    select(selected, false);
-  };
-
   const initLocalPages = () => {
     if (document.body.dataset.page !== 'local') return;
     const heroText = document.querySelector('.hero .hero-text');
@@ -279,7 +189,8 @@
       strip.innerHTML = `
         <div class="local-service-chip"><b>01</b><span><strong>Domicilio</strong><br>Según sector y horario.</span></div>
         <div class="local-service-chip"><b>02</b><span><strong>Gimnasio de edificio</strong><br>Si el espacio permite trabajar bien.</span></div>
-        <div class="local-service-chip"><b>03</b><span><strong>Híbrido</strong><br>Cuando mejora la continuidad.</span></div>
+        <div class="local-service-chip"><b>03</b><span><strong>Parque o zona verde</strong><br>Cuando el entorno y las condiciones permiten entrenar bien.</span></div>
+        <div class="local-service-chip"><b>04</b><span><strong>Híbrido</strong><br>Cuando mejora la continuidad.</span></div>
       `;
       meta.insertAdjacentElement('afterend', strip);
     }
@@ -289,7 +200,6 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     initReviews();
-    initCountrySelector();
     initLocalPages();
   });
 })();
