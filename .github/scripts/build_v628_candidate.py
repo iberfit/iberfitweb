@@ -12,7 +12,7 @@ SRC = ROOT / "recovery/live-production/site"
 DST = ROOT / "candidate/v628"
 
 ES_REPORT = """<div aria-label="Ejemplo ilustrativo de Informe IRI" class="report-preview report-preview-v2 reveal">
-<div class="report-head"><div><span>Ejemplo ilustrativo · datos ficticios</span><h3>Informe IRI · Línea de base</h3></div><div class="report-brand"><img alt="" aria-hidden="true" decoding="async" height="46" src="/assets/iberfit-isotipo-96.png" width="41"/></div></div>
+<div class="report-head"><div><span>Ejemplo ilustrativo · datos ficticios</span><h3>Informe IRI · Línea de base</h3></div><div class="report-brand"><img alt="" aria-hidden="true" decoding="async" height="46" src="/assets/iberfit-isotipo-oficial.png" width="41"/></div></div>
 <div class="report-profile report-profile-v2"><div class="report-status"><small>Evaluación inicial</small><strong>Línea de base</strong><span>Punto de partida para futuras revisiones</span></div><div class="report-profile-copy"><span class="report-label">Objetivo de ejemplo</span><h4>Recuperar constancia y desarrollar fuerza</h4><div class="report-facts"><span><b>3</b> días disponibles</span><span><b>Intermedia</b> experiencia</span><span><b>4 semanas</b> primera revisión</span></div></div></div>
 <div class="report-metrics report-metrics-v2"><div class="report-metric report-metric-priority"><div><span>Movilidad y control</span><strong>Prioridad inicial</strong></div><small>La calidad de movimiento orienta selección, rango y progresión de ejercicios.</small></div><div class="report-metric"><div><span>Fuerza por patrones</span><strong>Base funcional</strong></div><small>Se registra por patrones y protocolo, sin resumir dimensiones distintas en una sola cifra.</small></div><div class="report-metric"><div><span>Acondicionamiento</span><strong>Referencia inicial</strong></div><small>La respuesta al esfuerzo y la recuperación se interpretan según el protocolo utilizado.</small></div><div class="report-metric"><div><span>Composición corporal</span><strong>Referencia</strong></div><small>La bioimpedancia se interpreta como una medición contextual y no como un diagnóstico médico.</small></div></div>
 <div aria-label="Ejemplo ilustrativo de composición corporal" class="report-bio"><div class="report-bio-head"><span>Composición corporal</span><small>Valores ficticios de bioimpedancia</small></div><div class="report-bio-grid"><div><small>Peso</small><strong>72,4 kg</strong></div><div><small>IMC</small><strong>24,1</strong></div><div><small>Grasa corporal</small><strong>16,8 %</strong></div><div><small>Masa muscular</small><strong>55,1 kg</strong></div><div><small>Agua corporal</small><strong>59,0 %</strong></div><div><small>Grasa visceral</small><strong>6</strong></div></div><p>Valores ilustrativos. La interpretación final depende de las condiciones de medición, del contexto y del conjunto de la evaluación IRI.</p></div>
@@ -22,7 +22,7 @@ ES_REPORT = """<div aria-label="Ejemplo ilustrativo de Informe IRI" class="repor
 </div>"""
 
 EN_REPORT = """<div aria-label="Illustrative IRI Report" class="report-preview report-preview-v2 reveal">
-<div class="report-head"><div><span>Illustrative case · fictional data</span><h3>IRI Report · Baseline</h3></div><div class="report-brand"><img alt="" aria-hidden="true" decoding="async" height="46" src="/assets/iberfit-isotipo-96.png" width="41"/></div></div>
+<div class="report-head"><div><span>Illustrative case · fictional data</span><h3>IRI Report · Baseline</h3></div><div class="report-brand"><img alt="" aria-hidden="true" decoding="async" height="46" src="/assets/iberfit-isotipo-oficial.png" width="41"/></div></div>
 <div class="report-profile report-profile-v2"><div class="report-status"><small>Initial assessment</small><strong>Baseline</strong><span>Starting point for future reviews</span></div><div class="report-profile-copy"><span class="report-label">Example goal</span><h4>Rebuild consistency and develop strength</h4><div class="report-facts"><span><b>3</b> available days</span><span><b>Intermediate</b> experience</span><span><b>4 weeks</b> first review</span></div></div></div>
 <div class="report-metrics report-metrics-v2"><div class="report-metric report-metric-priority"><div><span>Mobility and control</span><strong>Initial priority</strong></div><small>Movement quality guides exercise selection, range and progression.</small></div><div class="report-metric"><div><span>Strength by movement pattern</span><strong>Functional baseline</strong></div><small>Recorded by movement pattern and protocol, keeping distinct dimensions separate.</small></div><div class="report-metric"><div><span>Conditioning</span><strong>Initial reference</strong></div><small>Response to effort and recovery are interpreted according to the protocol used.</small></div><div class="report-metric"><div><span>Body composition</span><strong>Reference</strong></div><small>Bioimpedance is interpreted in context and is not presented as a medical diagnosis.</small></div></div>
 <div aria-label="Illustrative body composition snapshot" class="report-bio"><div class="report-bio-head"><span>Body composition</span><small>Illustrative bioimpedance values</small></div><div class="report-bio-grid"><div><small>Weight</small><strong>72.4 kg</strong></div><div><small>BMI</small><strong>24.1</strong></div><div><small>Body fat</small><strong>16.8%</strong></div><div><small>Muscle mass</small><strong>55.1 kg</strong></div><div><small>Body water</small><strong>59.0%</strong></div><div><small>Visceral fat</small><strong>6</strong></div></div><p>Illustrative values only. Final interpretation depends on measurement conditions, context and the full IRI assessment.</p></div>
@@ -255,7 +255,15 @@ def main() -> None:
     with new_css.open("a",encoding="utf-8") as fh:
         fh.write("\n\n"+CSS_ADD)
 
-    for name in ("iri-report-preview-es-1448.webp","iri-report-preview-es-768.webp","iri-report-preview-es.png"):
+    for name in (
+        "iri-report-preview-es-1448.webp",
+        "iri-report-preview-es-768.webp",
+        "iri-report-preview-es.png",
+        "iberfit-isotipo-96.png",
+        "iberfit-isotipo-192.png",
+        "iberfit-isotipo-verde-96.png",
+        "iberfit-isotipo-verde-192.png",
+    ):
         path=DST/"assets"/name
         if path.exists(): path.unlink()
 
