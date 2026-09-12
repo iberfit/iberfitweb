@@ -153,7 +153,20 @@ p{text-wrap:pretty}
   .modality-row,.btn{transition:none!important}
 }
 .choice-chip{min-height:48px}
-@media(max-width:720px){.device-dock a{min-width:44px;min-height:52px}}
+@media(max-width:720px){
+  .device-dock{
+    opacity:0;
+    transform:translateY(calc(100% + 1.2rem));
+    pointer-events:none;
+    transition:opacity .22s ease,transform .22s ease;
+  }
+  .device-dock.is-visible{
+    opacity:1;
+    transform:translateY(0);
+    pointer-events:auto;
+  }
+  .device-dock a{min-width:44px;min-height:52px}
+}
 @media(max-width:430px){input,select,textarea{font-size:16px}}
 @media(hover:none){.btn:hover{transform:none}}
 @media(prefers-reduced-motion:reduce){
@@ -1035,6 +1048,9 @@ def main() -> None:
     app_text = app_text.replace("/assets/iberfit-isotipo-192.png","/assets/iberfit-isotipo-oficial.png")
     app_text += r"""
 ;document.addEventListener('DOMContentLoaded',()=>{const form=document.querySelector('[data-orientador-form]');if(!form)return;const isEn=(document.documentElement.lang||'').toLowerCase().startsWith('en');const status=form.querySelector('[data-orientador-status]');const steps=Array.from(form.querySelectorAll('[data-step]'));const result=form.querySelector('[data-orientador-result]');const copy=isEn?{step:'Step',of:'of',choose:'Choose a main goal to continue.',ready:'Your initial guidance is ready. Review it before opening WhatsApp.'}:{step:'Paso',of:'de',choose:'Selecciona un objetivo principal para continuar.',ready:'Tu orientación inicial está preparada. Revísala antes de abrir WhatsApp.'};const announce=message=>{if(status)status.textContent=message};const syncSteps=()=>{let activeIndex=0;steps.forEach((step,index)=>{const active=step.classList.contains('active');step.setAttribute('aria-hidden',String(!active));if(active)activeIndex=index});const active=steps[activeIndex];if(active?.classList.contains('active')){const title=active.querySelector('h3')?.textContent?.trim()||'';announce(`${copy.step} ${activeIndex+1} ${copy.of} ${steps.length}: ${title}`)}};const observer=new MutationObserver(syncSteps);steps.forEach(step=>observer.observe(step,{attributes:true,attributeFilter:['class']}));if(result){result.setAttribute('role','region');result.setAttribute('aria-live','polite');new MutationObserver(()=>{if(!result.hidden)announce(copy.ready)}).observe(result,{attributes:true,attributeFilter:['hidden','class']})}form.addEventListener('click',event=>{if(event.target.closest('[data-next-step]'))setTimeout(()=>{if(steps[0]?.classList.contains('active')&&!form.elements.objetivo?.value)announce(copy.choose)},0)});form.querySelectorAll('select').forEach(select=>{const grid=select.nextElementSibling;if(!grid?.classList.contains('choice-grid'))return;const buttons=Array.from(grid.querySelectorAll('.choice-chip'));const syncChoice=()=>buttons.forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.value===select.value)));buttons.forEach(button=>button.setAttribute('aria-pressed','false'));select.addEventListener('change',syncChoice);syncChoice()});syncSteps()});
+"""
+    app_text += r"""
+;document.addEventListener('DOMContentLoaded',()=>{const dock=document.querySelector('.device-dock');if(!dock)return;const hero=document.querySelector('.hero,.page-hero');let ticking=false;const update=()=>{const threshold=hero?Math.min(140,Math.max(72,hero.offsetHeight*.18)):80;dock.classList.toggle('is-visible',window.scrollY>threshold);ticking=false};const requestUpdate=()=>{if(!ticking){ticking=true;requestAnimationFrame(update)}};update();addEventListener('scroll',requestUpdate,{passive:true});addEventListener('resize',requestUpdate,{passive:true})});
 """
     app_js.write_text(app_text,encoding="utf-8")
     old_app_js.unlink()
