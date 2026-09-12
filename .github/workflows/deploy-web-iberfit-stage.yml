@@ -52,6 +52,9 @@ jobs:
           test -s candidate/v628/404.html
           test -s candidate/v628/sitemap.xml
           test -s candidate/v628/robots.txt
+          test -s candidate/v628/llms.txt
+          grep -q '^# IBERFIT' candidate/v628/llms.txt
+          grep -q 'https://iberfit.cl/sitemap.xml' candidate/v628/llms.txt
           test -s candidate/v628/assets/styles.v628.css
           test -s candidate/v628/assets/app.v628.js
           test -s candidate/v628/assets/analytics.v628.js
@@ -99,12 +102,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for path in / /diagnostico-iri/ /contacto/ /en/ /sitemap.xml /robots.txt; do
+          for path in / /diagnostico-iri/ /contacto/ /en/ /sitemap.xml /robots.txt /llms.txt; do
             curl --fail --silent --show-error --location --retry 8 --retry-all-errors               "${STAGE_URL}${path}" -o "/tmp/web-iberfit-$(echo "$path" | tr '/.' '__').out"
           done
           grep -q 'IBERFIT' /tmp/web-iberfit-__.out
           grep -q 'https://iberfit.cl/' /tmp/web-iberfit-_sitemap_xml.out
           grep -q 'Sitemap: https://iberfit.cl/sitemap.xml' /tmp/web-iberfit-_robots_txt.out
+          grep -q '^# IBERFIT' /tmp/web-iberfit-_llms_txt.out
+          grep -q 'https://iberfit.cl/sitemap.xml' /tmp/web-iberfit-_llms_txt.out
 
       - name: QA multidispositivo contra Cloudflare real
         shell: bash
