@@ -1,19 +1,20 @@
-name: Calidad profesional web V6.28
+name: Calidad profesional web V6.30
 # Gate integral: marca, estructura, enlaces, accesibilidad, rendimiento, seguridad y SEO.
-# Gate final conjunto V6.28 · SHA único
+# Gate final conjunto V6.30 · SHA único
 
 on:
   workflow_dispatch:
     inputs:
       target_sha:
-        description: "SHA exacto de la candidata V6.28 a certificar"
+        description: "SHA exacto de la candidata V6.30 a certificar"
         required: false
         type: string
   push:
     branches:
-      - work/web-v6-28-recuperacion
+      - work/web-v6-30-hardening
     paths:
       - "candidate/v628/**"
+      - "llms.txt"
       - "brand/Isotipo_IBERFIT_Oficial.png"
       - ".github/scripts/qa_v628_accesibilidad.mjs"
       - ".github/scripts/qa_v628_profesional.py"
@@ -24,7 +25,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: calidad-web-v628
+  group: calidad-web-v630
   cancel-in-progress: true
 
 jobs:
@@ -187,6 +188,15 @@ jobs:
           fs.copyFileSync(`${prefix}-${medianIndex}.json`,`${prefix}.json`);
           if(fail) process.exit(1);
           NODE
+
+      - name: Compatibilidad y descubrimiento por IA
+        run: |
+          set -euo pipefail
+          test -s candidate/v628/llms.txt
+          grep -q '^# IBERFIT' candidate/v628/llms.txt
+          grep -q 'Diagnóstico IRI' candidate/v628/llms.txt
+          grep -q 'https://iberfit.cl/sitemap.xml' candidate/v628/llms.txt
+          grep -q 'https://app.iberfit.cl/' candidate/v628/llms.txt
 
       - name: Seguridad estática
         run: |
