@@ -1,0 +1,51 @@
+name: QA multidispositivo web V6.28
+
+on:
+  push:
+    branches:
+      - work/web-v6-28-recuperacion
+    paths:
+      - "candidate/v628/**"
+      - ".github/scripts/qa_v628_dispositivos.mjs"
+      - ".github/workflows/qa-v628-dispositivos.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  dispositivos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Descargar rama
+        uses: actions/checkout@v4
+
+      - name: Preparar navegador
+        run: |
+          npm install --no-save playwright@1.62.1
+          npx playwright install --with-deps chromium
+
+      - name: Servir candidata
+        run: |
+          python -m http.server 4173 --directory candidate/v628 > /tmp/iberfit-web-server.log 2>&1 &
+          echo $! > /tmp/iberfit-web-server.pid
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/iberfit-web-server.log
+          exit 1
+
+      - name: Probar móvil, tableta y escritorio
+        run: node .github/scripts/qa_v628_dispositivos.mjs
+
+      - name: Guardar evidencia visual
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencia-v628-dispositivos
+          path: evidence/v628-devices
+          if-no-files-found: warn
+          retention-days: 30
