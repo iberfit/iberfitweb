@@ -266,16 +266,26 @@ for (const device of devices) {
     await reviewPage.waitForTimeout(180);
 
     const hiddenReveal = await reviewPage.locator(".reveal").evaluateAll(nodes =>
-      nodes.filter(node => {
+      nodes.flatMap((node, index) => {
         const style = getComputedStyle(node);
         const rect = node.getBoundingClientRect();
         const rendered = style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
         const hidden = Number.parseFloat(style.opacity || "1") < 0.95;
-        return rendered && hidden;
-      }).length
+        if (!(rendered && hidden)) return [];
+        return [{
+          index,
+          tag: node.tagName.toLowerCase(),
+          id: node.id || "",
+          className: String(node.className || "").slice(0,120),
+          text: String(node.textContent || "").replace(/\s+/g," ").trim().slice(0,140),
+          opacity: style.opacity,
+          top: Math.round(rect.top),
+          height: Math.round(rect.height),
+        }];
+      })
     );
-    if (hiddenReveal) {
-      add(device.name, reviewRoute, "REVEAL_NO_VISIBLE", String(hiddenReveal));
+    if (hiddenReveal.length) {
+      add(device.name, reviewRoute, "REVEAL_NO_VISIBLE", JSON.stringify(hiddenReveal));
     }
 
     await reviewPage.evaluate(() => {
