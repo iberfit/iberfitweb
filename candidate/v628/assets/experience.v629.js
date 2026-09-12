@@ -40,6 +40,9 @@
     const delay = 2000;
 
     slides.forEach((slide, index) => {
+      // El carrusel controla por completo visibilidad/opacidad. Retirar las
+      // clases de reveal evita que dos sistemas de transición compitan entre sí.
+      slide.classList.remove('reveal', 'visible');
       slide.classList.add('review-slide');
       slide.dataset.reviewIndex = String(index);
       slide.setAttribute('role', 'group');
