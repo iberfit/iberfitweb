@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "web-iberfit",
+  "compatibility_date": "2026-09-12",
+  "workers_dev": true,
+  "preview_urls": true,
+  "assets": {
+    "directory": "./candidate/v628",
+    "not_found_handling": "404-page",
+    "html_handling": "auto-trailing-slash"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1,
+    "traces": {
+      "enabled": true
+    }
+  }
+}
