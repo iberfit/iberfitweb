@@ -135,7 +135,7 @@ p{text-wrap:pretty}
 @media(max-width:820px){
   .hero-grid-no-media .hero-text{padding-left:1.15rem}
   .origin-section h2{max-width:14ch}
-  .brand-journey{grid-template-columns:1fr}
+  .brand-journey{grid-template-columns:repeat(2,minmax(0,1fr))}
   .brand-journey article{min-height:0}
   .brand-journey span{margin-bottom:.75rem}
 }
@@ -147,7 +147,7 @@ p{text-wrap:pretty}
   .hero-grid-no-media .hero-actions .btn{width:100%}
   .section{padding-block:4rem}
   .origin-section .founder-copy{padding-left:1rem}
-  .brand-journey{border-radius:18px}
+  .brand-journey{grid-template-columns:1fr;border-radius:18px}
 }
 @media(prefers-reduced-motion:reduce){
   .modality-row,.btn{transition:none!important}
