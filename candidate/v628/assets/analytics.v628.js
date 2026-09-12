@@ -17,7 +17,11 @@
   };
 
   const parse = value => { try { return JSON.parse(value); } catch (_) { return null; } };
-  let consent = parse(localStorage.getItem(storageKey));
+  const safeStorage = {
+    get(key){ try { return window.localStorage.getItem(key); } catch (_) { return null; } },
+    set(key,value){ try { window.localStorage.setItem(key,value); return true; } catch (_) { return false; } }
+  };
+  let consent = parse(safeStorage.get(storageKey));
   if (!consent || consent.version !== cfg.consentVersion) consent = null;
   let gaLoaded = false;
   let metaLoaded = false;
@@ -112,7 +116,7 @@
       marketing:Boolean(marketing),
       updatedAt:new Date().toISOString()
     };
-    localStorage.setItem(storageKey, JSON.stringify(consent));
+    safeStorage.set(storageKey, JSON.stringify(consent));
     applyConsent();
     document.querySelector('.consent-banner')?.remove();
     document.querySelector('.consent-modal')?.remove();

@@ -14,11 +14,11 @@
   Cache-Control: public, max-age=31536000, immutable
   Content-Type: text/css; charset=utf-8
 
-/assets/app.v623.js
+/assets/app.v628.js
   Cache-Control: public, max-age=31536000, immutable
   Content-Type: text/javascript; charset=utf-8
 
-/assets/analytics.v6211.js
+/assets/analytics.v628.js
   Cache-Control: public, max-age=31536000, immutable
   Content-Type: text/javascript; charset=utf-8
 
