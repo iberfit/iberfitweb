@@ -1,5 +1,5 @@
 name: QA multidispositivo web V6.28
-# Certificación final de isotipo oficial 2026-09-11
+# Gate final V6.28 · marca oficial + contraste AA
 
 on:
   workflow_dispatch:
