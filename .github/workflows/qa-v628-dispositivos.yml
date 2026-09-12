@@ -30,7 +30,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Descargar candidata actual
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.target_sha || github.sha }}
 
@@ -57,7 +57,7 @@ jobs:
 
       - name: Guardar evidencia visual
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: evidencia-v628-dispositivos
           path: evidence/v628-devices
