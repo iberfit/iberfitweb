@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - work/web-v6-30-hardening
+    paths-ignore:
+      - '.github/scripts/monitor_produccion.py'
+      - '.github/workflows/monitor-produccion.yml'
+      - '.github/scripts/audit_live_visual.mjs'
+      - '.github/workflows/audit-live-ai.yml'
+      - 'llms.txt'
   workflow_dispatch:
 
 permissions:

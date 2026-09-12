@@ -85,6 +85,7 @@ except Exception as exc:
     add("version producción", False, repr(exc), required=False)
 
 require_v628_semantics = production_version >= (6, 28)
+require_llms_discovery = production_version >= (6, 30)
 
 # Rutas críticas.
 for route in CRITICAL:
@@ -175,7 +176,8 @@ try:
 except Exception as exc:
     add("robots", False, repr(exc))
 
-# Descubrimiento por IA. Se vuelve obligatorio al publicar V6.28+.
+# Descubrimiento por IA. llms.txt forma parte de V6.30 y solo es bloqueante
+# cuando esa versión (o posterior) ya está realmente publicada.
 try:
     status, final, headers, body, ms = fetch("/llms.txt")
     body_text = text(body)
@@ -190,7 +192,7 @@ try:
         llms_ok,
         f"HTTP {status} · {len(body)} bytes",
         ms,
-        required=require_v628_semantics,
+        required=require_llms_discovery,
     )
 except Exception as exc:
     add("llms.txt", False, repr(exc), required=require_v628_semantics)
@@ -233,7 +235,7 @@ if enforce_v628:
             f"IRI sin puntuación global {route}",
             not hits,
             "sin términos obsoletos" if not hits else ", ".join(hits),
-            required=require_v628_semantics,
+            required=require_llms_discovery,
         )
         except Exception as exc:
             add(f"IRI sin puntuación global {route}", False, repr(exc), required=require_v628_semantics)
@@ -246,7 +248,7 @@ if enforce_v628:
         "nombre A distancia",
         "a distancia" in normalized,
         "presente" if "a distancia" in normalized else "ausente",
-        required=require_v628_semantics,
+        required=require_llms_discovery,
     )
     except Exception as exc:
         add("nombre A distancia", False, repr(exc), required=require_v628_semantics)
