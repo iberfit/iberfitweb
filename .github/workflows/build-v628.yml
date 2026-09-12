@@ -6,6 +6,7 @@ on:
       - work/web-v6-28-recuperacion
     paths:
       - ".github/scripts/build_v628_candidate.py"
+      - ".github/scripts/postprocess_v628_dock_a11y.py"
       - ".github/workflows/build-v628.yml"
 
 permissions:
@@ -30,6 +31,9 @@ jobs:
 
       - name: Generar V6.28 desde producción certificada
         run: python .github/scripts/build_v628_candidate.py
+
+      - name: Reforzar semántica del dock móvil
+        run: python .github/scripts/postprocess_v628_dock_a11y.py
 
       - name: Restaurar isotipo oficial desde fuente canónica
         run: |
