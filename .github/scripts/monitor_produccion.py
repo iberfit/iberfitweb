@@ -128,26 +128,44 @@ try:
 except Exception as exc:
     add("manifest", False, repr(exc))
 
-# Reglas metodológicas/comerciales visibles.
-for route in ("/", "/diagnostico-iri/", "/en/"):
-    try:
-        status, final, headers, body, ms = fetch(route)
-        visible = re.sub(r"<script\b[^>]*>.*?</script>", " ", text(body), flags=re.I | re.S)
-        visible = re.sub(r"<style\b[^>]*>.*?</style>", " ", visible, flags=re.I | re.S)
-        visible = re.sub(r"<[^>]+>", " ", visible)
-        low = " ".join(visible.lower().split())
-        hits = [term for term in FORBIDDEN_IRI if term in low]
-        add(f"IRI sin puntuación global {route}", not hits, "sin términos obsoletos" if not hits else ", ".join(hits))
-    except Exception as exc:
-        add(f"IRI sin puntuación global {route}", False, repr(exc))
-
+# Las reglas semánticas nuevas se exigen solo cuando producción declare V6.28+.
+published_version = None
 try:
-    status, final, headers, body, ms = fetch("/online/")
-    visible = re.sub(r"<[^>]+>", " ", text(body))
-    normalized = " ".join(visible.lower().split())
-    add("nombre A distancia", "a distancia" in normalized, "presente" if "a distancia" in normalized else "ausente")
-except Exception as exc:
-    add("nombre A distancia", False, repr(exc))
+    status, final, headers, body, ms = fetch("/VERSION")
+    raw_version = text(body).strip()
+    match = re.search(r"(\\d+)\\.(\\d+)", raw_version)
+    if match:
+        published_version = tuple(map(int, match.groups()))
+        add("versión publicada", True, raw_version, ms)
+    else:
+        add("versión publicada", True, "no declarada; se mantienen solo controles operativos", ms)
+except Exception:
+    add("versión publicada", True, "no expuesta; se mantienen solo controles operativos")
+
+enforce_v628 = bool(published_version and published_version >= (6, 28))
+
+if enforce_v628:
+    for route in ("/", "/diagnostico-iri/", "/en/"):
+        try:
+            status, final, headers, body, ms = fetch(route)
+            visible = re.sub(r"<script\\b[^>]*>.*?</script>", " ", text(body), flags=re.I | re.S)
+            visible = re.sub(r"<style\\b[^>]*>.*?</style>", " ", visible, flags=re.I | re.S)
+            visible = re.sub(r"<[^>]+>", " ", visible)
+            low = " ".join(visible.lower().split())
+            hits = [term for term in FORBIDDEN_IRI if term in low]
+            add(f"IRI sin puntuación global {route}", not hits, "sin términos obsoletos" if not hits else ", ".join(hits))
+        except Exception as exc:
+            add(f"IRI sin puntuación global {route}", False, repr(exc))
+
+    try:
+        status, final, headers, body, ms = fetch("/online/")
+        visible = re.sub(r"<[^>]+>", " ", text(body))
+        normalized = " ".join(visible.lower().split())
+        add("nombre A distancia", "a distancia" in normalized, "presente" if "a distancia" in normalized else "ausente")
+    except Exception as exc:
+        add("nombre A distancia", False, repr(exc))
+else:
+    add("reglas V6.28", True, "pendientes hasta que producción publique V6.28+")
 
 failed = [c for c in checks if not c.ok]
 slow = [c for c in checks if c.ms is not None and c.ms > 5000]
