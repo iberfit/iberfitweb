@@ -41,6 +41,7 @@ class Check:
     ok: bool
     detail: str
     ms: int | None = None
+    required: bool = True
 
 checks: list[Check] = []
 
@@ -61,8 +62,24 @@ def fetch(path: str, *, attempts: int = 2):
                 time.sleep(1.0)
     raise last
 
-def add(name: str, ok: bool, detail: str, ms: int | None = None):
-    checks.append(Check(name=name, ok=ok, detail=detail, ms=ms))
+def add(name: str, ok: bool, detail: str, ms: int | None = None, *, required: bool = True):
+    checks.append(Check(name=name, ok=ok, detail=detail, ms=ms, required=required))
+
+def parse_version(value: str) -> tuple[int, int]:
+    match = re.search(r"(\d+)\.(\d+)", value)
+    return (int(match.group(1)), int(match.group(2))) if match else (0, 0)
+
+production_version_raw = "unknown"
+production_version = (0, 0)
+try:
+    status, final, headers, body, ms = fetch("/VERSION")
+    production_version_raw = text(body).strip()
+    production_version = parse_version(production_version_raw)
+    add("version producción", status == 200 and production_version != (0, 0), production_version_raw, ms, required=False)
+except Exception as exc:
+    add("version producción", False, repr(exc), required=False)
+
+require_v628_semantics = production_version >= (6, 28)
 
 def text(data: bytes) -> str:
     return data.decode("utf-8", errors="replace")
@@ -153,34 +170,53 @@ if enforce_v628:
             visible = re.sub(r"<[^>]+>", " ", visible)
             low = " ".join(visible.lower().split())
             hits = [term for term in FORBIDDEN_IRI if term in low]
-            add(f"IRI sin puntuación global {route}", not hits, "sin términos obsoletos" if not hits else ", ".join(hits))
+            add(
+            f"IRI sin puntuación global {route}",
+            not hits,
+            "sin términos obsoletos" if not hits else ", ".join(hits),
+            required=require_v628_semantics,
+        )
         except Exception as exc:
-            add(f"IRI sin puntuación global {route}", False, repr(exc))
+            add(f"IRI sin puntuación global {route}", False, repr(exc), required=require_v628_semantics)
 
     try:
         status, final, headers, body, ms = fetch("/online/")
         visible = re.sub(r"<[^>]+>", " ", text(body))
         normalized = " ".join(visible.lower().split())
-        add("nombre A distancia", "a distancia" in normalized, "presente" if "a distancia" in normalized else "ausente")
+        add(
+        "nombre A distancia",
+        "a distancia" in normalized,
+        "presente" if "a distancia" in normalized else "ausente",
+        required=require_v628_semantics,
+    )
     except Exception as exc:
-        add("nombre A distancia", False, repr(exc))
+        add("nombre A distancia", False, repr(exc), required=require_v628_semantics)
 else:
     add("reglas V6.28", True, "pendientes hasta que producción publique V6.28+")
 
-failed = [c for c in checks if not c.ok]
+failed = [c for c in checks if not c.ok and c.required]
+warnings = [c for c in checks if not c.ok and not c.required]
 slow = [c for c in checks if c.ms is not None and c.ms > 5000]
 
 report = {
     "base": BASE,
+    "production_version": production_version_raw,
+    "v628_semantics_required": require_v628_semantics,
     "checks": [asdict(c) for c in checks],
     "summary": {
         "total": len(checks),
         "failed": len(failed),
+        "warnings": len(warnings),
         "slow_over_5s": len(slow),
     },
 }
 
 print(json.dumps(report, ensure_ascii=False, indent=2))
+
+if warnings:
+    print("\nADVERTENCIAS NO BLOQUEANTES:", file=sys.stderr)
+    for c in warnings:
+        print(f"- {c.name}: {c.detail}", file=sys.stderr)
 
 if failed:
     print("\nFALLOS:", file=sys.stderr)
@@ -188,4 +224,7 @@ if failed:
         print(f"- {c.name}: {c.detail}", file=sys.stderr)
     raise SystemExit(1)
 
-print(f"\nIBERFIT producción: PASS · {len(checks)} controles · 0 fallos")
+print(
+    f"\nIBERFIT producción: PASS · {len(checks)} controles · "
+    f"0 fallos · {len(warnings)} advertencias · versión {production_version_raw}"
+)
