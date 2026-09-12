@@ -64,25 +64,36 @@ jobs:
           ];
           const failures = [];
           const notes = [];
-
-          const assert = (condition, message) => {
-            if (!condition) throw new Error(message);
-          };
+          const assert = (condition, message) => { if (!condition) throw new Error(message); };
 
           async function openPage(context, path, label) {
             const page = await context.newPage();
             const errors = [];
             page.on('pageerror', e => errors.push('pageerror: ' + e.message));
-            page.on('console', m => {
-              if (m.type() === 'error') errors.push('console: ' + m.text());
-            });
+            page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
             const response = await page.goto(base + path, { waitUntil: 'networkidle' });
             assert(response && response.ok(), label + ': HTTP no OK');
-            await page.waitForTimeout(450);
+            await page.waitForTimeout(350);
             const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
             assert(overflow <= 2, label + ': overflow horizontal ' + overflow + 'px');
             if (errors.length) throw new Error(label + ': ' + errors.join(' | '));
             return page;
+          }
+
+          async function verifyCarousel(page, label) {
+            await page.locator('.review-carousel-shell').waitFor();
+            assert(await page.locator('.review-slide').count() === 2, label + ': deben existir 2 reseñas reales');
+            assert(await page.locator('.review-slide.is-active').count() === 1, label + ': debe haber una sola reseña activa');
+            assert(await page.locator('.review-source-row a[href*="google"]').count() === 0, label + ': las reseñas no deben sacar al usuario a Google');
+            const first = await page.locator('.review-slide.is-active').getAttribute('data-review-index');
+            await page.waitForTimeout(2250);
+            const second = await page.locator('.review-slide.is-active').getAttribute('data-review-index');
+            assert(first !== second, label + ': el carrusel no avanzó a los 2 segundos');
+            await page.locator('[data-review-pause]').click();
+            const paused = await page.locator('.review-slide.is-active').getAttribute('data-review-index');
+            await page.waitForTimeout(2250);
+            const pausedAfter = await page.locator('.review-slide.is-active').getAttribute('data-review-index');
+            assert(paused === pausedAfter, label + ': la pausa no detuvo el carrusel');
           }
 
           (async () => {
@@ -91,35 +102,25 @@ jobs:
               const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
 
               const home = await openPage(desktop, '/', 'home desktop');
-              await home.locator('.review-carousel-shell').waitFor();
-              assert(await home.locator('.review-slide').count() === 2, 'home: deben existir 2 reseñas reales');
-              assert(await home.locator('.review-slide.is-active').count() === 1, 'home: debe haber una sola reseña activa');
-              assert(await home.locator('.review-source-row a[href*="google"]').count() === 0, 'home: reseñas no deben enviar a Google');
-              const first = await home.locator('.review-slide.is-active').getAttribute('data-review-index');
-              await home.waitForTimeout(2250);
-              const second = await home.locator('.review-slide.is-active').getAttribute('data-review-index');
-              assert(first !== second, 'home: el carrusel no avanzó a los 2 s');
-              await home.locator('[data-review-pause]').click();
-              const paused = await home.locator('.review-slide.is-active').getAttribute('data-review-index');
-              await home.waitForTimeout(2250);
-              const pausedAfter = await home.locator('.review-slide.is-active').getAttribute('data-review-index');
-              assert(paused === pausedAfter, 'home: la pausa no detuvo el carrusel');
+              await verifyCarousel(home, 'home');
               await home.screenshot({ path: '/tmp/v629-evidence/home-desktop.png', fullPage: true });
               notes.push('home: carrusel 2s + pausa + sin salida Google PASS');
               await home.close();
 
+              const about = await openPage(desktop, '/sobre-iberfit/', 'sobre IBERFIT desktop');
+              const journeyNames = await about.locator('.brand-journey article strong').allTextContents();
+              const journeyFlags = await about.locator('.brand-journey .journey-flag').allTextContents();
+              assert(JSON.stringify(journeyNames.map(x => x.trim())) === JSON.stringify(['España','Alemania','España','Chile']), 'sobre: recorrido de países incorrecto: ' + JSON.stringify(journeyNames));
+              assert(JSON.stringify(journeyFlags.map(x => x.trim())) === JSON.stringify(['🇪🇸','🇩🇪','🇪🇸','🇨🇱']), 'sobre: banderas incorrectas: ' + JSON.stringify(journeyFlags));
+              await verifyCarousel(about, 'sobre');
+              await about.screenshot({ path: '/tmp/v629-evidence/sobre-desktop.png', fullPage: true });
+              notes.push('sobre: España→Alemania→España→Chile con banderas + carrusel PASS');
+              await about.close();
+
               const online = await openPage(desktop, '/online/', 'online desktop');
-              await online.locator('[data-country-selector]').waitFor();
-              assert(await online.locator('.country-option').count() === 7, 'online: selector debe tener 7 opciones');
-              assert(await online.locator('.country-option .flag').count() === 7, 'online: faltan banderas');
-              await online.locator('.country-option[data-country="ES"]').click();
-              assert((await online.locator('[data-country-name]').textContent()).trim() === 'España', 'online: España no quedó seleccionada');
-              assert((await online.locator('[data-country-currency]').textContent()).trim() === 'EUR', 'online: EUR no se mostró');
-              const waHref = await online.locator('a[href*="wa.me/56944040032"]').first().getAttribute('href');
-              const waText = new URL(waHref).searchParams.get('text') || '';
-              assert(waText.includes('País: España'), 'online: WhatsApp no conserva el país seleccionado');
+              assert(await online.locator('[data-country-selector]').count() === 0, 'online: no debe existir selector de países');
               await online.screenshot({ path: '/tmp/v629-evidence/online-desktop.png', fullPage: true });
-              notes.push('online: 7 países + banderas + contexto EUR + WhatsApp PASS');
+              notes.push('online: sin selector de países artificial PASS');
               await online.close();
 
               for (const [route, place] of localRoutes) {
@@ -127,44 +128,52 @@ jobs:
                 await page.locator('.local-place-badge').waitFor();
                 const badge = (await page.locator('.local-place-badge strong').textContent()).trim();
                 assert(badge === place, route + ': badge esperado ' + place + ', obtenido ' + badge);
-                assert(await page.locator('.local-service-chip').count() === 3, route + ': faltan 3 opciones de cobertura');
+                assert(await page.locator('.local-service-chip').count() === 4, route + ': deben existir 4 opciones de cobertura');
+                const chips = (await page.locator('.local-service-chip').allTextContents()).join(' ');
+                assert(/Parque o zona verde/i.test(chips), route + ': falta parque o zona verde');
                 const cards = page.locator('.cards-4');
                 if (await cards.count()) {
                   const columns = await cards.evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').filter(Boolean).length);
                   assert(columns === 2, route + ': tarjetas locales deben ser 2x2 en escritorio');
                 }
                 await page.screenshot({ path: '/tmp/v629-evidence/' + place.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-') + '-desktop.png', fullPage: true });
-                notes.push(route + ': identidad local + cobertura PASS');
+                notes.push(route + ': identidad local + domicilio + gimnasio + parque + híbrido PASS');
                 await page.close();
               }
               await desktop.close();
 
               const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-              for (const [path, label] of [['/', 'home mobile'], ['/online/', 'online mobile'], ...localRoutes.map(([r,p]) => [r, p + ' mobile'])]) {
+              const mobileRoutes = [['/', 'home mobile'], ['/sobre-iberfit/', 'sobre mobile'], ['/online/', 'online mobile'], ...localRoutes.map(([r,p]) => [r, p + ' mobile'])];
+              for (const [path, label] of mobileRoutes) {
                 const page = await openPage(mobile, path, label);
-                if (path === '/') {
-                  assert(await page.locator('.review-slide.is-active').count() === 1, 'home mobile: más de una reseña activa');
-                } else if (path === '/online/') {
-                  assert(await page.locator('.country-option').count() === 7, 'online mobile: selector incompleto');
-                  const cols = await page.locator('.country-grid').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').filter(Boolean).length);
-                  assert(cols === 2, 'online mobile: selector debe ser 2 columnas');
-                } else {
+                if (path === '/' || path === '/sobre-iberfit/') {
+                  assert(await page.locator('.review-slide.is-active').count() === 1, label + ': más de una reseña activa');
+                }
+                if (path === '/sobre-iberfit/') {
+                  assert(await page.locator('.journey-flag').count() === 4, 'sobre mobile: faltan banderas');
+                }
+                if (path === '/online/') {
+                  assert(await page.locator('[data-country-selector]').count() === 0, 'online mobile: no debe existir selector de países');
+                }
+                if (localRoutes.some(([route]) => route === path)) {
                   assert(await page.locator('.local-place-badge').count() === 1, label + ': badge local ausente');
-                  assert(await page.locator('.local-service-chip').count() === 3, label + ': cobertura local incompleta');
+                  assert(await page.locator('.local-service-chip').count() === 4, label + ': cobertura local incompleta');
                 }
                 await page.close();
               }
-              notes.push('mobile 390px: home + online + 7 comunas sin overflow PASS');
+              notes.push('mobile 390px: home + sobre + online + 7 comunas sin overflow PASS');
               await mobile.close();
 
               const reduced = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
-              const reducedHome = await openPage(reduced, '/', 'home reduced motion');
-              const r1 = await reducedHome.locator('.review-slide.is-active').getAttribute('data-review-index');
-              await reducedHome.waitForTimeout(2250);
-              const r2 = await reducedHome.locator('.review-slide.is-active').getAttribute('data-review-index');
-              assert(r1 === r2, 'reduced-motion: el carrusel no debe autoavanzar');
-              notes.push('prefers-reduced-motion: autoavance desactivado PASS');
-              await reducedHome.close();
+              for (const route of ['/', '/sobre-iberfit/']) {
+                const page = await openPage(reduced, route, route + ' reduced motion');
+                const r1 = await page.locator('.review-slide.is-active').getAttribute('data-review-index');
+                await page.waitForTimeout(2250);
+                const r2 = await page.locator('.review-slide.is-active').getAttribute('data-review-index');
+                assert(r1 === r2, route + ': reduced-motion no debe autoavanzar');
+                await page.close();
+              }
+              notes.push('prefers-reduced-motion: carruseles sin autoavance PASS');
               await reduced.close();
 
               fs.writeFileSync('/tmp/v629-evidence/report.json', JSON.stringify({ ok: true, notes }, null, 2));
@@ -189,8 +198,13 @@ jobs:
           test -s candidate/v628/assets/experience.v629.css
           test -s candidate/v628/assets/experience.v629.js
           grep -Fq 'data-review-carousel' candidate/v628/index.html
-          grep -Fq 'experience.v629.css' candidate/v628/index.html
-          grep -Fq 'experience.v629.js' candidate/v628/online/index.html
+          grep -Fq 'data-review-carousel' candidate/v628/sobre-iberfit/index.html
+          grep -Fq '🇪🇸' candidate/v628/sobre-iberfit/index.html
+          grep -Fq '🇩🇪' candidate/v628/sobre-iberfit/index.html
+          grep -Fq '🇨🇱' candidate/v628/sobre-iberfit/index.html
+          ! grep -Fq 'const countries = [' candidate/v628/assets/experience.v629.js
+          ! grep -Fq 'country-selector' candidate/v628/assets/experience.v629.js
+          grep -Fq 'Parque o zona verde' candidate/v628/assets/experience.v629.js
           for f in             candidate/v628/entrenador-personal-la-reina/index.html             candidate/v628/entrenador-personal-las-condes/index.html             candidate/v628/entrenador-personal-lo-barnechea/index.html             candidate/v628/entrenador-personal-penalolen/index.html             candidate/v628/entrenador-personal-vitacura/index.html             candidate/v628/entrenamiento-personal-providencia/index.html             candidate/v628/personal-trainer-nunoa/index.html; do
             grep -Fq 'experience.v629.css' "$f"
             grep -Fq 'experience.v629.js' "$f"
