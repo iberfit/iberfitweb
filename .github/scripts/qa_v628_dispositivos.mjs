@@ -141,15 +141,26 @@ for (const device of devices) {
       const toggle = document.querySelector(".menu-toggle");
       const nav = document.querySelector(".navlinks");
       if (!toggle || !nav) return null;
+      const toggleStyle = getComputedStyle(toggle);
+      const navStyle = getComputedStyle(nav);
       return {
-        toggleDisplay: getComputedStyle(toggle).display,
-        navDisplay: getComputedStyle(nav).display,
+        toggleDisplay: toggleStyle.display,
+        navDisplay: navStyle.display,
+        navVisibility: navStyle.visibility,
+        navOpacity: Number.parseFloat(navStyle.opacity || "1"),
+        navPointerEvents: navStyle.pointerEvents,
+        navOpenClass: nav.classList.contains("open"),
       };
     });
 
-    if (device.width <= 980) {
+    if (device.width <= 860) {
       if (!menuState || menuState.toggleDisplay === "none") add(device.name, route, "MENU_MOVIL", "botón ausente");
-      if (menuState && menuState.navDisplay !== "none") add(device.name, route, "MENU_MOVIL", "navegación abierta al cargar");
+      if (menuState && (
+        menuState.navOpenClass ||
+        menuState.navVisibility !== "hidden" ||
+        menuState.navOpacity > 0.05 ||
+        menuState.navPointerEvents !== "none"
+      )) add(device.name, route, "MENU_MOVIL", "navegación visible/interactiva al cargar");
       if (menuState && menuState.toggleDisplay !== "none") {
         const beforeTop = await page.locator("main").evaluate(el => el.getBoundingClientRect().top);
         await page.locator(".menu-toggle").click();
@@ -173,7 +184,9 @@ for (const device of devices) {
       }
     } else {
       if (!menuState || menuState.toggleDisplay !== "none") add(device.name, route, "MENU_ESCRITORIO", "botón móvil visible");
-      if (menuState && menuState.navDisplay === "none") add(device.name, route, "MENU_ESCRITORIO", "navegación oculta");
+      if (menuState && (menuState.navDisplay === "none" || menuState.navVisibility === "hidden" || menuState.navOpacity < 0.95)) {
+        add(device.name, route, "MENU_ESCRITORIO", "navegación oculta");
+      }
     }
 
     if (device.width <= 720) {
