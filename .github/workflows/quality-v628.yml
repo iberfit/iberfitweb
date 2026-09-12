@@ -16,6 +16,7 @@ on:
       - "brand/Isotipo_IBERFIT_Oficial.png"
       - ".github/scripts/qa_v628_accesibilidad.mjs"
       - ".github/scripts/qa_v628_profesional.py"
+      - ".github/scripts/qa_v628_privacidad.mjs"
       - ".github/workflows/quality-v628.yml"
 
 permissions:
@@ -99,6 +100,9 @@ jobs:
 
       - name: Accesibilidad
         run: node .github/scripts/qa_v628_accesibilidad.mjs
+
+      - name: Privacidad y consentimiento
+        run: node .github/scripts/qa_v628_privacidad.mjs
 
       - name: Lighthouse · Inicio
         run: |
