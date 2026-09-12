@@ -97,75 +97,6 @@
   display:grid;place-items:center;border:1px solid currentColor;font-size:.7rem;
 }
 
-/* Selector internacional */
-.country-experience{
-  padding:0 0 clamp(3.4rem,6vw,5rem);
-  margin-top:-.35rem;
-}
-.country-panel{
-  position:relative;
-  overflow:hidden;
-  display:grid;
-  grid-template-columns:minmax(0,1.45fr) minmax(270px,.55fr);
-  gap:clamp(1.3rem,4vw,3rem);
-  border:1px solid rgba(184,151,58,.25);
-  border-radius:30px;
-  padding:clamp(1.3rem,3vw,2rem);
-  background:
-    radial-gradient(circle at 100% 0%,rgba(217,181,104,.17),transparent 34%),
-    linear-gradient(145deg,#fffdf8,#f5f0e5);
-  box-shadow:0 24px 60px rgba(20,43,30,.10);
-}
-.country-panel:after{
-  content:"";position:absolute;right:-70px;bottom:-85px;width:210px;height:210px;border-radius:50%;
-  border:1px solid rgba(184,151,58,.14);pointer-events:none;
-}
-.country-panel-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;margin-bottom:1.15rem}
-.country-panel-heading h2{font-size:clamp(1.5rem,2.6vw,2.35rem);margin:0}
-.country-panel-heading p{margin:0;color:var(--muted);font-size:.86rem;max-width:31rem}
-.country-grid{
-  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.65rem;
-}
-.country-option{
-  appearance:none;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.78);
-  color:var(--green-deep);min-height:66px;padding:.7rem .75rem;
-  display:flex;align-items:center;gap:.65rem;text-align:left;cursor:pointer;
-  font-weight:760;box-shadow:0 8px 22px rgba(20,43,30,.045);
-  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background .18s ease;
-}
-.country-option:hover{transform:translateY(-2px);border-color:rgba(184,151,58,.5);box-shadow:0 12px 28px rgba(20,43,30,.08)}
-.country-option.is-active{
-  border-color:var(--gold);
-  background:linear-gradient(145deg,#fff,#fbf5e7);
-  box-shadow:0 0 0 2px rgba(184,151,58,.12),0 12px 28px rgba(20,43,30,.08);
-}
-.country-option .flag{font-size:1.5rem;line-height:1;filter:saturate(.94)}
-.country-option .country-name{font-size:.86rem;line-height:1.15}
-.country-summary{
-  position:relative;z-index:1;
-  align-self:stretch;
-  display:flex;flex-direction:column;justify-content:space-between;
-  padding:1.3rem;
-  border-radius:22px;
-  background:linear-gradient(150deg,var(--green-deep),#244a35);
-  color:#fff;
-  box-shadow:0 20px 45px rgba(16,39,27,.18);
-}
-.country-summary small{display:block;color:rgba(255,255,255,.65);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;font-weight:800}
-.country-summary strong{display:flex;align-items:center;gap:.65rem;margin:.45rem 0 .2rem;color:#fff;font-family:Iowan Old Style,Baskerville,Georgia,serif;font-size:1.65rem}
-.country-summary .country-summary-flag{font-family:system-ui,sans-serif;font-size:1.55rem}
-.country-summary p{margin:.65rem 0 0;color:rgba(255,255,255,.78);font-size:.86rem}
-.country-currency{
-  margin-top:1.2rem;
-  display:inline-flex;align-items:center;justify-content:space-between;gap:.75rem;
-  border-top:1px solid rgba(255,255,255,.16);padding-top:1rem;
-  font-size:.8rem;color:rgba(255,255,255,.68);
-}
-.country-currency b{
-  display:inline-flex;padding:.35rem .58rem;border-radius:999px;background:rgba(217,181,104,.16);
-  color:var(--gold-light);font-size:.78rem;letter-spacing:.04em;
-}
-
 /* Páginas de comunas */
 body[data-page="local"] .hero{
   position:relative;
@@ -210,7 +141,7 @@ body[data-page="local"] .hero-meta{
 }
 body[data-page="local"] .hero-meta:before{content:"●";color:var(--gold);font-size:.72rem}
 .local-service-strip{
-  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem;
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem;
   margin-top:1.25rem;max-width:900px;
 }
 .local-service-chip{
@@ -255,26 +186,64 @@ body[data-page="local"] .scope-note{
 @media (max-width:900px){
   .review-showcase.is-carousel-ready{grid-template-columns:1fr;gap:1.6rem}
   .review-showcase.is-carousel-ready .review-intro h2{max-width:18ch}
-  .country-panel{grid-template-columns:1fr}
-  .country-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .local-service-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (max-width:700px){
-  .country-panel-heading{align-items:flex-start;flex-direction:column}
-  .country-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .local-service-strip{grid-template-columns:1fr}
   body[data-page="local"] .cards-4{grid-template-columns:1fr}
   body[data-page="local"] .cards-4 .card{min-height:0}
   .review-carousel-stage{min-height:300px}
 }
 @media (max-width:520px){
-  .country-panel{border-radius:24px;padding:1rem}
-  .country-option{min-height:60px;padding:.62rem}
-  .country-summary{border-radius:19px}
   .review-carousel-controls{gap:.65rem}
   .review-carousel-status{display:none}
   .review-carousel-btn{width:40px;height:40px}
   .local-place-badge{border-radius:18px;width:100%}
 }
 @media (prefers-reduced-motion:reduce){
-  .review-carousel .review-slide,.country-option,.review-carousel-btn,.review-carousel-dot{transition:none!important}
+  .review-carousel .review-slide,.review-carousel-btn,.review-carousel-dot{transition:none!important}
+}
+
+/* Historia IBERFIT · España → Alemania → España → Chile */
+.brand-journey{
+  position:relative;
+  overflow:hidden;
+}
+.brand-journey article{
+  position:relative;
+  padding-top:1.25rem;
+  transition:transform .2s ease,background .2s ease,border-color .2s ease;
+}
+.brand-journey article:hover{
+  transform:translateY(-3px);
+  background:rgba(255,255,255,.035);
+}
+.brand-journey .journey-flag{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:48px;
+  height:48px;
+  margin:.25rem 0 1rem;
+  border-radius:15px;
+  background:rgba(255,255,255,.075);
+  border:1px solid rgba(217,181,104,.22);
+  box-shadow:0 10px 24px rgba(0,0,0,.12);
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:1.75rem;
+  line-height:1;
+}
+.brand-journey article strong{
+  display:block;
+  margin-bottom:.55rem;
+}
+.brand-journey article:nth-child(4){
+  background:linear-gradient(180deg,rgba(217,181,104,.07),rgba(217,181,104,.015));
+}
+.brand-journey article:nth-child(4) .journey-flag{
+  background:rgba(217,181,104,.10);
+  border-color:rgba(217,181,104,.38);
+}
+@media (max-width:760px){
+  .brand-journey .journey-flag{width:44px;height:44px;font-size:1.55rem}
 }
