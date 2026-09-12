@@ -58,9 +58,10 @@ for (const route of routes) {
     if (await firstGoal.count() !== 1) {
       findings.push({ route, id:'orientador-choice-chip', impact:'serious', description:'No se generaron opciones táctiles accesibles.' });
     } else {
-      await firstGoal.click();
+      await page.locator('#objetivo').selectOption({ index:1 });
+      await page.waitForTimeout(30);
       if (await firstGoal.getAttribute('aria-pressed') !== 'true') {
-        findings.push({ route, id:'orientador-aria-pressed', impact:'serious', description:'La opción seleccionada no refleja aria-pressed=true.' });
+        findings.push({ route, id:'orientador-aria-pressed', impact:'serious', description:'La selección nativa no sincroniza aria-pressed en las opciones táctiles.' });
       }
       await page.locator('[data-step="1"] [data-next-step]').click();
       await page.waitForTimeout(60);
