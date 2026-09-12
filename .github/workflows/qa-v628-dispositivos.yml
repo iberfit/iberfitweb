@@ -1,5 +1,5 @@
 name: QA multidispositivo web V6.28
-# Gate final V6.28 · marca oficial + contraste AA
+# Certificación candidata a800 · isotipo canónico
 
 on:
   workflow_dispatch:
