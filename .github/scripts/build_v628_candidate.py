@@ -246,6 +246,21 @@ def humanize_brand_voice(text: str, rel: str) -> str:
 
     for old, new in per_page.get(rel, {}).items():
         text = text.replace(old, new)
+
+    if rel == "sobre-iberfit/index.html":
+        story = """<section class="section origin-section"><div class="container founder-grid"><div class="reveal"><div class="kicker">Nuestra historia</div><h2>IBERFIT no nació para añadir otra rutina. Nació para que entrenar tuviera más sentido.</h2></div><div class="founder-copy reveal"><p>Con el tiempo vimos repetirse algo demasiado habitual: personas con ganas de mejorar, pero rodeadas de rutinas genéricas, mediciones que nadie les explicaba y planes que seguían iguales aunque su realidad cambiara.</p><p>Después de formarse y trabajar profesionalmente en Europa, su fundador llega a Chile con una convicción ya muy clara: antes de prescribir hay que entender; después, explicar, observar y ajustar.</p><p>En Chile, esa forma de trabajar toma el nombre de IBERFIT. Primero fue una manera de acompañar. Después fueron apareciendo el Diagnóstico IRI, un seguimiento más conectado y distintas formas de entrenar porque ayudaban a dar un servicio más claro, continuo y útil.</p><p>Hoy IBERFIT sigue creciendo con la misma regla: si algo no ayuda a entender mejor, decidir mejor o sostener mejor el proceso, no aporta.</p></div></div></section><section class="section section-cream"><div class="container"><div class="section-intro reveal"><div class="kicker">Una marca que sigue mejorando</div><h2>Mejorar no es añadir más. Es aportar más.</h2><p class="lead">Cada herramienta, cada cambio y cada nueva forma de acompañar tiene que ganarse su lugar ayudando a la persona que entrena.</p></div><div class="principle-stack"><article class="principle-row reveal"><h3>Entender antes de proponer</h3><p>Empezamos por tu contexto y tu punto de partida, no por una rutina que ya estaba escrita.</p></article><article class="principle-row reveal"><h3>Convertir datos en decisiones</h3><p>El IRI y el seguimiento sirven para explicar qué estamos viendo y qué conviene hacer con esa información.</p></article><article class="principle-row reveal"><h3>Acompañar también entre sesiones</h3><p>El valor no termina cuando acaba una sesión. Lo que ocurre después también ayuda a decidir el siguiente paso.</p></article><article class="principle-row reveal"><h3>Usar tecnología sin perder lo humano</h3><p>La tecnología puede ayudarnos a recordar, comparar y explicar mejor. La decisión y la conversación siguen siendo humanas.</p></article></div></div></section>"""
+        text = re.sub(
+            r'<section class="section origin-section">.*?</section>',
+            story,
+            text,
+            count=1,
+            flags=re.S,
+        )
+
+    if rel == "index.html" and "Mejorar no es añadir más. Es aportar más." not in text:
+        teaser = """<section class="section section-cream"><div class="container"><div class="section-intro reveal"><div class="kicker">Por qué existe IBERFIT</div><h2>Mejorar no es añadir más. Es aportar más.</h2><p class="lead">IBERFIT nació para que entrenar tenga una dirección que puedas entender. Por eso cada mejora de la marca tiene que ayudarte a entender mejor, decidir mejor o sostener mejor tu proceso.</p><a class="text-link" href="/sobre-iberfit/">Conocer la historia de IBERFIT</a></div><div class="principle-stack"><article class="principle-row reveal"><h3>Entender mejor</h3><p>Antes de decirte qué hacer, queremos comprender dónde estás y qué necesitas.</p></article><article class="principle-row reveal"><h3>Decidir mejor</h3><p>Medimos y registramos solo cuando esa información puede mejorar una decisión.</p></article><article class="principle-row reveal"><h3>Sostener mejor</h3><p>El plan tiene que poder vivir contigo cuando cambian tu semana, tu contexto o tus objetivos.</p></article></div></div></section>"""
+        text = text.replace('<section class="section review-proof">', teaser + '<section class="section review-proof">', 1)
+
     return text
 
 
