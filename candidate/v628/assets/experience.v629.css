@@ -98,18 +98,18 @@
 }
 
 /* Páginas de comunas */
-body[data-page="local"] .hero{
+body:is([data-page="local"],[data-page="local_en"]) .hero{
   position:relative;
   overflow:hidden;
   background:
     radial-gradient(circle at 85% 12%,rgba(217,181,104,.13),transparent 24%),
     linear-gradient(180deg,#faf7f0 0%,#f7f4ee 100%);
 }
-body[data-page="local"] .hero:after{
+body:is([data-page="local"],[data-page="local_en"]) .hero:after{
   content:"";position:absolute;right:-100px;bottom:-140px;width:340px;height:340px;border-radius:50%;
   border:1px solid rgba(184,151,58,.10);box-shadow:0 0 0 45px rgba(184,151,58,.035);pointer-events:none;
 }
-body[data-page="local"] .hero-text{position:relative;z-index:1}
+body:is([data-page="local"],[data-page="local_en"]) .hero-text{position:relative;z-index:1}
 .local-place-badge{
   width:max-content;max-width:100%;
   display:inline-flex;align-items:center;gap:.8rem;
@@ -132,14 +132,14 @@ body[data-page="local"] .hero-text{position:relative;z-index:1}
 .local-place-copy strong{
   margin-top:.22rem;color:var(--green-deep);font-family:Iowan Old Style,Baskerville,Georgia,serif;font-size:1.07rem;
 }
-body[data-page="local"] .eyebrow{margin-bottom:.45rem}
-body[data-page="local"] .hero-meta{
+body:is([data-page="local"],[data-page="local_en"]) .eyebrow{margin-bottom:.45rem}
+body:is([data-page="local"],[data-page="local_en"]) .hero-meta{
   display:inline-flex;align-items:center;gap:.55rem;
   padding:.62rem .85rem;border-radius:14px;
   background:rgba(31,61,43,.055);border:1px solid rgba(31,61,43,.08);
   color:#34483c;font-weight:650;
 }
-body[data-page="local"] .hero-meta:before{content:"●";color:var(--gold);font-size:.72rem}
+body:is([data-page="local"],[data-page="local_en"]) .hero-meta:before{content:"●";color:var(--gold);font-size:.72rem}
 .local-service-strip{
   display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem;
   margin-top:1.25rem;max-width:900px;
@@ -154,30 +154,30 @@ body[data-page="local"] .hero-meta:before{content:"●";color:var(--gold);font-s
   display:grid;place-items:center;width:24px;height:24px;flex:none;border-radius:50%;
   background:rgba(184,151,58,.12);color:var(--gold-dark);font-size:.68rem;
 }
-body[data-page="local"] .section:not(.cta-panel){padding-top:clamp(3.5rem,6vw,5rem);padding-bottom:clamp(3.5rem,6vw,5rem)}
-body[data-page="local"] .section-head{
+body:is([data-page="local"],[data-page="local_en"]) .section:not(.cta-panel){padding-top:clamp(3.5rem,6vw,5rem);padding-bottom:clamp(3.5rem,6vw,5rem)}
+body:is([data-page="local"],[data-page="local_en"]) .section-head{
   max-width:900px;
   padding-left:clamp(1rem,2vw,1.45rem);
   border-left:2px solid rgba(184,151,58,.55);
 }
-body[data-page="local"] .section-head h2{max-width:18ch}
-body[data-page="local"] .cards-4{
+body:is([data-page="local"],[data-page="local_en"]) .section-head h2{max-width:18ch}
+body:is([data-page="local"],[data-page="local_en"]) .cards-4{
   grid-template-columns:repeat(2,minmax(0,1fr));
   gap:1rem;
   margin-top:2rem;
 }
-body[data-page="local"] .cards-4 .card{
+body:is([data-page="local"],[data-page="local_en"]) .cards-4 .card{
   min-height:210px;
   border-radius:22px;
   background:linear-gradient(145deg,#fffdf8,#f7f3ea);
   border-color:rgba(184,151,58,.2);
 }
-body[data-page="local"] .cards-4 .card-index{
+body:is([data-page="local"],[data-page="local_en"]) .cards-4 .card-index{
   width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
   background:rgba(184,151,58,.10);color:var(--gold-dark);
   font-size:.72rem;font-weight:850;margin-bottom:1rem;
 }
-body[data-page="local"] .scope-note{
+body:is([data-page="local"],[data-page="local_en"]) .scope-note{
   border-radius:22px;
   background:linear-gradient(145deg,#fff,#f7f1e5);
   box-shadow:0 16px 42px rgba(20,43,30,.07);
@@ -190,8 +190,8 @@ body[data-page="local"] .scope-note{
 }
 @media (max-width:700px){
   .local-service-strip{grid-template-columns:1fr}
-  body[data-page="local"] .cards-4{grid-template-columns:1fr}
-  body[data-page="local"] .cards-4 .card{min-height:0}
+  body:is([data-page="local"],[data-page="local_en"]) .cards-4{grid-template-columns:1fr}
+  body:is([data-page="local"],[data-page="local_en"]) .cards-4 .card{min-height:0}
   .review-carousel-stage{min-height:300px}
 }
 @media (max-width:520px){
