@@ -2118,6 +2118,7 @@ h1,h2,h3,h4,.brand-text span,.report-head h3,.decision-row strong{font-family:"I
 
 
 /* V6.28 · Interacción accesible y vista longitudinal IRI. */
+.brand-mark{width:auto!important;height:48px!important;aspect-ratio:173/192;object-fit:contain}
 .lang-switch a{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:.35rem .25rem}
 .photo-story-copy > .kicker{color:#775b12}
 /* Vista longitudinal IRI: consciente del protocolo y sin puntuación global. */
@@ -2136,7 +2137,6 @@ h1,h2,h3,h4,.brand-text span,.report-head h3,.decision-row strong{font-family:"I
 .report-comparison p{margin:0;color:#5f6f65;font-size:.72rem;line-height:1.5}
 @media(max-width:720px){.report-preview-v2 .report-profile-v2{grid-template-columns:1fr}.report-status{text-align:center}.report-metrics-v2 .report-metric>div{gap:.55rem}.report-metrics-v2 .report-metric>div strong{max-width:52%}}
 @media(max-width:430px){.report-metrics-v2 .report-metric>div{display:grid}.report-metrics-v2 .report-metric>div strong{max-width:none;text-align:left}}
-
 
 /* V6.28 · Ergonomía táctil premium y foco visible. */
 a,button,[role="button"],select,input,textarea{touch-action:manipulation}
