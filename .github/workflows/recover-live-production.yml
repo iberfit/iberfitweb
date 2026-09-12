@@ -1,0 +1,53 @@
+name: Recuperar producción web
+
+on:
+  push:
+    branches:
+      - recovery/web-produccion-live-20260911
+    paths:
+      - ".github/workflows/recover-live-production.yml"
+      - ".github/scripts/recover_live_production.py"
+
+permissions:
+  contents: write
+
+jobs:
+  recuperar:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Descargar rama
+        uses: actions/checkout@v4
+        with:
+          ref: recovery/web-produccion-live-20260911
+          fetch-depth: 0
+
+      - name: Recuperar iberfit.cl
+        run: python .github/scripts/recover_live_production.py
+
+      - name: Validar captura
+        run: |
+          test -s recovery/live-production/RECOVERY_META.json
+          test -s recovery/live-production/SHA256SUMS.txt
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("recovery/live-production/RECOVERY_META.json")
+          d=json.loads(p.read_text(encoding="utf-8"))
+          assert d["errors"] == [], d["errors"]
+          assert d["files"] >= 30, d["files"]
+          print("captured", d["files"], "files")
+          PY
+
+      - name: Registrar snapshot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add recovery/live-production
+          if git diff --cached --quiet; then
+            echo "No hay cambios que registrar"
+            exit 0
+          fi
+          git commit -m "chore: capturar producción web 2026-09-11"
+          git push origin HEAD:recovery/web-produccion-live-20260911
