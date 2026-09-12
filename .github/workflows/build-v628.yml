@@ -61,6 +61,9 @@ jobs:
       - name: Verificar invariantes
         run: |
           test -s candidate/v628/index.html
+          test -s candidate/v628/llms.txt
+          grep -q '^# IBERFIT' candidate/v628/llms.txt
+          grep -q 'https://iberfit.cl/sitemap.xml' candidate/v628/llms.txt
           test -s candidate/v628/assets/styles.v628.css
           test "$(cat candidate/v628/VERSION)" = "6.28"
           echo "d4707b688db39e11fee7d027bf9d3f2514225dfc806797ae3f9379d710ef07aa  candidate/v628/assets/iberfit-isotipo-oficial.png" | sha256sum -c -
