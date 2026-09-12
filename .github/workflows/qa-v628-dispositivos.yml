@@ -1,6 +1,7 @@
 name: QA multidispositivo web V6.28
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - work/web-v6-28-recuperacion
