@@ -233,9 +233,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
     display:flex;
     position:fixed;
     top:var(--nav-panel-top,76px);
-    left:max(.75rem,env(safe-area-inset-left));
+    left:auto;
     right:max(.75rem,env(safe-area-inset-right));
-    width:auto;
+    width:min(28rem,calc(100vw - max(1.5rem,env(safe-area-inset-left) + env(safe-area-inset-right))));
     max-height:calc(100dvh - var(--nav-panel-top,76px) - .9rem - env(safe-area-inset-bottom));
     overflow-y:auto;
     overscroll-behavior:contain;
@@ -289,6 +289,14 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
     opacity:1;
     visibility:visible;
     pointer-events:auto;
+  }
+}
+
+@media (max-width:480px){
+  .navlinks{
+    left:max(.75rem,env(safe-area-inset-left));
+    right:max(.75rem,env(safe-area-inset-right));
+    width:auto;
   }
 }
 
