@@ -27,6 +27,7 @@ const routes = [
   ["/entrenador-personal-las-condes/", "las-condes"],
   ["/privacidad/", "privacidad"],
   ["/en/", "inicio-en"],
+  ["/en/contact/", "contacto-en"],
 ];
 
 const importantTouchSelectors = [
@@ -364,7 +365,7 @@ for (const device of devices) {
       }
     }
 
-    if (route === "/contacto/") {
+    if (route === "/contacto/" || route === "/en/contact/") {
       if (await page.locator("[data-orientador-form]").count() !== 1) add(device.name, route, "ORIENTADOR", "formulario ausente");
       const selects = await page.locator("[data-orientador-form] select").count();
       if (selects < 2) add(device.name, route, "ORIENTADOR", "selectores incompletos");
@@ -373,7 +374,9 @@ for (const device of devices) {
         add(device.name, route, "ORIENTADOR_SIN_PRESION", "reaseguro ausente o duplicado");
       } else {
         const text = (await reassurance.innerText()).toLowerCase();
-        if (!text.includes("sin compromiso") || !text.includes("no te obliga a contratar")) {
+        const es = route === "/contacto/";
+        const expected = es ? ["sin compromiso", "no te obliga a contratar"] : ["no commitment", "does not require you to buy anything"];
+        if (!expected.every(token => text.includes(token))) {
           add(device.name, route, "ORIENTADOR_SIN_PRESION", text);
         }
         const box = await reassurance.boundingBox();
@@ -400,7 +403,7 @@ for (const device of devices) {
       }
     }
 
-    if (["inicio", "iri", "contacto", "metodo", "sobre-iberfit"].includes(label)) {
+    if (["inicio", "iri", "contacto", "contacto-en", "metodo", "sobre-iberfit"].includes(label)) {
       await page.screenshot({
         path: path.join(out, device.name + "-" + label + ".png"),
         fullPage: true,
@@ -428,7 +431,7 @@ for (const device of devices) {
     await necessary.click();
     await reviewPage.waitForTimeout(250);
   }
-  for (const [reviewRoute, reviewLabel] of routes.filter(([, label]) => ["inicio", "iri", "contacto", "metodo", "sobre-iberfit"].includes(label))) {
+  for (const [reviewRoute, reviewLabel] of routes.filter(([, label]) => ["inicio", "iri", "contacto", "contacto-en", "metodo", "sobre-iberfit"].includes(label))) {
     if (reviewRoute !== "/") {
       await reviewPage.goto(base + reviewRoute, { waitUntil: "networkidle", timeout: 30000 });
     }
