@@ -77,3 +77,12 @@ h1,h2,h3,h4{overflow-wrap:break-word}
 .site-footer p.small{color:rgba(255,255,255,.68)!important}
 
 .review-stars{color:#8a6515}
+
+
+.card-index,
+.process-step>span,
+.report-head span,
+.report-note{
+  color:var(--gold-dark)
+}
+.system-stage:not(:last-child):after{color:var(--gold-dark)}
