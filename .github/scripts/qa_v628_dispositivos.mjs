@@ -335,7 +335,7 @@ for (const device of devices) {
           return {left:r.left,right:r.right,width:r.width,height:r.height,text:(el.textContent||"").trim().slice(0,80)};
         }));
         for (const item of boxes) {
-          if (item.left < -2 || item.right > innerWidth + 2 || item.width < 1 || item.height < 1) {
+          if (item.left < -2 || item.right > device.width + 2 || item.width < 1 || item.height < 1) {
             add(device.name, route, "RUTAS_INTENCION_VIEWPORT", JSON.stringify(item));
           }
         }
