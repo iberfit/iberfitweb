@@ -1,21 +1,20 @@
-name: Construir candidata web V6.30
+name: Construir candidata web V6.28
 
 on:
   push:
     branches:
-      - work/web-v6-30-hardening
+      - work/web-v6-28-recuperacion
     paths:
       - ".github/scripts/build_v628_candidate.py"
       - ".github/scripts/postprocess_v628_dock_a11y.py"
       - ".github/workflows/build-v628.yml"
-      - "llms.txt"
 
 permissions:
   contents: write
   actions: write
 
 concurrency:
-  group: web-v630-build
+  group: web-v628-build
   cancel-in-progress: true
 
 jobs:
@@ -27,10 +26,10 @@ jobs:
       - name: Descargar rama
         uses: actions/checkout@v7
         with:
-          ref: work/web-v6-30-hardening
+          ref: work/web-v6-28-recuperacion
           fetch-depth: 0
 
-      - name: Generar V6.30 desde producción certificada
+      - name: Generar V6.28 desde producción certificada
         run: python .github/scripts/build_v628_candidate.py
 
       - name: Reforzar semántica del dock móvil
@@ -62,11 +61,8 @@ jobs:
       - name: Verificar invariantes
         run: |
           test -s candidate/v628/index.html
-          test -s candidate/v628/llms.txt
-          grep -q '^# IBERFIT' candidate/v628/llms.txt
-          grep -q 'https://iberfit.cl/sitemap.xml' candidate/v628/llms.txt
           test -s candidate/v628/assets/styles.v628.css
-          test "$(cat candidate/v628/VERSION)" = "6.30"
+          test "$(cat candidate/v628/VERSION)" = "6.28"
           echo "d4707b688db39e11fee7d027bf9d3f2514225dfc806797ae3f9379d710ef07aa  candidate/v628/assets/iberfit-isotipo-oficial.png" | sha256sum -c -
           ! grep -R -E -i "overall index|overall score|iri global|índice global|puntuación global" candidate/v628 --include="*.html"
           ! grep -R -E ">Online<|>online<" candidate/v628 --include="*.html" | grep -v "/en/" || false
@@ -83,9 +79,9 @@ jobs:
           if git diff --cached --quiet; then
             echo "La candidata ya coincide con la salida reproducible."
           else
-            git commit -m "feat(web): generar candidata V6.30"
-            git pull --rebase origin work/web-v6-30-hardening
-            git push origin HEAD:work/web-v6-30-hardening
+            git commit -m "feat(web): generar candidata V6.28"
+            git pull --rebase origin work/web-v6-28-recuperacion
+            git push origin HEAD:work/web-v6-28-recuperacion
           fi
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
@@ -94,6 +90,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh workflow run qa-v628-dispositivos.yml --ref work/web-v6-30-hardening -f target_sha="${{ steps.registrar.outputs.sha }}"
-          gh workflow run quality-v628.yml --ref work/web-v6-30-hardening -f target_sha="${{ steps.registrar.outputs.sha }}"
+          gh workflow run qa-v628-dispositivos.yml --ref work/web-v6-28-recuperacion -f target_sha="${{ steps.registrar.outputs.sha }}"
+          gh workflow run quality-v628.yml --ref work/web-v6-28-recuperacion -f target_sha="${{ steps.registrar.outputs.sha }}"
           echo "Certificación solicitada para ${{ steps.registrar.outputs.sha }}"
