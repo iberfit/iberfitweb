@@ -195,7 +195,7 @@ try:
         required=require_llms_discovery,
     )
 except Exception as exc:
-    add("llms.txt", False, repr(exc), required=require_v628_semantics)
+    add("llms.txt", False, repr(exc), required=require_llms_discovery)
 
 # Manifest.
 try:
@@ -235,7 +235,7 @@ if enforce_v628:
             f"IRI sin puntuación global {route}",
             not hits,
             "sin términos obsoletos" if not hits else ", ".join(hits),
-            required=require_llms_discovery,
+            required=require_v628_semantics,
         )
         except Exception as exc:
             add(f"IRI sin puntuación global {route}", False, repr(exc), required=require_v628_semantics)
@@ -248,7 +248,7 @@ if enforce_v628:
         "nombre A distancia",
         "a distancia" in normalized,
         "presente" if "a distancia" in normalized else "ausente",
-        required=require_llms_discovery,
+        required=require_v628_semantics,
     )
     except Exception as exc:
         add("nombre A distancia", False, repr(exc), required=require_v628_semantics)
