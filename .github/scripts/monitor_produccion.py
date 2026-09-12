@@ -11,7 +11,8 @@ from dataclasses import dataclass, asdict
 from xml.etree import ElementTree as ET
 
 BASE = "https://iberfit.cl"
-UA = "IBERFIT-Synthetic-Monitor/1.0 (+https://iberfit.cl)"
+APP_BASE = "https://app.iberfit.cl"
+UA = "IBERFIT-Synthetic-Monitor/1.1 (+https://iberfit.cl)"
 TIMEOUT = 15
 CRITICAL = [
     "/",
@@ -93,6 +94,27 @@ for route in CRITICAL:
         add(f"route {route}", ok, f"HTTP {status} · {len(body)} bytes · {final}", ms)
     except Exception as exc:
         add(f"route {route}", False, repr(exc))
+
+# Disponibilidad pública de la app. Durante la fase de calibración se informa
+# como advertencia si una protección anti-bot impide la sonda sintética.
+for app_path in ("/", "/runtime-config.js"):
+    try:
+        status, final, headers, body, ms = fetch(APP_BASE + app_path)
+        body_text = text(body)
+        plausible = status == 200 and (
+            "IBERFIT" in body_text
+            or "runtime" in app_path
+            or "<html" in body_text.lower()
+        )
+        add(
+            f"app pública {app_path}",
+            plausible,
+            f"HTTP {status} · {len(body)} bytes · {final}",
+            ms,
+            required=False,
+        )
+    except Exception as exc:
+        add(f"app pública {app_path}", False, repr(exc), required=False)
 
 # Headers de seguridad en la raíz.
 try:
