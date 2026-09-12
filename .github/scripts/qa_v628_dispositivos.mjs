@@ -21,6 +21,8 @@ const routes = [
   ["/", "inicio"],
   ["/diagnostico-iri/", "iri"],
   ["/contacto/", "contacto"],
+  ["/metodo/", "metodo"],
+  ["/sobre-iberfit/", "sobre-iberfit"],
   ["/online/", "a-distancia"],
   ["/entrenador-personal-las-condes/", "las-condes"],
   ["/privacidad/", "privacidad"],
@@ -250,7 +252,7 @@ for (const device of devices) {
       }
     }
 
-    if (["inicio", "iri", "contacto"].includes(label)) {
+    if (["inicio", "iri", "contacto", "metodo", "sobre-iberfit"].includes(label)) {
       await page.screenshot({
         path: path.join(out, device.name + "-" + label + ".png"),
         fullPage: true,
@@ -278,7 +280,7 @@ for (const device of devices) {
     await necessary.click();
     await reviewPage.waitForTimeout(250);
   }
-  for (const [reviewRoute, reviewLabel] of routes.filter(([, label]) => ["inicio", "iri", "contacto"].includes(label))) {
+  for (const [reviewRoute, reviewLabel] of routes.filter(([, label]) => ["inicio", "iri", "contacto", "metodo", "sobre-iberfit"].includes(label))) {
     if (reviewRoute !== "/") {
       await reviewPage.goto(base + reviewRoute, { waitUntil: "networkidle", timeout: 30000 });
     }
