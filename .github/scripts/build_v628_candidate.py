@@ -300,6 +300,110 @@ def specialize_local_page(text: str, rel: str) -> str:
 
     for old, new in local.get(rel, {}).items():
         text = text.replace(old, new)
+
+    # El hero habla primero a la persona; el bloque siguiente desarrolla el contexto local.
+    hero_leads = {
+        "entrenador-personal-las-condes/index.html": (
+            "Un plan puede ser perfecto sobre el papel y fracasar si cada sesión exige una logística imposible. Por eso sector, horario y espacio forman parte del plan desde el principio.",
+            "Si entre horarios, desplazamientos y cambios de agenda el entrenamiento siempre queda para después, buscamos una forma que puedas sostener de verdad.",
+        ),
+        "entrenador-personal-vitacura/index.html": (
+            "Si tu entorno ya facilita moverte, caminar, usar bicicleta o entrenar cerca de casa, lo tenemos en cuenta. El plan parte de lo que ya forma parte de tu vida.",
+            "En una comuna residencial y verde, entrenar cerca puede ser una ventaja. La clave es convertir esa comodidad en continuidad y no en improvisación.",
+        ),
+        "entrenamiento-personal-providencia/index.html": (
+            "Si ya caminas, usas bicicleta o te mueves mucho durante el día, esa actividad también forma parte del contexto. No empezamos suponiendo que todo ocurre dentro de un gimnasio.",
+            "En Providencia la vida diaria ya implica moverse mucho. El entrenamiento no debería convertirse en otro traslado que compite con tu tiempo.",
+        ),
+        "personal-trainer-nunoa/index.html": (
+            "El espacio, el equipamiento y la facilidad para desplazarte importan tanto como el objetivo. El Diagnóstico IRI nos ayuda a ordenarlo antes de contratar un plan.",
+            "Ñuñoa combina casas, departamentos, espacios comunes y mucha vida de barrio. No hay una sola forma correcta de entrenar aquí.",
+        ),
+        "entrenador-personal-lo-barnechea/index.html": (
+            "Lo Barnechea combina zonas urbanas con una relación muy cercana con la montaña y grandes diferencias de desplazamiento. El plan tiene que convivir con esa realidad.",
+            "Las distancias dentro de Lo Barnechea pueden cambiar mucho la viabilidad de una frecuencia presencial. Preferimos diseñarlo bien desde el principio.",
+        ),
+        "entrenador-personal-la-reina/index.html": (
+            "Si ya caminas, pedaleas o haces actividad al aire libre, también lo tenemos en cuenta. El entrenamiento no empieza y termina en una sesión.",
+            "La escala residencial y los espacios verdes de La Reina permiten pensar el entrenamiento cerca de tu vida cotidiana. Nuestro trabajo es darle estructura.",
+        ),
+        "entrenador-personal-penalolen/index.html": (
+            "Peñalolén tiene realidades distintas entre barrios y zonas cercanas al pie de monte. No usamos una única respuesta para toda la comuna.",
+            "La comuna cambia mucho entre sectores y también cambia la facilidad para desplazarse. Por eso aquí la ubicación no es un detalle: forma parte de la decisión.",
+        ),
+    }
+    if rel in hero_leads:
+        old, new = hero_leads[rel]
+        text = text.replace(old, new, 1)
+
+    hero_meta = {
+        "entrenador-personal-las-condes/index.html": "Presencial según sector y horario · Híbrido cuando reduce fricción · A distancia desde cualquier lugar.",
+        "entrenador-personal-vitacura/index.html": "Presencial según sector y acceso · Híbrido para combinar supervisión y autonomía · A distancia desde cualquier lugar.",
+        "entrenamiento-personal-providencia/index.html": "Presencial, híbrido o a distancia según tu semana, espacio y tiempos de traslado.",
+        "personal-trainer-nunoa/index.html": "Presencial según sector · Híbrido si combina mejor con tu espacio y semana · A distancia desde cualquier lugar.",
+        "entrenador-personal-lo-barnechea/index.html": "Presencial cuando aporta · Híbrido para reducir desplazamientos · A distancia desde cualquier lugar.",
+        "entrenador-personal-la-reina/index.html": "Domicilio o espacio acordado según sector · Híbrido para sumar autonomía · A distancia desde cualquier lugar.",
+        "entrenador-personal-penalolen/index.html": "La modalidad se decide según sector, frecuencia viable y espacio disponible.",
+    }
+    if rel in hero_meta:
+        text = text.replace(
+            "Entrenamiento presencial en comunas seleccionadas de Santiago. Entrenamiento a distancia disponible desde cualquier lugar.",
+            hero_meta[rel],
+            1,
+        )
+
+    scope_notes = {
+        "entrenador-personal-las-condes/index.html": ("¿Tu semana cambia mucho?", "La modalidad híbrida o a distancia puede mantener la continuidad sin obligarte a reorganizar toda tu agenda."),
+        "entrenador-personal-vitacura/index.html": ("¿No necesitas presencial todas las semanas?", "Podemos reservar las sesiones directas para cuando realmente aportan y guiar el resto con el mismo plan."),
+        "entrenamiento-personal-providencia/index.html": ("¿No quieres sumar otro traslado?", "La modalidad híbrida o a distancia puede darte seguimiento sin convertir cada sesión en un problema logístico."),
+        "personal-trainer-nunoa/index.html": ("¿Tu espacio o tu semana cambian?", "Podemos combinar formatos sin perder el hilo del plan ni obligarte a empezar de cero."),
+        "entrenador-personal-lo-barnechea/index.html": ("¿La distancia complica la frecuencia presencial?", "Podemos usar la presencialidad de forma estratégica y mantener el trabajo guiado entre sesiones."),
+        "entrenador-personal-la-reina/index.html": ("¿Prefieres combinar cercanía y autonomía?", "La modalidad híbrida puede ayudarte a aprovechar tu entorno sin perder supervisión cuando hace falta."),
+        "entrenador-personal-penalolen/index.html": ("¿Tu sector hace difícil sostener la presencialidad?", "La frecuencia puede cambiar. El seguimiento y la dirección del plan no tienen por qué desaparecer."),
+    }
+    if rel in scope_notes:
+        title, body = scope_notes[rel]
+        text = text.replace(
+            '<span>¿Fuera de cobertura o con horarios variables?</span><p>El entrenamiento a distancia está disponible desde cualquier lugar y mantiene planificación, sesiones guiadas y seguimiento.</p>',
+            f'<span>{title}</span><p>{body}</p>',
+            1,
+        )
+
+    bottom_cta = {
+        "entrenador-personal-las-condes/index.html": "Ver qué opción encaja",
+        "entrenador-personal-vitacura/index.html": "Consultar modalidad",
+        "entrenamiento-personal-providencia/index.html": "Ordenar mi mejor opción",
+        "personal-trainer-nunoa/index.html": "Orientar mi modalidad",
+        "entrenador-personal-lo-barnechea/index.html": "Revisar frecuencia posible",
+        "entrenador-personal-la-reina/index.html": "Consultar opción",
+        "entrenador-personal-penalolen/index.html": "Revisar mi sector",
+    }
+    if rel in bottom_cta:
+        text = text.replace(
+            ">Consultar cobertura y horarios</a>",
+            f">{bottom_cta[rel]}</a>",
+            1,
+        )
+
+    meta_descriptions = {
+        "entrenador-personal-las-condes/index.html": "Entrenamiento personal en Las Condes pensado para una agenda real: domicilio, gimnasio de edificio o híbrido según sector, espacio y horarios.",
+        "entrenador-personal-vitacura/index.html": "Entrenamiento personal en Vitacura que aprovecha tu entorno y combina supervisión y autonomía según sector, espacio y disponibilidad.",
+        "entrenamiento-personal-providencia/index.html": "Entrenamiento personal en Providencia sin sumar fricción: presencial, híbrido o a distancia según tu semana, espacio y tiempos de traslado.",
+        "personal-trainer-nunoa/index.html": "Entrenamiento personal en Ñuñoa adaptado a tu barrio, espacio y semana. IRI para decidir modalidad y frecuencia antes de empezar.",
+        "entrenador-personal-lo-barnechea/index.html": "Entrenamiento personal en Lo Barnechea con frecuencia pensada según sector y distancias, combinando presencial e híbrido cuando aporta continuidad.",
+        "entrenador-personal-la-reina/index.html": "Entrenamiento personal en La Reina cerca de tu rutina, combinando domicilio, autonomía y seguimiento según espacio, sector y disponibilidad.",
+        "entrenador-personal-penalolen/index.html": "Entrenamiento personal en Peñalolén decidido según tu sector, espacio y frecuencia posible, con seguimiento presencial, híbrido o a distancia.",
+    }
+    if rel in meta_descriptions:
+        description = meta_descriptions[rel]
+        text = re.sub(
+            r'(<meta\b(?=[^>]*\bname="description")[^>]*\bcontent=")[^"]*(")',
+            lambda match: match.group(1) + description + match.group(2),
+            text,
+            count=1,
+            flags=re.I,
+        )
+
     return text
 
 
