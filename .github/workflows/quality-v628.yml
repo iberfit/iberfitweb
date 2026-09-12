@@ -188,6 +188,15 @@ jobs:
           if(fail) process.exit(1);
           NODE
 
+      - name: Compatibilidad y descubrimiento por IA
+        run: |
+          set -euo pipefail
+          test -s candidate/v628/llms.txt
+          grep -q '^# IBERFIT' candidate/v628/llms.txt
+          grep -q 'Diagnóstico IRI' candidate/v628/llms.txt
+          grep -q 'https://iberfit.cl/sitemap.xml' candidate/v628/llms.txt
+          grep -q 'https://app.iberfit.cl/' candidate/v628/llms.txt
+
       - name: Seguridad estática
         run: |
           grep -q "Content-Security-Policy:" candidate/v628/_headers
