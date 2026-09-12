@@ -24,9 +24,12 @@
     cards.setAttribute('aria-roledescription', 'carrusel');
     cards.setAttribute('aria-label', 'Experiencias reales de clientes IBERFIT');
 
+    const shell = document.createElement('div');
+    shell.className = 'review-carousel-shell';
+    cards.parentNode.insertBefore(shell, cards);
     const stage = document.createElement('div');
     stage.className = 'review-carousel-stage';
-    cards.parentNode.insertBefore(stage, cards);
+    shell.appendChild(stage);
     stage.appendChild(cards);
 
     let current = 0;
@@ -54,7 +57,7 @@
       <div class="review-carousel-dots" role="tablist" aria-label="Elegir reseña"></div>
       <div class="review-carousel-status" aria-hidden="true"></div>
     `;
-    stage.insertAdjacentElement('afterend', controls);
+    shell.appendChild(controls);
 
     const dots = controls.querySelector('.review-carousel-dots');
     const status = controls.querySelector('.review-carousel-status');
