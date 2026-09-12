@@ -1,0 +1,1 @@
+(()=>{"use strict";const show=()=>document.querySelectorAll(".reveal:not(.visible)").forEach(el=>el.classList.add("visible"));const run=()=>window.setTimeout(show,4500);if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",run,{once:true});else run();window.addEventListener("pageshow",()=>window.setTimeout(show,1200));})();
