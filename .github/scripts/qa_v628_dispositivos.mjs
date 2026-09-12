@@ -196,6 +196,16 @@ for (const device of devices) {
           ariaHidden: document.querySelector(".navlinks")?.getAttribute("aria-hidden"),
         }));
         if (!focusState.activeInside) add(device.name, route, "MENU_FOCO", JSON.stringify(focusState));
+        if (device.width <= 560) {
+          const languageState = await page.locator(".nav-mobile-languages").evaluateAll(nodes => nodes.map(el => ({
+            visible: getComputedStyle(el).display !== "none" && el.getBoundingClientRect().width > 0,
+            labels: Array.from(el.querySelectorAll("a")).map(a => a.textContent.trim()),
+            active: Array.from(el.querySelectorAll("a")).filter(a => a.classList.contains("active") || a.getAttribute("aria-current") === "true").map(a => a.textContent.trim()),
+          })));
+          if (languageState.length !== 1 || !languageState[0].visible || !languageState[0].labels.includes("ES") || !languageState[0].labels.includes("EN")) {
+            add(device.name, route, "IDIOMA_MOVIL", JSON.stringify(languageState));
+          }
+        }
         if (!focusState.mainInert) add(device.name, route, "MENU_FONDO_INTERACTIVO", JSON.stringify(focusState));
         if (!focusState.controls || focusState.controls !== focusState.navId) add(device.name, route, "MENU_ARIA_CONTROLS", JSON.stringify(focusState));
         if (focusState.ariaHidden !== "false") add(device.name, route, "MENU_ARIA_HIDDEN", JSON.stringify(focusState));
