@@ -389,6 +389,9 @@ for (const device of devices) {
     await reviewPage.evaluate(() => {
       document.documentElement.style.scrollBehavior = "auto";
       window.scrollTo(0, 0);
+      document.querySelectorAll(".premium-rail,.system-rail,.method-cycle").forEach(node => {
+        node.scrollLeft = 0;
+      });
     });
     await reviewPage.waitForTimeout(120);
     await reviewPage.screenshot({
