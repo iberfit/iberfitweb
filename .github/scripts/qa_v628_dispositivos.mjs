@@ -173,6 +173,7 @@ for (const device of devices) {
         if (await backdrop.count() !== 1 || !(await backdrop.isVisible())) add(device.name, route, "MENU_MOVIL", "backdrop ausente");
         const bodyLocked = await page.evaluate(() => document.body.classList.contains("nav-panel-open") && getComputedStyle(document.body).overflow === "hidden");
         if (!bodyLocked) add(device.name, route, "MENU_MOVIL", "scroll no bloqueado");
+        await page.waitForFunction(() => !!document.activeElement?.closest?.(".navlinks"), null, { timeout: 450 }).catch(() => null);
         const focusState = await page.evaluate(() => ({
           activeInside: !!document.activeElement?.closest?.(".navlinks"),
           mainInert: !!document.querySelector("main")?.inert,
@@ -199,6 +200,7 @@ for (const device of devices) {
           return s.visibility === "hidden" || Number.parseFloat(s.opacity || "1") < .05;
         });
         if (!closed) add(device.name, route, "MENU_MOVIL", "Escape no cierra");
+        await page.waitForFunction(() => document.activeElement?.matches?.(".menu-toggle"), null, { timeout: 450 }).catch(() => null);
         const closeState = await page.evaluate(() => ({
           focusReturned: document.activeElement?.matches?.(".menu-toggle") || false,
           mainInert: !!document.querySelector("main")?.inert,
