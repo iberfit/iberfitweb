@@ -9,6 +9,8 @@ on:
     paths:
       - "candidate/v628/**"
       - ".github/workflows/quality-v628.yml"
+      - ".github/scripts/qa_v628_profesional.py"
+      - ".github/scripts/qa_v628_accesibilidad.mjs"
 
 permissions:
   contents: read
@@ -29,6 +31,9 @@ jobs:
       - name: Validar HTML y estructura
         run: |
           npx --yes html-validate@9 "candidate/v628/**/*.html" --rule no-inline-style:off --rule no-trailing-whitespace:off
+
+      - name: Auditoría profesional estática
+        run: python .github/scripts/qa_v628_profesional.py
 
       - name: Certificar isotipo oficial
         run: |
