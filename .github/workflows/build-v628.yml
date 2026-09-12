@@ -83,6 +83,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh workflow run qa-v628-dispositivos.yml --ref work/web-v6-28-recuperacion
-          gh workflow run quality-v628.yml --ref work/web-v6-28-recuperacion
+          gh workflow run qa-v628-dispositivos.yml --ref work/web-v6-28-recuperacion -f target_sha="${{ steps.registrar.outputs.sha }}"
+          gh workflow run quality-v628.yml --ref work/web-v6-28-recuperacion -f target_sha="${{ steps.registrar.outputs.sha }}"
           echo "Certificación solicitada para ${{ steps.registrar.outputs.sha }}"
