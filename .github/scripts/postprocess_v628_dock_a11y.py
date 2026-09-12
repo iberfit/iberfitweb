@@ -74,14 +74,21 @@ BENCHMARK_CSS = r'''
   font-size:.82rem;
   line-height:1.45;
 }
-.modality-meta span{
+.modality-row .modality-meta span{
   display:grid;
   grid-template-columns:7.7rem 1fr;
   gap:.65rem;
+  margin:0;
+  color:var(--muted);
+  font-size:.82rem;
+  font-weight:400;
+  letter-spacing:0;
+  text-transform:none;
 }
-.modality-meta b{
+.modality-row .modality-meta b{
   color:var(--green);
   font-size:.68rem;
+  font-weight:850;
   letter-spacing:.07em;
   text-transform:uppercase;
 }
