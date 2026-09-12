@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
     dock.innerHTML = `
       <a href="${isEn ? '/en/' : '/'}" data-dock="home"><strong aria-hidden="true">⌂</strong><span>${dockLabels.home}</span></a>
       <a href="${isEn ? '/en/iri-assessment/' : '/diagnostico-iri/'}" data-dock="iri"><strong>IRI</strong><span>${dockLabels.iri}</span></a>
-      <a class="is-primary" href="${guideHref}" data-dock="guide"><img src="/assets/iberfit-isotipo-96.png" width="22" height="25" alt="" aria-hidden="true"><span>${dockLabels.guide}</span></a>
+      <a class="is-primary" href="${guideHref}" data-dock="guide"><img src="/assets/iberfit-isotipo-oficial.png" width="22" height="25" alt="" aria-hidden="true"><span>${dockLabels.guide}</span></a>
       <a href="${contactHref}" data-dock="contact"><strong aria-hidden="true">↗</strong><span>${dockLabels.contact}</span></a>`;
     document.body.appendChild(dock);
     dock.addEventListener('click', event => {
