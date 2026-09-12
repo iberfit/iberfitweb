@@ -106,43 +106,85 @@ jobs:
 
       - name: Lighthouse · Inicio
         run: |
-          npx --yes lighthouse@12 http://127.0.0.1:4173/             --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage"             --only-categories=performance,accessibility,best-practices,seo             --output=json --output-path=/tmp/lighthouse-home.json
+          set -euo pipefail
+          for i in 1 2 3; do
+            npx --yes lighthouse@12 http://127.0.0.1:4173/ \
+              --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
+              --only-categories=performance,accessibility,best-practices,seo \
+              --output=json --output-path="/tmp/lighthouse-home-$i.json"
+          done
           node - <<'NODE'
           const fs=require('fs');
-          const r=JSON.parse(fs.readFileSync('/tmp/lighthouse-home.json','utf8'));
-          const wanted={performance:0.95,accessibility:0.95,'best-practices':0.95,seo:0.95};
-          let fail=false;
-          for(const [k,min] of Object.entries(wanted)){
-            const score=r.categories[k].score;
-            console.log(k,score,'mínimo',min);
-            if(score<min) fail=true;
+          const prefix='/tmp/lighthouse-home';
+          const reports=[1,2,3].map(i=>JSON.parse(fs.readFileSync(`${prefix}-${i}.json`,'utf8')));
+          const median=values=>[...values].sort((a,b)=>a-b)[1];
+          const perf=reports.map(r=>r.categories.performance.score);
+          const tbt=reports.map(r=>r.audits['total-blocking-time']?.numericValue ?? Infinity);
+          const cls=reports.map(r=>r.audits['cumulative-layout-shift']?.numericValue ?? Infinity);
+          const lcp=reports.map(r=>r.audits['largest-contentful-paint']?.numericValue ?? Infinity);
+          const other=['accessibility','best-practices','seo'];
+          reports.forEach((r,i)=>console.log('run',i+1,{
+            performance:r.categories.performance.score,
+            accessibility:r.categories.accessibility.score,
+            bestPractices:r.categories['best-practices'].score,
+            seo:r.categories.seo.score,
+            tbt:tbt[i],cls:cls[i],lcp:lcp[i]
+          }));
+          const perfMedian=median(perf), tbtMedian=median(tbt), lcpMedian=median(lcp), clsMax=Math.max(...cls);
+          let fail=perfMedian<0.95 || tbtMedian>300 || lcpMedian>2500 || clsMax>0.1;
+          for(const k of other){
+            const min=Math.min(...reports.map(r=>r.categories[k].score));
+            console.log(k,'mínimo observado',min,'mínimo requerido',0.95);
+            if(min<0.95) fail=true;
           }
-          const tbt=r.audits['total-blocking-time']?.numericValue ?? Infinity;
-          const cls=r.audits['cumulative-layout-shift']?.numericValue ?? Infinity;
-          console.log('TBT(ms)',tbt,'máximo',300);
-          console.log('CLS',cls,'máximo',0.1);
-          if(tbt>300 || cls>0.1) fail=true;
+          console.log('performance mediana',perfMedian,'mínimo',0.95);
+          console.log('TBT mediana(ms)',tbtMedian,'máximo',300);
+          console.log('LCP mediana(ms)',lcpMedian,'máximo',2500);
+          console.log('CLS máximo',clsMax,'máximo',0.1);
+          const medianIndex=perf.map((v,i)=>({i,d:Math.abs(v-perfMedian)})).sort((a,b)=>a.d-b.d)[0].i+1;
+          fs.copyFileSync(`${prefix}-${medianIndex}.json`,`${prefix}.json`);
           if(fail) process.exit(1);
           NODE
 
       - name: Lighthouse · Diagnóstico IRI
         run: |
-          npx --yes lighthouse@12 http://127.0.0.1:4173/diagnostico-iri/             --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage"             --only-categories=performance,accessibility,best-practices,seo             --output=json --output-path=/tmp/lighthouse-iri.json
+          set -euo pipefail
+          for i in 1 2 3; do
+            npx --yes lighthouse@12 http://127.0.0.1:4173/diagnostico-iri/ \
+              --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
+              --only-categories=performance,accessibility,best-practices,seo \
+              --output=json --output-path="/tmp/lighthouse-iri-$i.json"
+          done
           node - <<'NODE'
           const fs=require('fs');
-          const r=JSON.parse(fs.readFileSync('/tmp/lighthouse-iri.json','utf8'));
-          const wanted={performance:0.95,accessibility:0.95,'best-practices':0.95,seo:0.95};
-          let fail=false;
-          for(const [k,min] of Object.entries(wanted)){
-            const score=r.categories[k].score;
-            console.log(k,score,'mínimo',min);
-            if(score<min) fail=true;
+          const prefix='/tmp/lighthouse-iri';
+          const reports=[1,2,3].map(i=>JSON.parse(fs.readFileSync(`${prefix}-${i}.json`,'utf8')));
+          const median=values=>[...values].sort((a,b)=>a-b)[1];
+          const perf=reports.map(r=>r.categories.performance.score);
+          const tbt=reports.map(r=>r.audits['total-blocking-time']?.numericValue ?? Infinity);
+          const cls=reports.map(r=>r.audits['cumulative-layout-shift']?.numericValue ?? Infinity);
+          const lcp=reports.map(r=>r.audits['largest-contentful-paint']?.numericValue ?? Infinity);
+          const other=['accessibility','best-practices','seo'];
+          reports.forEach((r,i)=>console.log('run',i+1,{
+            performance:r.categories.performance.score,
+            accessibility:r.categories.accessibility.score,
+            bestPractices:r.categories['best-practices'].score,
+            seo:r.categories.seo.score,
+            tbt:tbt[i],cls:cls[i],lcp:lcp[i]
+          }));
+          const perfMedian=median(perf), tbtMedian=median(tbt), lcpMedian=median(lcp), clsMax=Math.max(...cls);
+          let fail=perfMedian<0.95 || tbtMedian>300 || lcpMedian>2500 || clsMax>0.1;
+          for(const k of other){
+            const min=Math.min(...reports.map(r=>r.categories[k].score));
+            console.log(k,'mínimo observado',min,'mínimo requerido',0.95);
+            if(min<0.95) fail=true;
           }
-          const tbt=r.audits['total-blocking-time']?.numericValue ?? Infinity;
-          const cls=r.audits['cumulative-layout-shift']?.numericValue ?? Infinity;
-          console.log('TBT(ms)',tbt,'máximo',300);
-          console.log('CLS',cls,'máximo',0.1);
-          if(tbt>300 || cls>0.1) fail=true;
+          console.log('performance mediana',perfMedian,'mínimo',0.95);
+          console.log('TBT mediana(ms)',tbtMedian,'máximo',300);
+          console.log('LCP mediana(ms)',lcpMedian,'máximo',2500);
+          console.log('CLS máximo',clsMax,'máximo',0.1);
+          const medianIndex=perf.map((v,i)=>({i,d:Math.abs(v-perfMedian)})).sort((a,b)=>a.d-b.d)[0].i+1;
+          fs.copyFileSync(`${prefix}-${medianIndex}.json`,`${prefix}.json`);
           if(fail) process.exit(1);
           NODE
 
