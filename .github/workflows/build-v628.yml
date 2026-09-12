@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   construir:
@@ -56,13 +57,24 @@ jobs:
           ! grep -R -E ">Online<|>online<" candidate/v628 --include="*.html" | grep -v "/en/" || false
 
       - name: Registrar candidata reproducible
+        id: registrar
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add candidate/v628 brand/Isotipo_IBERFIT_Oficial.png
           if git diff --cached --quiet; then
             echo "La candidata ya coincide con la salida reproducible."
-            exit 0
+          else
+            git commit -m "feat(web): generar candidata V6.28"
+            git push origin HEAD:work/web-v6-28-recuperacion
           fi
-          git commit -m "feat(web): generar candidata V6.28"
-          git push origin HEAD:work/web-v6-28-recuperacion
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Lanzar certificación integral de la candidata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run qa-v628-dispositivos.yml --ref work/web-v6-28-recuperacion
+          gh workflow run quality-v628.yml --ref work/web-v6-28-recuperacion
+          echo "Certificación solicitada para ${{ steps.registrar.outputs.sha }}"
