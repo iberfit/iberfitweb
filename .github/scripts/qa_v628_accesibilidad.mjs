@@ -41,6 +41,8 @@ for (const route of routes) {
   }
 
   if (route === '/contacto/') {
+    await page.locator('#orientador').scrollIntoViewIfNeeded();
+    await page.waitForTimeout(120);
     const status = page.locator('[data-orientador-status]');
     if (await status.count() !== 1 || await status.getAttribute('aria-live') !== 'polite') {
       findings.push({ route, id:'orientador-live-region', impact:'serious', description:'El orientador debe exponer una región viva accesible.' });
