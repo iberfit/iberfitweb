@@ -35,6 +35,17 @@ GENERAL_MESSAGES = {
     ),
 }
 
+GUIDE_PREFIXES = (
+    (
+        "Hola IBERFIT, quiero recibir orientación inicial sobre el Diagnóstico IRI.",
+        "Hola IBERFIT, completé el orientador y quiero saber qué opción de entrenamiento puede encajar mejor conmigo.",
+    ),
+    (
+        "Hello IBERFIT, I would like initial guidance about the IRI Assessment.",
+        "Hello IBERFIT, I completed the guide and would like to know which training option might fit me best.",
+    ),
+)
+
 
 def general_whatsapp(message: str) -> str:
     return f"https://wa.me/{PHONE}?text={quote(message, safe='')}"
@@ -65,13 +76,28 @@ if MARKER in source:
 if "data-dock=\"home\"" not in source or "data-dock=\"iri\"" not in source or "data-dock=\"contact\"" not in source:
     raise SystemExit("No se encontró la estructura esperada del dock móvil")
 
+for old, new in GUIDE_PREFIXES:
+    count = source.count(old)
+    if count != 1:
+        raise SystemExit(f"El prefijo dinámico del orientador debía aparecer una vez y apareció {count}: {old}")
+    source = source.replace(old, new, 1)
+
 APP.write_text(source.rstrip() + "\n" + BLOCK.lstrip(), encoding="utf-8")
 
 result = APP.read_text("utf-8")
-required = [MARKER, "aria-current','page", "{home:'home',iri:'iri',contact:'contact'}"]
+required = [
+    MARKER,
+    "aria-current','page",
+    "{home:'home',iri:'iri',contact:'contact'}",
+    GUIDE_PREFIXES[0][1],
+    GUIDE_PREFIXES[1][1],
+]
 missing = [token for token in required if token not in result]
 if missing:
     raise SystemExit("Postprocesado incompleto: " + ", ".join(missing))
+for old, _ in GUIDE_PREFIXES:
+    if old in result:
+        raise SystemExit(f"Persistió un prefijo antiguo del orientador: {old}")
 
 for path, (message, labels) in GENERAL_MESSAGES.items():
     changed = replace_contact_links(path, message, labels)
@@ -86,4 +112,4 @@ for path, (message, labels) in GENERAL_MESSAGES.items():
     if html.count(target) != 3:
         raise SystemExit(f"{path}: el mensaje general no quedó exactamente en tres CTA")
 
-print("Dock móvil: aria-current añadido. Contacto: mensajes generales de WhatsApp alineados en ES/EN.")
+print("Dock móvil: aria-current añadido. Contacto y orientador: intención de WhatsApp alineada en ES/EN.")
