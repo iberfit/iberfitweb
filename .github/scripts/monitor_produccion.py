@@ -70,6 +70,9 @@ def parse_version(value: str) -> tuple[int, int]:
     match = re.search(r"(\d+)\.(\d+)", value)
     return (int(match.group(1)), int(match.group(2))) if match else (0, 0)
 
+def text(data: bytes) -> str:
+    return data.decode("utf-8", errors="replace")
+
 production_version_raw = "unknown"
 production_version = (0, 0)
 try:
@@ -82,9 +85,6 @@ except Exception as exc:
 
 require_v628_semantics = production_version >= (6, 28)
 
-def text(data: bytes) -> str:
-    return data.decode("utf-8", errors="replace")
-
 # Rutas críticas.
 for route in CRITICAL:
     try:
@@ -95,26 +95,42 @@ for route in CRITICAL:
     except Exception as exc:
         add(f"route {route}", False, repr(exc))
 
-# Disponibilidad pública de la app. Durante la fase de calibración se informa
-# como advertencia si una protección anti-bot impide la sonda sintética.
-for app_path in ("/", "/runtime-config.js"):
-    try:
-        status, final, headers, body, ms = fetch(APP_BASE + app_path)
-        body_text = text(body)
-        plausible = status == 200 and (
-            "IBERFIT" in body_text
-            or "runtime" in app_path
-            or "<html" in body_text.lower()
-        )
-        add(
-            f"app pública {app_path}",
-            plausible,
-            f"HTTP {status} · {len(body)} bytes · {final}",
-            ms,
-            required=False,
-        )
-    except Exception as exc:
-        add(f"app pública {app_path}", False, repr(exc), required=False)
+# Disponibilidad pública de la app. La raíz debe servir el shell y la
+# configuración M26 debe ser JavaScript real, nunca el fallback HTML del SPA.
+try:
+    status, final, headers, body, ms = fetch(APP_BASE + "/")
+    body_text = text(body)
+    root_ok = status == 200 and "IBERFIT" in body_text and "<html" in body_text.lower()
+    add(
+        "app pública /",
+        root_ok,
+        f"HTTP {status} · {len(body)} bytes · {final}",
+        ms,
+        required=False,
+    )
+except Exception as exc:
+    add("app pública /", False, repr(exc), required=False)
+
+try:
+    app_runtime_path = "/m26/runtime-config.js"
+    status, final, headers, body, ms = fetch(APP_BASE + app_runtime_path)
+    body_text = text(body)
+    content_type = headers.get("Content-Type", headers.get("content-type", ""))
+    runtime_ok = (
+        status == 200
+        and "window.__IBERFIT_M26_RUNTIME__" in body_text
+        and "<html" not in body_text.lower()
+        and "javascript" in content_type.lower()
+    )
+    add(
+        f"app pública {app_runtime_path}",
+        runtime_ok,
+        f"HTTP {status} · {len(body)} bytes · {content_type} · {final}",
+        ms,
+        required=False,
+    )
+except Exception as exc:
+    add("app pública /m26/runtime-config.js", False, repr(exc), required=False)
 
 # Headers de seguridad en la raíz.
 try:
