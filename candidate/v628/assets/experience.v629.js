@@ -1,0 +1,292 @@
+
+(() => {
+  'use strict';
+
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const track = (name, payload = {}) => {
+    try {
+      if (typeof window.iberfitTrack === 'function') window.iberfitTrack(name, payload);
+    } catch (_) {}
+  };
+
+  const initReviews = () => {
+    const cards = document.querySelector('.review-cards');
+    if (!cards || cards.dataset.v629Ready === '1') return;
+    const slides = Array.from(cards.querySelectorAll('.client-review'));
+    if (slides.length < 2) return;
+
+    cards.dataset.v629Ready = '1';
+    const showcase = cards.closest('.review-showcase');
+    if (showcase) showcase.classList.add('is-carousel-ready');
+
+    cards.classList.add('review-carousel');
+    cards.setAttribute('role', 'region');
+    cards.setAttribute('aria-roledescription', 'carrusel');
+    cards.setAttribute('aria-label', 'Experiencias reales de clientes IBERFIT');
+
+    const stage = document.createElement('div');
+    stage.className = 'review-carousel-stage';
+    cards.parentNode.insertBefore(stage, cards);
+    stage.appendChild(cards);
+
+    let current = 0;
+    let timer = 0;
+    let manuallyPaused = false;
+    let pointerStart = null;
+    const delay = 2000;
+
+    slides.forEach((slide, index) => {
+      slide.classList.add('review-slide');
+      slide.dataset.reviewIndex = String(index);
+      slide.setAttribute('role', 'group');
+      slide.setAttribute('aria-roledescription', 'reseña');
+      slide.setAttribute('aria-label', `${index + 1} de ${slides.length}`);
+    });
+
+    const controls = document.createElement('div');
+    controls.className = 'review-carousel-controls';
+    controls.innerHTML = `
+      <div class="review-carousel-nav">
+        <button class="review-carousel-btn" type="button" data-review-prev aria-label="Reseña anterior">←</button>
+        <button class="review-carousel-btn" type="button" data-review-pause aria-label="Pausar cambio automático">Ⅱ</button>
+        <button class="review-carousel-btn" type="button" data-review-next aria-label="Reseña siguiente">→</button>
+      </div>
+      <div class="review-carousel-dots" role="tablist" aria-label="Elegir reseña"></div>
+      <div class="review-carousel-status" aria-hidden="true"></div>
+    `;
+    stage.insertAdjacentElement('afterend', controls);
+
+    const dots = controls.querySelector('.review-carousel-dots');
+    const status = controls.querySelector('.review-carousel-status');
+    const pauseButton = controls.querySelector('[data-review-pause]');
+
+    slides.forEach((_, index) => {
+      const dot = document.createElement('button');
+      dot.type = 'button';
+      dot.className = 'review-carousel-dot';
+      dot.setAttribute('role', 'tab');
+      dot.setAttribute('aria-label', `Mostrar reseña ${index + 1}`);
+      dot.addEventListener('click', () => {
+        show(index, 'dot');
+        restart();
+      });
+      dots.appendChild(dot);
+    });
+
+    const dotItems = Array.from(dots.children);
+    const show = (next, source = 'auto') => {
+      const normalized = (next + slides.length) % slides.length;
+      slides.forEach((slide, index) => {
+        const active = index === normalized;
+        slide.classList.toggle('is-active', active);
+        slide.setAttribute('aria-hidden', String(!active));
+        if ('inert' in slide) slide.inert = !active;
+      });
+      dotItems.forEach((dot, index) => {
+        const active = index === normalized;
+        dot.classList.toggle('is-active', active);
+        dot.setAttribute('aria-selected', String(active));
+        dot.tabIndex = active ? 0 : -1;
+      });
+      current = normalized;
+      status.textContent = `${current + 1} / ${slides.length}`;
+      if (source !== 'init' && source !== 'auto') track('review_carousel_change', { source, review: current + 1 });
+    };
+
+    const stop = () => {
+      if (timer) window.clearInterval(timer);
+      timer = 0;
+    };
+    const start = () => {
+      stop();
+      if (manuallyPaused || prefersReducedMotion.matches || document.hidden) return;
+      timer = window.setInterval(() => show(current + 1, 'auto'), delay);
+    };
+    const restart = () => {
+      stop();
+      start();
+    };
+
+    controls.querySelector('[data-review-prev]').addEventListener('click', () => {
+      show(current - 1, 'previous');
+      restart();
+    });
+    controls.querySelector('[data-review-next]').addEventListener('click', () => {
+      show(current + 1, 'next');
+      restart();
+    });
+    pauseButton.addEventListener('click', () => {
+      manuallyPaused = !manuallyPaused;
+      pauseButton.textContent = manuallyPaused ? '▶' : 'Ⅱ';
+      pauseButton.setAttribute('aria-label', manuallyPaused ? 'Reanudar cambio automático' : 'Pausar cambio automático');
+      track('review_carousel_toggle', { state: manuallyPaused ? 'paused' : 'playing' });
+      start();
+    });
+
+    stage.addEventListener('mouseenter', stop);
+    stage.addEventListener('mouseleave', start);
+    stage.addEventListener('focusin', stop);
+    stage.addEventListener('focusout', (event) => {
+      if (!stage.contains(event.relatedTarget)) start();
+    });
+    stage.addEventListener('pointerdown', (event) => {
+      pointerStart = { x: event.clientX, y: event.clientY };
+    }, { passive: true });
+    stage.addEventListener('pointerup', (event) => {
+      if (!pointerStart) return;
+      const dx = event.clientX - pointerStart.x;
+      const dy = event.clientY - pointerStart.y;
+      pointerStart = null;
+      if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) {
+        show(current + (dx < 0 ? 1 : -1), 'swipe');
+        restart();
+      }
+    }, { passive: true });
+
+    document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
+    const motionChange = () => start();
+    prefersReducedMotion.addEventListener?.('change', motionChange);
+
+    const sourceRow = document.querySelector('.review-source-row');
+    if (sourceRow) {
+      sourceRow.classList.add('review-source-row--internal');
+      sourceRow.innerHTML = `
+        <p>Reseñas públicas verificadas. Las mostramos aquí para que puedas leer las experiencias sin salir de IBERFIT.</p>
+        <span class="review-verified-badge">Reseñas verificadas</span>
+      `;
+    }
+
+    show(0, 'init');
+    start();
+  };
+
+  const countries = [
+    { code: 'CL', flag: '🇨🇱', name: 'Chile', currency: 'CLP' },
+    { code: 'CO', flag: '🇨🇴', name: 'Colombia', currency: 'COP' },
+    { code: 'MX', flag: '🇲🇽', name: 'México', currency: 'MXN' },
+    { code: 'AR', flag: '🇦🇷', name: 'Argentina', currency: 'ARS' },
+    { code: 'PE', flag: '🇵🇪', name: 'Perú', currency: 'PEN' },
+    { code: 'ES', flag: '🇪🇸', name: 'España', currency: 'EUR' },
+    { code: 'OT', flag: '🌍', name: 'Otro país', currency: 'A convenir' }
+  ];
+
+  const initCountrySelector = () => {
+    if (document.body.dataset.page !== 'online' || document.querySelector('[data-country-selector]')) return;
+    const hero = document.querySelector('.hero');
+    if (!hero) return;
+
+    const section = document.createElement('section');
+    section.className = 'country-experience';
+    section.dataset.countrySelector = '1';
+    section.innerHTML = `
+      <div class="container">
+        <div class="country-panel">
+          <div>
+            <div class="country-panel-heading">
+              <div>
+                <div class="kicker">Cobertura internacional</div>
+                <h2>Elige tu país</h2>
+              </div>
+              <p>La modalidad a distancia mantiene el mismo criterio de planificación y seguimiento. El país nos ayuda a contextualizar horarios y pago.</p>
+            </div>
+            <div class="country-grid" role="radiogroup" aria-label="País desde el que entrenas"></div>
+          </div>
+          <aside class="country-summary" aria-live="polite">
+            <div>
+              <small>País seleccionado</small>
+              <strong><span class="country-summary-flag" data-country-flag>🇨🇱</span><span data-country-name>Chile</span></strong>
+              <p>Acompañamiento a distancia disponible. La propuesta final se confirma contigo antes de contratar.</p>
+            </div>
+            <div class="country-currency"><span>Moneda local habitual</span><b data-country-currency>CLP</b></div>
+          </aside>
+        </div>
+      </div>
+    `;
+    hero.insertAdjacentElement('afterend', section);
+
+    const grid = section.querySelector('.country-grid');
+    const stored = (() => { try { return localStorage.getItem('iberfit-country-v629'); } catch (_) { return null; } })();
+    let selected = countries.some(c => c.code === stored) ? stored : 'CL';
+
+    countries.forEach(country => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'country-option';
+      button.dataset.country = country.code;
+      button.setAttribute('role', 'radio');
+      button.innerHTML = `<span class="flag" aria-hidden="true">${country.flag}</span><span class="country-name">${country.name}</span>`;
+      button.addEventListener('click', () => select(country.code, true));
+      grid.appendChild(button);
+    });
+
+    const updateWhatsApp = (country) => {
+      document.querySelectorAll('a[href*="wa.me/56944040032"]').forEach(link => {
+        if (!link.dataset.v629BaseHref) link.dataset.v629BaseHref = link.href;
+        try {
+          const url = new URL(link.dataset.v629BaseHref);
+          const original = url.searchParams.get('text') || 'Hola IBERFIT, quiero recibir orientación.';
+          url.searchParams.set('text', `${original}\nPaís: ${country.name}`);
+          link.href = url.toString();
+        } catch (_) {}
+      });
+    };
+
+    function select(code, userInitiated = false) {
+      const country = countries.find(c => c.code === code) || countries[0];
+      selected = country.code;
+      grid.querySelectorAll('.country-option').forEach(button => {
+        const active = button.dataset.country === selected;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-checked', String(active));
+      });
+      section.querySelector('[data-country-flag]').textContent = country.flag;
+      section.querySelector('[data-country-name]').textContent = country.name;
+      section.querySelector('[data-country-currency]').textContent = country.currency;
+      updateWhatsApp(country);
+      try { localStorage.setItem('iberfit-country-v629', selected); } catch (_) {}
+      if (userInitiated) track('country_selector_change', { country: country.code, currency: country.currency });
+    }
+
+    select(selected, false);
+  };
+
+  const initLocalPages = () => {
+    if (document.body.dataset.page !== 'local') return;
+    const heroText = document.querySelector('.hero .hero-text');
+    if (!heroText || heroText.querySelector('.local-place-badge')) return;
+
+    const eyebrow = heroText.querySelector('.eyebrow');
+    const raw = eyebrow?.textContent?.trim() || '';
+    const match = raw.match(/IBERFIT\s+en\s+(.+)/i);
+    const place = match?.[1]?.trim() || document.querySelector('h1')?.textContent?.match(/(?:en|de)\s+([^,.]+?)(?:\s+sin|\s+con|$)/i)?.[1]?.trim() || 'tu comuna';
+
+    const badge = document.createElement('div');
+    badge.className = 'local-place-badge';
+    badge.innerHTML = `
+      <span class="local-place-pin" aria-hidden="true">⌖</span>
+      <span class="local-place-copy"><small>Cobertura local</small><strong>${place}</strong></span>
+    `;
+    eyebrow?.insertAdjacentElement('afterend', badge);
+
+    const meta = heroText.querySelector('.hero-meta');
+    if (meta && !heroText.querySelector('.local-service-strip')) {
+      const strip = document.createElement('div');
+      strip.className = 'local-service-strip';
+      strip.setAttribute('aria-label', `Opciones de entrenamiento en ${place}`);
+      strip.innerHTML = `
+        <div class="local-service-chip"><b>01</b><span><strong>Domicilio</strong><br>Según sector y horario.</span></div>
+        <div class="local-service-chip"><b>02</b><span><strong>Gimnasio de edificio</strong><br>Si el espacio permite trabajar bien.</span></div>
+        <div class="local-service-chip"><b>03</b><span><strong>Híbrido</strong><br>Cuando mejora la continuidad.</span></div>
+      `;
+      meta.insertAdjacentElement('afterend', strip);
+    }
+
+    document.body.classList.add('local-experience-v629');
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initReviews();
+    initCountrySelector();
+    initLocalPages();
+  });
+})();
