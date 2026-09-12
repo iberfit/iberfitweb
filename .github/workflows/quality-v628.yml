@@ -3,6 +3,11 @@ name: Calidad profesional web V6.28
 
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows:
+      - Construir candidata web V6.28
+    types:
+      - completed
   push:
     branches:
       - work/web-v6-28-recuperacion
@@ -15,13 +20,20 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: calidad-web-v628
+  cancel-in-progress: true
+
 jobs:
   calidad:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Descargar rama
+      - name: Descargar candidata actual
         uses: actions/checkout@v4
+        with:
+          ref: work/web-v6-28-recuperacion
 
       - name: Preparar Node
         uses: actions/setup-node@v4

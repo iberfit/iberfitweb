@@ -1,8 +1,13 @@
 name: QA multidispositivo web V6.28
-# Certificación candidata a800 · isotipo canónico
+# Certificación visual y funcional en móvil, tableta y escritorio.
 
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows:
+      - Construir candidata web V6.28
+    types:
+      - completed
   push:
     branches:
       - work/web-v6-28-recuperacion
@@ -14,13 +19,20 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: qa-dispositivos-web-v628
+  cancel-in-progress: true
+
 jobs:
   dispositivos:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - name: Descargar rama
+      - name: Descargar candidata actual
         uses: actions/checkout@v4
+        with:
+          ref: work/web-v6-28-recuperacion
 
       - name: Preparar navegador
         run: |
