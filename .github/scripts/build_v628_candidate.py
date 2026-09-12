@@ -692,6 +692,52 @@ def refine_client_language(text: str, rel: str) -> str:
     return text
 
 
+def humanize_ctas(text: str, rel: str) -> str:
+    """CTA de marca: claros y humanos, sin sonar administrativos."""
+    text = text.replace(">Solicitar IRI</a>", ">Empezar por el IRI</a>")
+
+    page_replacements = {
+        "index.html": {
+            ">Solicitar orientación inicial</a>": ">Hablar con IBERFIT</a>",
+            ">Solicitar Diagnóstico IRI</a>": ">Empezar por el IRI</a>",
+        },
+        "diagnostico-iri/index.html": {
+            ">Solicitar Diagnóstico IRI</a>": ">Quiero hacer mi Diagnóstico IRI</a>",
+        },
+        "metodo/index.html": {
+            ">Solicitar Diagnóstico IRI</a>": ">Empezar por el IRI</a>",
+        },
+        "presencial/index.html": {
+            ">Solicitar orientación</a>": ">Hablar con IBERFIT</a>",
+            ">Usar el orientador de modalidad</a>": ">Ver qué opción encaja conmigo</a>",
+            ">Solicitar Diagnóstico IRI</a>": ">Empezar por el IRI</a>",
+        },
+        "hibrido/index.html": {
+            ">Solicitar orientación</a>": ">Hablar con IBERFIT</a>",
+            ">Usar el orientador de modalidad</a>": ">Ver qué opción encaja conmigo</a>",
+            ">Solicitar Diagnóstico IRI</a>": ">Empezar por el IRI</a>",
+        },
+        "online/index.html": {
+            ">Solicitar orientación</a>": ">Hablar con IBERFIT</a>",
+            ">Usar el orientador de modalidad</a>": ">Ver qué opción encaja conmigo</a>",
+            ">Solicitar Diagnóstico IRI</a>": ">Empezar por el IRI</a>",
+        },
+        "sobre-iberfit/index.html": {
+            ">Solicitar orientación inicial</a>": ">Hablar con IBERFIT</a>",
+            ">Solicitar Diagnóstico IRI</a>": ">Empezar por el IRI</a>",
+        },
+        "contacto/index.html": {
+            ">Solicitar Diagnóstico IRI</a>": ">Empezar por el IRI</a>",
+        },
+    }
+    for old, new in page_replacements.get(rel, {}).items():
+        text = text.replace(old, new)
+
+    if rel != "diagnostico-iri/index.html":
+        text = text.replace(">Solicitar Diagnóstico IRI</a>", ">Empezar por el IRI</a>")
+    return text
+
+
 def enrich_structured_data(text: str, rel: str) -> str:
     """Añade semántica específica por página sin inventar datos operativos."""
     pattern = re.compile(
@@ -1097,6 +1143,7 @@ def main() -> None:
             text=specialize_local_page(text, rel)
             text=humanize_brand_voice(text, rel)
             text=refine_client_language(text, rel)
+            text=humanize_ctas(text, rel)
         if rel in {"contacto/index.html","en/contact/index.html"}:
             text=text.replace(
                 '<form class="orientador-card reveal" data-orientador-form="" novalidate="">',
