@@ -347,8 +347,11 @@ for (const device of devices) {
       finePointer: matchMedia("(hover:hover) and (pointer:fine) and (min-width:1024px)").matches,
       reduced: matchMedia("(prefers-reduced-motion: reduce)").matches,
     }));
-    if (premiumState.surfaces < 1) {
-      add(device.name, reviewRoute, "INTERACCION_PREMIUM", "superficies premium ausentes");
+    if (premiumState.finePointer && !premiumState.reduced && premiumState.surfaces < 1) {
+      add(device.name, reviewRoute, "INTERACCION_PREMIUM", "superficies premium ausentes en escritorio");
+    }
+    if ((!premiumState.finePointer || premiumState.reduced) && premiumState.surfaces > 0) {
+      add(device.name, reviewRoute, "INTERACCION_PREMIUM_INNECESARIA", JSON.stringify(premiumState));
     }
     if (premiumState.reduced && premiumState.rich) {
       add(device.name, reviewRoute, "INTERACCION_REDUCED_MOTION", JSON.stringify(premiumState));
