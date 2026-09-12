@@ -62,7 +62,17 @@ OUT.mkdir(parents=True, exist_ok=True)
 site = OUT / "site"
 site.mkdir(parents=True, exist_ok=True)
 
-seed = {BASE + "/", BASE + "/robots.txt", BASE + "/sitemap.xml", BASE + "/manifest.webmanifest"}
+seed = {
+    BASE + "/",
+    BASE + "/404.html",
+    BASE + "/robots.txt",
+    BASE + "/sitemap.xml",
+    BASE + "/manifest.webmanifest",
+    BASE + "/assets/favicon-192x192.png",
+    BASE + "/assets/favicon-512x512.png",
+    BASE + "/assets/iberfit-isotipo-oficial.png",
+    BASE + "/assets/iberfit-og.webp",
+}
 sitemap_bytes, sitemap_headers, _, _ = request(BASE + "/sitemap.xml")
 try:
     root = ET.fromstring(sitemap_bytes)
@@ -128,7 +138,6 @@ while queue:
     except Exception as exc:
         errors.append({"url": url, "error": repr(exc)})
 
-# Deterministic manifest.
 records.sort(key=lambda x: x["path"])
 manifest_lines = [f'{r["sha256"]}  {r["path"]}' for r in records]
 (OUT / "SHA256SUMS.txt").write_text("\n".join(manifest_lines) + "\n", encoding="utf-8")
