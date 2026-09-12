@@ -174,6 +174,26 @@ try:
 except Exception as exc:
     add("robots", False, repr(exc))
 
+# Descubrimiento por IA. Se vuelve obligatorio al publicar V6.28+.
+try:
+    status, final, headers, body, ms = fetch("/llms.txt")
+    body_text = text(body)
+    llms_ok = (
+        status == 200
+        and body_text.lstrip().startswith("# IBERFIT")
+        and "https://iberfit.cl/sitemap.xml" in body_text
+        and "Diagnóstico IRI" in body_text
+    )
+    add(
+        "llms.txt",
+        llms_ok,
+        f"HTTP {status} · {len(body)} bytes",
+        ms,
+        required=require_v628_semantics,
+    )
+except Exception as exc:
+    add("llms.txt", False, repr(exc), required=require_v628_semantics)
+
 # Manifest.
 try:
     status, final, headers, body, ms = fetch("/manifest.webmanifest")
