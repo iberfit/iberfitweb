@@ -52,10 +52,14 @@ for (const device of devices) {
   for (const [route, label] of routes) {
     const page = await context.newPage();
     const consoleErrors = [];
+    const failedResponses = [];
     page.on("console", msg => {
       if (msg.type() === "error") consoleErrors.push(msg.text());
     });
     page.on("pageerror", err => consoleErrors.push(String(err)));
+    page.on("response", response => {
+      if (response.status() >= 400) failedResponses.push(response.status() + " " + response.url());
+    });
 
     const response = await page.goto(base + route, { waitUntil: "networkidle", timeout: 30000 });
     if (!response || !response.ok()) {
@@ -144,8 +148,15 @@ for (const device of devices) {
       if (!visible.includes("a distancia")) add(device.name, route, "NOMBRE_COMERCIAL", "A distancia ausente");
     }
 
+    if (failedResponses.length) {
+      for (const failure of failedResponses) add(device.name, route, "HTTP_RECURSO", failure);
+    }
     if (consoleErrors.length) {
-      for (const error of consoleErrors) add(device.name, route, "CONSOLA", error);
+      const generic404 = failedResponses.some(item => item.startsWith("404 "));
+      for (const error of consoleErrors) {
+        if (generic404 && error.includes("404 (File not found)")) continue;
+        add(device.name, route, "CONSOLA", error);
+      }
     }
 
     if (["inicio", "iri", "contacto"].includes(label)) {
