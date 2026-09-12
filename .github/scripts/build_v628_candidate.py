@@ -33,6 +33,7 @@ EN_REPORT = """<div aria-label="Illustrative IRI Report" class="report-preview r
 
 CSS_ADD = """
 /* V6.28 · Interacción accesible y vista longitudinal IRI. */
+.brand-mark{width:auto!important;height:48px!important;aspect-ratio:173/192;object-fit:contain}
 .lang-switch a{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:.35rem .25rem}
 .photo-story-copy > .kicker{color:#775b12}
 /* Vista longitudinal IRI: consciente del protocolo y sin puntuación global. */
@@ -305,6 +306,12 @@ def main() -> None:
         rel=page.relative_to(DST).as_posix()
         text=page.read_text("utf-8")
         text=text.replace("/assets/styles.v626.css","/assets/styles.v628.css")
+        text=re.sub(
+            r'(<img\b(?=[^>]*class="brand-mark")[^>]*?)height="48"([^>]*?)width="48"',
+            r'\1height="48"\2width="43"',
+            text,
+            flags=re.I,
+        )
         text=text.replace("/assets/iberfit-isotipo-96.png","/assets/iberfit-isotipo-oficial.png")
         text=text.replace("/assets/iberfit-isotipo-192.png","/assets/iberfit-isotipo-oficial.png")
         text=text.replace("/assets/iberfit-isotipo-verde-96.png","/assets/iberfit-isotipo-oficial.png")
