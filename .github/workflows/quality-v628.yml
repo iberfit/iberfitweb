@@ -110,13 +110,18 @@ jobs:
           node - <<'NODE'
           const fs=require('fs');
           const r=JSON.parse(fs.readFileSync('/tmp/lighthouse-home.json','utf8'));
-          const wanted={performance:0.85,accessibility:0.95,'best-practices':0.95,seo:0.95};
+          const wanted={performance:0.95,accessibility:0.95,'best-practices':0.95,seo:0.95};
           let fail=false;
           for(const [k,min] of Object.entries(wanted)){
             const score=r.categories[k].score;
             console.log(k,score,'mínimo',min);
             if(score<min) fail=true;
           }
+          const tbt=r.audits['total-blocking-time']?.numericValue ?? Infinity;
+          const cls=r.audits['cumulative-layout-shift']?.numericValue ?? Infinity;
+          console.log('TBT(ms)',tbt,'máximo',300);
+          console.log('CLS',cls,'máximo',0.1);
+          if(tbt>300 || cls>0.1) fail=true;
           if(fail) process.exit(1);
           NODE
 
@@ -126,13 +131,18 @@ jobs:
           node - <<'NODE'
           const fs=require('fs');
           const r=JSON.parse(fs.readFileSync('/tmp/lighthouse-iri.json','utf8'));
-          const wanted={performance:0.85,accessibility:0.95,'best-practices':0.95,seo:0.95};
+          const wanted={performance:0.95,accessibility:0.95,'best-practices':0.95,seo:0.95};
           let fail=false;
           for(const [k,min] of Object.entries(wanted)){
             const score=r.categories[k].score;
             console.log(k,score,'mínimo',min);
             if(score<min) fail=true;
           }
+          const tbt=r.audits['total-blocking-time']?.numericValue ?? Infinity;
+          const cls=r.audits['cumulative-layout-shift']?.numericValue ?? Infinity;
+          console.log('TBT(ms)',tbt,'máximo',300);
+          console.log('CLS',cls,'máximo',0.1);
+          if(tbt>300 || cls>0.1) fail=true;
           if(fail) process.exit(1);
           NODE
 
