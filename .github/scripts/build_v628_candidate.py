@@ -202,14 +202,10 @@ def enrich_structured_data(text: str, rel: str) -> str:
     else:
         canonical = "https://iberfit.cl/" + rel.removesuffix("index.html")
 
-    title_match = re.search(r"<title>(.*?)</title>", text, re.I | re.S)
-    title = re.sub(r"\s+", " ", title_match.group(1)).strip() if title_match else "IBERFIT"
-    desc_match = re.search(
-        r'<meta[^>]+name="description"[^>]+content="([^"]+)"',
-        text,
-        re.I,
-    )
-    description = desc_match.group(1).strip() if desc_match else ""
+    parser = PageParser()
+    parser.feed(text)
+    title = parser.title.strip() or "IBERFIT"
+    description = (parser.desc or "").strip()
 
     page_id = canonical + "#webpage"
     breadcrumb_items = [
@@ -381,6 +377,21 @@ def validate() -> None:
         text=(DST/rel).read_text("utf-8")
         if "report-preview-v2" not in text or "report-comparison" not in text:
             fail(f"{rel}: vista IRI longitudinal ausente")
+
+    structured_required = {
+        "diagnostico-iri/index.html": ('"@type":"Service"', '"price":"30000"', '"priceCurrency":"CLP"'),
+        "contacto/index.html": ('"@type":"ContactPage"',),
+        "metodo/index.html": ('"@type":"BreadcrumbList"',),
+        "online/index.html": ('"name":"Entrenamiento personal a distancia"',),
+        "entrenador-personal-las-condes/index.html": ('"areaServed":{"@type":"AdministrativeArea","name":"Las Condes"}',),
+    }
+    for rel, markers in structured_required.items():
+        source=(DST/rel).read_text("utf-8")
+        for marker in markers:
+            if marker not in source:
+                fail(f"{rel}: dato estructurado ausente {marker}")
+        if '"description":""' in source:
+            fail(f"{rel}: descripción vacía en datos estructurados")
     for old in ("iri-report-preview-es-1448.webp","iri-report-preview-es-768.webp","iri-report-preview-es.png"):
         if (DST/"assets"/old).exists(): fail(f"Recurso IRI antiguo presente: {old}")
     for asset in DST.rglob("*"):
