@@ -67,7 +67,8 @@ def add(name: str, ok: bool, detail: str, ms: int | None = None, *, required: bo
     checks.append(Check(name=name, ok=ok, detail=detail, ms=ms, required=required))
 
 def parse_version(value: str) -> tuple[int, int]:
-    match = re.search(r"(\d+)\.(\d+)", value)
+    # VERSION debe ser un payload de versión, no HTML que contenga números por casualidad.
+    match = re.fullmatch(r"\s*(\d+)\.(\d+)(?:\.\d+)?\s*", value)
     return (int(match.group(1)), int(match.group(2))) if match else (0, 0)
 
 def text(data: bytes) -> str:
