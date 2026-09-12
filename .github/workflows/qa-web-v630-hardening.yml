@@ -1,0 +1,270 @@
+name: QA WEB IBERFIT V6.30 hardening
+
+on:
+  push:
+    branches:
+      - work/web-v6-30-hardening
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-web-v630-hardening
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.62.1
+          npx playwright install --with-deps chromium
+
+      - name: Verificar integración estática V6.30
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat candidate/v628/VERSION)" = "6.30"
+          test -s candidate/v628/assets/hardening.v630.css
+          test -s candidate/v628/assets/noscript.v630.css
+          test -s candidate/v628/assets/hardening.v630.js
+          count="$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')"
+          linked="$(grep -rl '/assets/hardening.v630.css' candidate/v628 --include='*.html' | wc -l | tr -d ' ')"
+          noscript="$(grep -rl '/assets/noscript.v630.css' candidate/v628 --include='*.html' | wc -l | tr -d ' ')"
+          watchdog="$(grep -rl '/assets/hardening.v630.js' candidate/v628 --include='*.html' | wc -l | tr -d ' ')"
+          echo "HTML=$count CSS=$linked NOSCRIPT=$noscript JS=$watchdog"
+          test "$linked" = "$count"
+          test "$noscript" = "$count"
+          test "$watchdog" = "$count"
+          grep -Fq -- '--gold-dark:#806216' candidate/v628/assets/hardening.v630.css
+          grep -Fq '.cta-panel-inner h1' candidate/v628/assets/hardening.v630.css
+          grep -Fq '.site-header .brand-mark' candidate/v628/assets/hardening.v630.css
+
+      - name: Verificar variables CSS
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('fs');
+          const css=[
+            fs.readFileSync('candidate/v628/assets/styles.v628.css','utf8'),
+            fs.readFileSync('candidate/v628/assets/experience.v629.css','utf8'),
+            fs.readFileSync('candidate/v628/assets/hardening.v630.css','utf8')
+          ].join('\n');
+          const defs=new Set([...css.matchAll(/--([\w-]+)\s*:/g)].map(m=>m[1]));
+          const uses=[...css.matchAll(/var\(--([\w-]+)(?:,[^)]+)?\)/g)].map(m=>m[1]);
+          const allowed=new Set(['nav-panel-top','value']);
+          const missing=[...new Set(uses.filter(v=>!defs.has(v)&&!allowed.has(v)))];
+          if(missing.length) throw new Error('UNDEFINED_CSS_VARS='+missing.join(','));
+          console.log('CSS_CUSTOM_PROPERTIES=PASS');
+          NODE
+
+      - name: Servir candidata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v630-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl --fail --silent http://127.0.0.1:4173/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/v630-server.log
+          exit 1
+
+      - name: QA regresión multidispositivo existente
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v630-evidence/general
+          BASE_URL="http://127.0.0.1:4173" QA_OUT="/tmp/v630-evidence/general"             node .github/scripts/qa_v628_dispositivos.mjs
+
+      - name: QA visual, contraste y robustez V6.30
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v630-evidence/hardening
+          cat > /tmp/qa-v630.js <<'NODE'
+          const { chromium } = require('playwright');
+          const fs=require('fs');
+          const base='http://127.0.0.1:4173';
+          const routes=[
+            '/','/diagnostico-iri/','/metodo/','/presencial/','/hibrido/','/online/','/sobre-iberfit/','/contacto/','/privacidad/',
+            '/entrenador-personal-las-condes/','/entrenador-personal-vitacura/','/entrenamiento-personal-providencia/','/personal-trainer-nunoa/',
+            '/entrenador-personal-lo-barnechea/','/entrenador-personal-la-reina/','/entrenador-personal-penalolen/',
+            '/en/','/en/iri-assessment/','/en/method/','/en/in-person/','/en/hybrid/','/en/online/','/en/about/','/en/contact/','/en/privacy/',
+            '/en/personal-trainer-las-condes/','/en/personal-trainer-vitacura/','/en/personal-training-providencia/','/en/personal-trainer-nunoa/',
+            '/en/personal-trainer-lo-barnechea/','/en/personal-trainer-la-reina/','/en/personal-trainer-penalolen/'
+          ];
+          const notes=[];
+          const fail=(m)=>{throw new Error(m)};
+          const parseRGB=s=>{
+            const m=String(s).match(/rgba?\(([^)]+)\)/i);
+            if(!m)return null;
+            const p=m[1].split(',').map(x=>parseFloat(x.trim()));
+            return {r:p[0],g:p[1],b:p[2],a:p.length>3?p[3]:1};
+          };
+          const linear=c=>{c/=255;return c<=.03928?c/12.92:Math.pow((c+.055)/1.055,2.4)};
+          const lum=c=>.2126*linear(c.r)+.7152*linear(c.g)+.0722*linear(c.b);
+          const ratio=(a,b)=>{const A=lum(a),B=lum(b);return (Math.max(A,B)+.05)/(Math.min(A,B)+.05)};
+
+          async function open(ctx,route,label){
+            const p=await ctx.newPage();
+            const errors=[];
+            p.on('pageerror',e=>errors.push('pageerror:'+e.message));
+            p.on('console',m=>{if(m.type()==='error')errors.push('console:'+m.text())});
+            const res=await p.goto(base+route,{waitUntil:'networkidle'});
+            if(!res||!res.ok())fail(label+': HTTP');
+            if(errors.length)fail(label+': '+errors.join(' | '));
+            return p;
+          }
+
+          async function scrollAll(p){
+            await p.evaluate(async()=>{
+              const max=Math.max(document.body.scrollHeight,document.documentElement.scrollHeight);
+              for(let y=0;y<max;y+=Math.max(280,innerHeight*.65)){
+                scrollTo(0,y);
+                await new Promise(r=>setTimeout(r,35));
+              }
+              scrollTo(0,max);
+              await new Promise(r=>setTimeout(r,180));
+            });
+          }
+
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            try{
+              const desktop=await browser.newContext({viewport:{width:1440,height:1000}});
+              for(const route of routes){
+                const p=await open(desktop,route,route+' desktop');
+                const h1=await p.locator('h1').first();
+                if(!await h1.count())fail(route+': H1 missing');
+                const h1State=await h1.evaluate(el=>{
+                  const s=getComputedStyle(el),r=el.getBoundingClientRect();
+                  return {opacity:+s.opacity,visibility:s.visibility,display:s.display,w:r.width,h:r.height,color:s.color};
+                });
+                if(h1State.opacity<.9||h1State.visibility==='hidden'||h1State.display==='none'||h1State.w<1||h1State.h<1)fail(route+': H1 not visible '+JSON.stringify(h1State));
+
+                const logo=await p.locator('.site-header .brand-mark').first();
+                if(await logo.count()){
+                  const ls=await logo.evaluate(el=>{const s=getComputedStyle(el);return {bg:s.backgroundColor,pad:s.paddingTop,w:el.getBoundingClientRect().width,h:el.getBoundingClientRect().height}});
+                  const bg=parseRGB(ls.bg);
+                  if(!bg||bg.a<.9||ls.w<44||ls.h<44||parseFloat(ls.pad)<4)fail(route+': header logo contrast support missing '+JSON.stringify(ls));
+                }
+
+                const ctas=p.locator('.cta-panel-inner');
+                for(let i=0;i<await ctas.count();i++){
+                  const data=await ctas.nth(i).evaluate(el=>{
+                    const h=el.querySelector('h1,h2,h3,h4');
+                    if(!h)return null;
+                    const hs=getComputedStyle(h),bs=getComputedStyle(el),r=h.getBoundingClientRect();
+                    return {fg:hs.color,bg:bs.backgroundColor,opacity:+hs.opacity,visibility:hs.visibility,w:r.width,h:r.height,text:h.textContent.trim()};
+                  });
+                  if(data){
+                    const fg=parseRGB(data.fg),bg=parseRGB(data.bg);
+                    if(!fg||!bg||ratio(fg,bg)<4.5)fail(route+': CTA title low contrast '+JSON.stringify(data));
+                    if(data.opacity<.9||data.visibility==='hidden'||data.w<1||data.h<1)fail(route+': CTA title hidden '+JSON.stringify(data));
+                  }
+                }
+
+                const goldSmall=await p.locator('.kicker,.eyebrow').evaluateAll(els=>els.map(el=>{
+                  const s=getComputedStyle(el),r=el.getBoundingClientRect();
+                  return {color:s.color,font:parseFloat(s.fontSize),text:el.textContent.trim(),visible:r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden'};
+                }).filter(x=>x.visible));
+                for(const x of goldSmall){
+                  const fg=parseRGB(x.color);
+                  if(fg && x.font<=14 && fg.r>120 && fg.g>90 && fg.b<80){
+                    // El color dorado claro pequeño ya no debe aparecer en superficies claras.
+                    const hexLike=`${fg.r},${fg.g},${fg.b}`;
+                    if(fg.r>=170&&fg.g>=130) fail(route+': small light-gold text remains '+x.text+' rgb='+hexLike);
+                  }
+                }
+
+                await scrollAll(p);
+                const hiddenReveal=await p.locator('.reveal').evaluateAll(els=>els.filter(el=>{
+                  const s=getComputedStyle(el),r=el.getBoundingClientRect();
+                  return r.width>0&&r.height>0&&(parseFloat(s.opacity)<.85||s.visibility==='hidden');
+                }).map(el=>({cls:el.className,text:(el.textContent||'').trim().slice(0,80),opacity:getComputedStyle(el).opacity})));
+                if(hiddenReveal.length)fail(route+': reveals hidden after full scroll '+JSON.stringify(hiddenReveal.slice(0,5)));
+
+                const broken=await p.locator('img').evaluateAll(imgs=>imgs.filter(i=>i.getBoundingClientRect().width>0 && (!i.complete||i.naturalWidth===0)).map(i=>i.getAttribute('src')));
+                if(broken.length)fail(route+': broken images '+JSON.stringify(broken));
+
+                const dup=await p.evaluate(()=>{
+                  const ids=[...document.querySelectorAll('[id]')].map(e=>e.id).filter(Boolean),seen=new Set(),dups=[];
+                  for(const id of ids){if(seen.has(id))dups.push(id);seen.add(id)}
+                  return [...new Set(dups)];
+                });
+                if(dup.length)fail(route+': duplicate ids '+dup.join(','));
+
+                const overflow=await p.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
+                if(overflow>2)fail(route+': desktop horizontal overflow '+overflow);
+                await p.close();
+              }
+              notes.push('desktop: H1 + CTA contrast + logo support + reveal + images + IDs + overflow PASS');
+              await desktop.close();
+
+              const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2});
+              const mobileRoutes=['/','/diagnostico-iri/','/presencial/','/sobre-iberfit/','/contacto/','/entrenador-personal-las-condes/','/en/','/en/in-person/','/en/about/','/en/contact/','/en/personal-trainer-las-condes/'];
+              for(const route of mobileRoutes){
+                const p=await open(mobile,route,route+' mobile');
+                const overflow=await p.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
+                if(overflow>2)fail(route+': mobile horizontal overflow '+overflow);
+                const smallTargets=await p.evaluate(()=>{
+                  const sel='button,.btn,.consent-close,.review-carousel-btn,.review-carousel-dot,.menu-toggle,.device-dock a,.nav-mobile-languages a';
+                  return [...document.querySelectorAll(sel)].filter(el=>{
+                    const s=getComputedStyle(el),r=el.getBoundingClientRect();
+                    const visible=s.display!=='none'&&s.visibility!=='hidden'&&r.width>0&&r.height>0;
+                    return visible && (r.width<43.5||r.height<43.5);
+                  }).map(el=>({tag:el.tagName,cls:el.className,text:(el.textContent||'').trim().slice(0,40),w:el.getBoundingClientRect().width,h:el.getBoundingClientRect().height}));
+                });
+                if(smallTargets.length)fail(route+': small touch targets '+JSON.stringify(smallTargets.slice(0,8)));
+                await p.close();
+              }
+              notes.push('mobile: overflow + 44px touch targets PASS');
+              await mobile.close();
+
+              const nojs=await browser.newContext({viewport:{width:390,height:844},javaScriptEnabled:false});
+              for(const route of ['/','/metodo/','/sobre-iberfit/','/contacto/','/en/','/en/method/','/en/about/','/en/contact/']){
+                const p=await nojs.newPage();
+                const res=await p.goto(base+route,{waitUntil:'domcontentloaded'});
+                if(!res||!res.ok())fail(route+': no-JS HTTP');
+                const hidden=await p.locator('.reveal').evaluateAll(els=>els.filter(el=>{
+                  const s=getComputedStyle(el),r=el.getBoundingClientRect();
+                  return r.width>0&&r.height>0&&(parseFloat(s.opacity)<.9||s.visibility==='hidden');
+                }).length);
+                if(hidden)fail(route+': no-JS hidden reveal count='+hidden);
+                await p.close();
+              }
+              notes.push('no-JS: contenido reveal visible PASS');
+              await nojs.close();
+
+              fs.writeFileSync('/tmp/v630-evidence/hardening/report.json',JSON.stringify({ok:true,notes},null,2));
+              console.log('QA V6.30 HARDENING=PASS');
+              notes.forEach(n=>console.log('PASS · '+n));
+            } finally {await browser.close()}
+          })().catch(e=>{
+            fs.writeFileSync('/tmp/v630-evidence/hardening/report.json',JSON.stringify({ok:false,error:e.stack||String(e)},null,2));
+            console.error(e.stack||e);process.exit(1)
+          });
+          NODE
+          NODE_PATH="$GITHUB_WORKSPACE/node_modules" node /tmp/qa-v630.js
+
+      - name: Guardar evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-web-v630-hardening-${{ github.run_id }}
+          path: /tmp/v630-evidence
+          if-no-files-found: warn
+          retention-days: 30
