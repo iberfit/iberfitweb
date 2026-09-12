@@ -106,10 +106,10 @@ try:
         root_ok,
         f"HTTP {status} · {len(body)} bytes · {final}",
         ms,
-        required=False,
+        required=True,
     )
 except Exception as exc:
-    add("app pública /", False, repr(exc), required=False)
+    add("app pública /", False, repr(exc), required=True)
 
 try:
     app_runtime_path = "/m26/runtime-config.js"
@@ -127,10 +127,10 @@ try:
         runtime_ok,
         f"HTTP {status} · {len(body)} bytes · {content_type} · {final}",
         ms,
-        required=False,
+        required=True,
     )
 except Exception as exc:
-    add("app pública /m26/runtime-config.js", False, repr(exc), required=False)
+    add("app pública /m26/runtime-config.js", False, repr(exc), required=True)
 
 # Headers de seguridad en la raíz.
 try:
