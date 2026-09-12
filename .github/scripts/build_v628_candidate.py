@@ -66,6 +66,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .consent-close{width:44px;height:44px}
 .consent-link{display:inline-flex;align-items:center;min-height:44px;padding:.65rem}
 .consent-actions .btn,.consent-dialog .btn{min-height:44px}
+.consent-banner .btn-ghost{color:#fff;border-color:rgba(255,255,255,.45)}
+.consent-banner .btn-ghost:hover{background:rgba(255,255,255,.08)}
 .choice-chip{min-height:48px}
 @media(max-width:720px){.device-dock a{min-width:44px;min-height:52px}}
 @media(max-width:430px){input,select,textarea{font-size:16px}}
