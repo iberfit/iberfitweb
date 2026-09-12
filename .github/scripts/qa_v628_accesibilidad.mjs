@@ -40,6 +40,41 @@ for (const route of routes) {
     });
   }
 
+  if (route === '/contacto/') {
+    const status = page.locator('[data-orientador-status]');
+    if (await status.count() !== 1 || await status.getAttribute('aria-live') !== 'polite') {
+      findings.push({ route, id:'orientador-live-region', impact:'serious', description:'El orientador debe exponer una región viva accesible.' });
+    }
+
+    const firstGoal = page.locator('[data-step="1"] .choice-chip').first();
+    if (await firstGoal.count() !== 1) {
+      findings.push({ route, id:'orientador-choice-chip', impact:'serious', description:'No se generaron opciones táctiles accesibles.' });
+    } else {
+      await firstGoal.click();
+      if (await firstGoal.getAttribute('aria-pressed') !== 'true') {
+        findings.push({ route, id:'orientador-aria-pressed', impact:'serious', description:'La opción seleccionada no refleja aria-pressed=true.' });
+      }
+      await page.locator('[data-step="1"] [data-next-step]').click();
+      await page.waitForTimeout(60);
+      const step2 = page.locator('[data-step="2"]');
+      const liveText = (await status.textContent() || '').trim();
+      if (!(await step2.evaluate(el => el.classList.contains('active'))) || await step2.getAttribute('aria-hidden') !== 'false') {
+        findings.push({ route, id:'orientador-step-state', impact:'serious', description:'El paso 2 no expone correctamente su estado activo.' });
+      }
+      if (!liveText.includes('Paso 2 de 3')) {
+        findings.push({ route, id:'orientador-step-announcement', impact:'moderate', description:'El cambio de paso no se anuncia correctamente.' });
+      }
+
+      await page.locator('[data-step="2"] [data-next-step]').click();
+      await page.locator('[data-step="3"] button[type="submit"]').click();
+      await page.waitForTimeout(60);
+      const result = page.locator('[data-orientador-result]');
+      if (await result.isHidden() || await result.getAttribute('role') !== 'region' || await result.getAttribute('aria-live') !== 'polite') {
+        findings.push({ route, id:'orientador-result', impact:'serious', description:'El resultado no se expone como región accesible.' });
+      }
+    }
+  }
+
   await page.close();
   await context.close();
 }
