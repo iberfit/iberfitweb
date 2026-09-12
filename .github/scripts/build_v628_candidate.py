@@ -174,6 +174,91 @@ p{text-wrap:pretty}
 }
 """
 
+
+PREMIUM_INTERACTION_CSS = r"""
+/* IBERFIT V6.28 · fidelidad e interacción adaptativa */
+html{text-rendering:optimizeLegibility}
+body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+h1,h2{text-wrap:balance}
+.lead,.hero-support,.photo-story-copy p,.client-review blockquote{text-wrap:pretty}
+.photo-story-media img{image-rendering:auto;transform:translateZ(0);transition:transform .8s cubic-bezier(.2,.7,.2,1),filter .8s ease}
+.premium-surface{--mx:50%;--my:50%;--rx:0deg;--ry:0deg;position:relative;isolation:isolate}
+.premium-surface:before{content:"";position:absolute;inset:0;z-index:2;border-radius:inherit;pointer-events:none;opacity:0;background:radial-gradient(420px circle at var(--mx) var(--my),rgba(217,181,104,.14),rgba(255,255,255,.035) 32%,transparent 66%);transition:opacity .35s ease}
+.premium-surface>*{position:relative;z-index:1}
+.btn:active{transform:translateY(0) scale(.985)}
+.choice-chip:active,.device-dock a:active{transform:scale(.98)}
+.modality-row h3,.principle-row h3{transition:transform .35s cubic-bezier(.2,.7,.2,1),color .35s ease}
+
+@keyframes iberfit-ambient{
+  0%{transform:translate3d(0,0,0) scale(1)}
+  100%{transform:translate3d(-2%,3%,0) scale(1.055)}
+}
+
+@media (hover:hover) and (pointer:fine) and (min-width:1024px){
+  html.motion-rich .premium-surface{
+    transform:perspective(1400px) rotateX(var(--rx)) rotateY(var(--ry)) translateZ(0);
+    transform-style:preserve-3d;
+    transition:transform .18s ease-out,box-shadow .45s ease,border-color .45s ease
+  }
+  html.motion-rich .premium-surface:hover{will-change:transform;box-shadow:0 30px 78px rgba(8,31,20,.18)}
+  html.motion-rich .premium-surface:hover:before{opacity:1}
+  html.motion-rich .photo-story-media:hover img{transform:scale(1.024)}
+  html.motion-rich .modality-row:hover h3,
+  html.motion-rich .principle-row:hover h3{transform:translateX(6px)}
+  html.motion-rich .hero:before{animation:iberfit-ambient 14s ease-in-out infinite alternate}
+}
+
+@media (min-width:641px) and (max-width:1100px){
+  .system-rail{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .system-stage{min-height:180px}
+  .system-stage:nth-child(2){border-right:0}
+  .system-stage:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .system-stage:nth-child(2):after{display:none}
+  .method-cycle{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .cycle-step{min-height:205px}
+}
+
+@media (max-width:640px){
+  .premium-rail{
+    display:grid!important;
+    grid-template-columns:none!important;
+    grid-auto-flow:column;
+    grid-auto-columns:minmax(245px,78vw);
+    gap:.8rem!important;
+    margin-inline:-16px;
+    padding:0 22vw 12px 16px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    overscroll-behavior-inline:contain;
+    scroll-snap-type:x mandatory;
+    scroll-padding-inline:16px;
+    scrollbar-width:none;
+    background:transparent!important;
+    border:0!important;
+    -webkit-overflow-scrolling:touch
+  }
+  .premium-rail::-webkit-scrollbar{display:none}
+  .premium-rail>*{
+    scroll-snap-align:start;
+    scroll-snap-stop:always;
+    min-height:205px;
+    border:1px solid var(--line)!important;
+    border-radius:22px;
+    box-shadow:0 16px 36px rgba(16,42,29,.08)
+  }
+  .system-rail .system-stage:not(:last-child):after{display:none}
+  .cycle-step>span{margin-bottom:2rem}
+  .system-stage{padding:1.45rem 1.25rem}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .premium-surface{transform:none!important}
+  .premium-surface:before{display:none!important}
+  .photo-story-media img{transform:none!important}
+  .premium-rail{scroll-behavior:auto!important}
+}
+"""
+
 HEADERS = """/*
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
@@ -958,6 +1043,33 @@ def differentiate_local_page(text: str, rel: str) -> str:
     return text
 
 
+
+def upgrade_photo_fidelity(text: str) -> str:
+    """Deja que el navegador elija 640/960/1448 según ancho real y densidad de píxel."""
+    def replace_picture(match):
+        block=match.group(0)
+        source=re.search(r'src="/assets/(photo-[a-z0-9-]+)-1448\.webp"',block,flags=re.I)
+        if not source:
+            return block
+        base=source.group(1)
+        variants=(640,960,1448)
+        if not all((DST/"assets"/f"{base}-{width}.webp").exists() for width in variants):
+            return block
+        block=re.sub(r'<source\b[^>]*>',"",block,flags=re.I)
+        src=f'/assets/{base}-1448.webp'
+        srcset=", ".join(f"/assets/{base}-{width}.webp {width}w" for width in variants)
+        sizes="(max-width: 850px) calc(100vw - 32px), (max-width: 1180px) 54vw, 690px"
+        if ' srcset=' not in block:
+            block=block.replace(
+                f'src="{src}"',
+                f'src="{src}" srcset="{srcset}" sizes="{sizes}"',
+                1,
+            )
+        return block
+
+    return re.sub(r"<picture>.*?</picture>",replace_picture,text,flags=re.I|re.S)
+
+
 def replace_spanish_report(text: str) -> str:
     start='<figure class="iri-showcase reveal">'
     s=text.index(start)
@@ -1006,6 +1118,9 @@ def validate() -> None:
         for ref in p.refs:
             target=resolve_local(page,ref)
             if target is not None and not target.exists(): fail(f"{rel}: recurso local ausente {ref}")
+        if "photo-story-media" in text and "-1448.webp" in text:
+            if " 640w" not in text or " 960w" not in text or " 1448w" not in text or ' sizes="' not in text:
+                fail(f"{rel}: fotografía sin selección por densidad")
         for term in forbidden:
             if term in low: fail(f"{rel}: lenguaje IRI obsoleto: {term}")
         if not rel.startswith("en/") and rel!="404.html":
@@ -1082,7 +1197,7 @@ def main() -> None:
     new_css.write_bytes(old_css.read_bytes())
     old_css.unlink()
     with new_css.open("a",encoding="utf-8") as fh:
-        fh.write("\n\n"+CSS_ADD)
+        fh.write("\n\n"+CSS_ADD+"\n\n"+PREMIUM_INTERACTION_CSS)
 
     for name in (
         "iri-report-preview-es-1448.webp",
@@ -1107,6 +1222,11 @@ def main() -> None:
     app_text += r"""
 ;document.addEventListener('DOMContentLoaded',()=>{const dock=document.querySelector('.device-dock');if(!dock)return;const hero=document.querySelector('.hero,.page-hero');let ticking=false;const update=()=>{const threshold=hero?Math.min(140,Math.max(72,hero.offsetHeight*.18)):80;dock.classList.toggle('is-visible',window.scrollY>threshold);ticking=false};const requestUpdate=()=>{if(!ticking){ticking=true;requestAnimationFrame(update)}};update();addEventListener('scroll',requestUpdate,{passive:true});addEventListener('resize',requestUpdate,{passive:true})});
 """
+
+    app_text += r"""
+;document.addEventListener('DOMContentLoaded',()=>{const reduce=matchMedia('(prefers-reduced-motion: reduce)');const fine=matchMedia('(hover:hover) and (pointer:fine) and (min-width:1024px)');const compact=matchMedia('(max-width:640px)');const surfaces=Array.from(document.querySelectorAll('.photo-story-media,.report-preview-v2,.client-review,.review-proof-card,.cycle-step,.system-stage,.alternative-note,.price-panel'));surfaces.forEach(el=>el.classList.add('premium-surface'));const syncMotion=()=>document.documentElement.classList.toggle('motion-rich',fine.matches&&!reduce.matches);const watch=(mq,fn)=>{if(mq.addEventListener)mq.addEventListener('change',fn);else mq.addListener(fn)};syncMotion();watch(fine,syncMotion);watch(reduce,syncMotion);surfaces.forEach(el=>{let frame=0;el.addEventListener('pointermove',event=>{if(!fine.matches||reduce.matches)return;if(frame)cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{const rect=el.getBoundingClientRect();if(!rect.width||!rect.height)return;const x=Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width));const y=Math.max(0,Math.min(1,(event.clientY-rect.top)/rect.height));el.style.setProperty('--mx',(x*100)+'%');el.style.setProperty('--my',(y*100)+'%');el.style.setProperty('--rx',((0.5-y)*1.15)+'deg');el.style.setProperty('--ry',((x-0.5)*1.35)+'deg')})},{passive:true});el.addEventListener('pointerleave',()=>{if(frame)cancelAnimationFrame(frame);el.style.setProperty('--mx','50%');el.style.setProperty('--my','50%');el.style.setProperty('--rx','0deg');el.style.setProperty('--ry','0deg')},{passive:true})});const rails=Array.from(document.querySelectorAll('.system-rail,.method-cycle'));const isEn=(document.documentElement.lang||'').toLowerCase().startsWith('en');const syncRails=()=>rails.forEach(rail=>{rail.classList.toggle('premium-rail',compact.matches);if(compact.matches){rail.tabIndex=0;if(!rail.dataset.premiumLabel){rail.dataset.premiumLabel='1';rail.setAttribute('aria-label',isEn?'Training process steps. Swipe horizontally.':'Etapas del proceso. Desliza horizontalmente.')}}else{rail.removeAttribute('tabindex');if(rail.dataset.premiumLabel){rail.removeAttribute('aria-label');delete rail.dataset.premiumLabel}}});syncRails();watch(compact,syncRails)});
+"""
+
     app_js.write_text(app_text,encoding="utf-8")
     old_app_js.unlink()
 
@@ -1158,6 +1278,7 @@ def main() -> None:
                 '<form class="orientador-card reveal" data-orientador-form="" novalidate="">',
                 '<form class="orientador-card reveal" data-orientador-form="" novalidate=""><p class="sr-only" data-orientador-status="" aria-live="polite"></p>',
             )
+        text=upgrade_photo_fidelity(text)
         text=enrich_structured_data(text, rel)
         page.write_text(text,encoding="utf-8")
 
@@ -1183,7 +1304,9 @@ def main() -> None:
         "- IRI web alineado con IRI 2.0: línea de base, seguimiento longitudinal y sin puntuación global.\n"
         "- Informe IRI rasterizado antiguo sustituido por HTML accesible y adaptable.\n"
         "- Caché CSS corregida y versionada con styles.v628.css.\n"
-        "- Controles automáticos contra regresiones de nomenclatura, IRI y versionado.\n",
+        "- Controles automáticos contra regresiones de nomenclatura, IRI y versionado.\n"
+        "- Fotografía responsive sensible a densidad para pantallas Retina/alta resolución.\n"
+        "- Interacción premium adaptativa: profundidad en escritorio, composición táctil específica en móvil/tableta y respeto estricto de reducir movimiento.\n",
         encoding="utf-8",
     )
     (DST/"IBERFIT_WEB_V6_28_CAMBIOS.md").write_text(
