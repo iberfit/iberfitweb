@@ -173,6 +173,24 @@ for (const device of devices) {
         if (await backdrop.count() !== 1 || !(await backdrop.isVisible())) add(device.name, route, "MENU_MOVIL", "backdrop ausente");
         const bodyLocked = await page.evaluate(() => document.body.classList.contains("nav-panel-open") && getComputedStyle(document.body).overflow === "hidden");
         if (!bodyLocked) add(device.name, route, "MENU_MOVIL", "scroll no bloqueado");
+        const focusState = await page.evaluate(() => ({
+          activeInside: !!document.activeElement?.closest?.(".navlinks"),
+          mainInert: !!document.querySelector("main")?.inert,
+          controls: document.querySelector(".menu-toggle")?.getAttribute("aria-controls") || "",
+          navId: document.querySelector(".navlinks")?.id || "",
+          ariaHidden: document.querySelector(".navlinks")?.getAttribute("aria-hidden"),
+        }));
+        if (!focusState.activeInside) add(device.name, route, "MENU_FOCO", JSON.stringify(focusState));
+        if (!focusState.mainInert) add(device.name, route, "MENU_FONDO_INTERACTIVO", JSON.stringify(focusState));
+        if (!focusState.controls || focusState.controls !== focusState.navId) add(device.name, route, "MENU_ARIA_CONTROLS", JSON.stringify(focusState));
+        if (focusState.ariaHidden !== "false") add(device.name, route, "MENU_ARIA_HIDDEN", JSON.stringify(focusState));
+        await page.keyboard.press("Shift+Tab");
+        await page.keyboard.press("Shift+Tab");
+        const trappedBackwards = await page.evaluate(() => {
+          const active=document.activeElement;
+          return !!active && (active.matches(".menu-toggle") || !!active.closest?.(".navlinks"));
+        });
+        if (!trappedBackwards) add(device.name, route, "MENU_FOCUS_TRAP", "Shift+Tab escapó del panel");
         const afterTop = await page.locator("main").evaluate(el => el.getBoundingClientRect().top);
         if (Math.abs(afterTop-beforeTop) > 2) add(device.name, route, "MENU_LAYOUT_SHIFT", String(afterTop-beforeTop));
         await page.keyboard.press("Escape");
@@ -181,6 +199,14 @@ for (const device of devices) {
           return s.visibility === "hidden" || Number.parseFloat(s.opacity || "1") < .05;
         });
         if (!closed) add(device.name, route, "MENU_MOVIL", "Escape no cierra");
+        const closeState = await page.evaluate(() => ({
+          focusReturned: document.activeElement?.matches?.(".menu-toggle") || false,
+          mainInert: !!document.querySelector("main")?.inert,
+          ariaHidden: document.querySelector(".navlinks")?.getAttribute("aria-hidden"),
+        }));
+        if (!closeState.focusReturned || closeState.mainInert || closeState.ariaHidden !== "true") {
+          add(device.name, route, "MENU_CIERRE_ACCESIBLE", JSON.stringify(closeState));
+        }
       }
     } else {
       if (!menuState || menuState.toggleDisplay !== "none") add(device.name, route, "MENU_ESCRITORIO", "botón móvil visible");
