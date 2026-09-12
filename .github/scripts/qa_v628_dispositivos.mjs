@@ -247,6 +247,27 @@ for (const device of devices) {
     if (reviewRoute !== "/") {
       await reviewPage.goto(base + reviewRoute, { waitUntil: "networkidle", timeout: 30000 });
     }
+
+    // Recorrer la página para reproducir la experiencia real y activar IntersectionObserver.
+    await reviewPage.evaluate(async () => {
+      const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+      const step = Math.max(280, Math.floor(window.innerHeight * 0.7));
+      const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      for (let y = 0; y <= max; y += step) {
+        window.scrollTo(0, y);
+        await pause(55);
+      }
+      window.scrollTo(0, max);
+      await pause(120);
+      window.scrollTo(0, 0);
+      await pause(220);
+    });
+
+    const hiddenReveal = await reviewPage.locator(".reveal:not(.visible)").count();
+    if (hiddenReveal) {
+      add(device.name, reviewRoute, "REVEAL_NO_ACTIVADO", String(hiddenReveal));
+    }
+
     await reviewPage.screenshot({
       path: path.join(out, device.name + "-" + reviewLabel + "-sin-banner.png"),
       fullPage: true,
