@@ -6,12 +6,15 @@ const base = process.env.BASE_URL || "http://127.0.0.1:4173";
 const out = process.env.QA_OUT || "evidence/v628-devices";
 
 const devices = [
-  { name: "movil-360", width: 360, height: 800, touch: true },
-  { name: "movil-430", width: 430, height: 932, touch: true },
-  { name: "tableta-vertical", width: 768, height: 1024, touch: true },
-  { name: "tableta-horizontal", width: 1024, height: 768, touch: true },
-  { name: "portatil", width: 1366, height: 900, touch: false },
-  { name: "escritorio", width: 1600, height: 1000, touch: false },
+  { name: "movil-compacto-320", width: 320, height: 568, touch: true, mobile: true },
+  { name: "movil-360", width: 360, height: 800, touch: true, mobile: true },
+  { name: "movil-390", width: 390, height: 844, touch: true, mobile: true },
+  { name: "movil-430", width: 430, height: 932, touch: true, mobile: true },
+  { name: "movil-horizontal", width: 844, height: 390, touch: true, mobile: true },
+  { name: "tableta-vertical", width: 768, height: 1024, touch: true, mobile: false },
+  { name: "tableta-horizontal", width: 1024, height: 768, touch: true, mobile: false },
+  { name: "portatil", width: 1366, height: 900, touch: false, mobile: false },
+  { name: "escritorio", width: 1600, height: 1000, touch: false, mobile: false },
 ];
 
 const routes = [
@@ -28,6 +31,10 @@ const importantTouchSelectors = [
   ".btn",
   ".menu-toggle",
   ".lang-switch a",
+  ".choice-chip",
+  ".device-dock a",
+  ".consent-link",
+  ".consent-close",
   "select",
 ];
 
@@ -44,7 +51,7 @@ for (const device of devices) {
   const context = await browser.newContext({
     viewport: { width: device.width, height: device.height },
     hasTouch: device.touch,
-    isMobile: device.width <= 430,
+    isMobile: device.mobile,
     deviceScaleFactor: 1,
     locale: "es-CL",
   });
@@ -53,6 +60,7 @@ for (const device of devices) {
     const page = await context.newPage();
     const consoleErrors = [];
     const failedResponses = [];
+
     page.on("console", msg => {
       if (msg.type() === "error") consoleErrors.push(msg.text());
     });
@@ -75,11 +83,28 @@ for (const device of devices) {
       bodyWidth: document.body.scrollWidth,
       htmlWidth: document.documentElement.scrollWidth,
       h1: document.querySelectorAll("h1").length,
+      main: (() => {
+        const el = document.querySelector("main");
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return { left: r.left, right: r.right, width: r.width };
+      })(),
     }));
 
     if (geometry.h1 !== 1) add(device.name, route, "H1", String(geometry.h1));
     const overflow = Math.max(geometry.bodyWidth, geometry.htmlWidth) - geometry.innerWidth;
     if (overflow > 2) add(device.name, route, "DESBORDE_HORIZONTAL", String(overflow));
+    if (!geometry.main) {
+      add(device.name, route, "MAIN", "contenido principal ausente");
+    } else if (geometry.main.left < -2 || geometry.main.right > geometry.innerWidth + 2) {
+      add(device.name, route, "MAIN_DESBORDE", JSON.stringify(geometry.main));
+    }
+
+    const brokenImages = await page.locator("img").evaluateAll(nodes =>
+      nodes.filter(img => img.complete && img.naturalWidth === 0)
+        .map(img => img.getAttribute("src") || "(sin src)")
+    );
+    for (const src of brokenImages) add(device.name, route, "IMAGEN_ROTA", src);
 
     const menuState = await page.evaluate(() => {
       const toggle = document.querySelector(".menu-toggle");
@@ -98,6 +123,9 @@ for (const device of devices) {
         await page.locator(".menu-toggle").click();
         const open = await page.locator(".navlinks").evaluate(el => getComputedStyle(el).display !== "none");
         if (!open) add(device.name, route, "MENU_MOVIL", "no abre");
+        await page.keyboard.press("Escape");
+        const closed = await page.locator(".navlinks").evaluate(el => getComputedStyle(el).display === "none");
+        if (!closed) add(device.name, route, "MENU_MOVIL", "Escape no cierra");
       }
     } else {
       if (!menuState || menuState.toggleDisplay !== "none") add(device.name, route, "MENU_ESCRITORIO", "botón móvil visible");
@@ -110,15 +138,43 @@ for (const device of devices) {
           nodes.filter(el => {
             const r = el.getBoundingClientRect();
             const s = getComputedStyle(el);
-            return r.width > 0 && r.height > 0 && s.visibility !== "hidden";
+            return r.width > 0 && r.height > 0 && s.visibility !== "hidden" && s.display !== "none";
           }).map(el => {
             const r = el.getBoundingClientRect();
-            return { w: r.width, h: r.height, text: (el.textContent || "").trim().slice(0, 50) };
+            return {
+              w: r.width,
+              h: r.height,
+              text: (el.textContent || el.getAttribute("aria-label") || "").trim().slice(0, 50)
+            };
           })
         );
         for (const box of boxes) {
-          if (box.h < 36) add(device.name, route, "OBJETIVO_TACTIL", selector + " · " + box.text + " · " + Math.round(box.h) + "px");
+          if (box.h < 44 || box.w < 44) {
+            add(
+              device.name,
+              route,
+              "OBJETIVO_TACTIL_44",
+              selector + " · " + box.text + " · " + Math.round(box.w) + "×" + Math.round(box.h) + "px"
+            );
+          }
         }
+      }
+    }
+
+    if (device.width <= 430) {
+      const smallFormControls = await page.locator("input,select,textarea").evaluateAll(nodes =>
+        nodes.filter(el => {
+          const r = el.getBoundingClientRect();
+          const s = getComputedStyle(el);
+          return r.width > 0 && r.height > 0 && s.visibility !== "hidden" && parseFloat(s.fontSize) < 16;
+        }).map(el => ({
+          tag: el.tagName.toLowerCase(),
+          name: el.getAttribute("name") || el.getAttribute("id") || "",
+          fontSize: getComputedStyle(el).fontSize
+        }))
+      );
+      for (const item of smallFormControls) {
+        add(device.name, route, "ZOOM_FORMULARIO_IOS", JSON.stringify(item));
       }
     }
 
@@ -190,4 +246,4 @@ if (findings.length) {
   process.exit(1);
 }
 
-console.log("QA dispositivos V6.28: PASS · 6 perfiles · 7 rutas · 0 hallazgos");
+console.log("QA dispositivos V6.28: PASS · 9 perfiles · 7 rutas · 0 hallazgos");
