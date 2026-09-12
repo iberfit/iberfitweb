@@ -35,6 +35,7 @@ const importantTouchSelectors = [
   ".lang-switch a",
   ".choice-chip",
   ".device-dock a",
+  ".intent-route",
   ".consent-link",
   ".consent-close",
   "select",
@@ -322,6 +323,33 @@ for (const device of devices) {
       }
     }
 
+    if (route === "/") {
+      const intent = page.locator(".intent-router");
+      if (await intent.count() !== 1) {
+        add(device.name, route, "RUTAS_INTENCION", "selector de intención ausente o duplicado");
+      } else {
+        const links = intent.locator(".intent-route");
+        if (await links.count() !== 3) add(device.name, route, "RUTAS_INTENCION", "se esperaban 3 rutas");
+        const boxes = await links.evaluateAll(nodes => nodes.map(el => {
+          const r=el.getBoundingClientRect();
+          return {left:r.left,right:r.right,width:r.width,height:r.height,text:(el.textContent||"").trim().slice(0,80)};
+        }));
+        for (const item of boxes) {
+          if (item.left < -2 || item.right > innerWidth + 2 || item.width < 1 || item.height < 1) {
+            add(device.name, route, "RUTAS_INTENCION_VIEWPORT", JSON.stringify(item));
+          }
+        }
+      }
+      const guidedRows = page.locator(".modality-row--guided");
+      const meta = page.locator(".modality-meta");
+      if (await guidedRows.count() !== 3 || await meta.count() !== 3) {
+        add(device.name, route, "COMPARACION_MODALIDADES", "se esperaban 3 modalidades comparables");
+      }
+      if (await page.locator("#formatos").count() !== 1) {
+        add(device.name, route, "ANCLA_MODALIDADES", "#formatos ausente o duplicado");
+      }
+    }
+
     if (route === "/" || route === "/diagnostico-iri/") {
       const iri = page.locator(".report-preview-v2");
       if (await iri.count() !== 1) {
@@ -340,6 +368,19 @@ for (const device of devices) {
       if (await page.locator("[data-orientador-form]").count() !== 1) add(device.name, route, "ORIENTADOR", "formulario ausente");
       const selects = await page.locator("[data-orientador-form] select").count();
       if (selects < 2) add(device.name, route, "ORIENTADOR", "selectores incompletos");
+      const reassurance = page.locator(".orientador-reassurance");
+      if (await reassurance.count() !== 1) {
+        add(device.name, route, "ORIENTADOR_SIN_PRESION", "reaseguro ausente o duplicado");
+      } else {
+        const text = (await reassurance.innerText()).toLowerCase();
+        if (!text.includes("sin compromiso") || !text.includes("no te obliga a contratar")) {
+          add(device.name, route, "ORIENTADOR_SIN_PRESION", text);
+        }
+        const box = await reassurance.boundingBox();
+        if (!box || box.x < -2 || box.x + box.width > device.width + 2) {
+          add(device.name, route, "ORIENTADOR_SIN_PRESION_VIEWPORT", box ? JSON.stringify(box) : "sin geometría");
+        }
+      }
     }
 
     if (route === "/online/") {
