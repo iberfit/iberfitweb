@@ -1,17 +1,17 @@
-name: QA multidispositivo web V6.30
+name: QA multidispositivo web V6.28
 # Certificación visual y funcional en móvil, tableta y escritorio.
-# Gate final conjunto V6.30 · SHA único
+# Gate final conjunto V6.28 · SHA único
 
 on:
   workflow_dispatch:
     inputs:
       target_sha:
-        description: "SHA exacto de la candidata V6.30 a certificar"
+        description: "SHA exacto de la candidata V6.28 a certificar"
         required: false
         type: string
   push:
     branches:
-      - work/web-v6-30-hardening
+      - work/web-v6-28-recuperacion
     paths:
       - "candidate/v628/**"
       - ".github/scripts/qa_v628_dispositivos.mjs"
@@ -21,7 +21,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: qa-dispositivos-web-v630
+  group: qa-dispositivos-web-v628
   cancel-in-progress: true
 
 jobs:
