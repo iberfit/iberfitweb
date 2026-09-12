@@ -346,6 +346,23 @@ for (const device of devices) {
       if (await guidedRows.count() !== 3 || await meta.count() !== 3) {
         add(device.name, route, "COMPARACION_MODALIDADES", "se esperaban 3 modalidades comparables");
       }
+      if (device.width <= 560 && await meta.count() === 3) {
+        const mobileMeta = await page.locator(".modality-meta span").evaluateAll(nodes => nodes.map(el => {
+          const s=getComputedStyle(el);
+          return {
+            transform:s.textTransform,
+            columns:s.gridTemplateColumns,
+            letterSpacing:s.letterSpacing,
+            text:(el.textContent||"").trim().slice(0,90)
+          };
+        }));
+        for (const item of mobileMeta) {
+          const columnCount=item.columns.trim().split(/\s+/).filter(Boolean).length;
+          if (item.transform !== "none" || columnCount !== 1) {
+            add(device.name, route, "COMPARACION_MODALIDADES_MOVIL", JSON.stringify(item));
+          }
+        }
+      }
       if (await page.locator("#formatos").count() !== 1) {
         add(device.name, route, "ANCLA_MODALIDADES", "#formatos ausente o duplicado");
       }
