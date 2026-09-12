@@ -315,6 +315,57 @@ def enrich_structured_data(text: str, rel: str) -> str:
     return text[:match.start()] + match.group(1) + encoded + match.group(3) + text[match.end():]
 
 
+def differentiate_local_page(text: str, rel: str) -> str:
+    """Reduce repetición entre landings locales usando solo contenido ya respaldado por cada página."""
+    variants = {
+        "entrenador-personal-las-condes/index.html": {
+            "Entrenamiento personal en Las Condes con una propuesta realista.": "Entrenar en Las Condes: espacio, horarios y continuidad.",
+            "No todas las personas necesitan la misma combinación.": "La modalidad depende del espacio y de cómo encaja en tu semana.",
+            "La cobertura se confirma de forma individual.": "Primero confirmamos sector, espacio y horario.",
+            "Consulta disponibilidad en Las Condes.": "Revisa cobertura y horarios en Las Condes.",
+        },
+        "entrenador-personal-vitacura/index.html": {
+            "Entrenamiento personal en Vitacura con una propuesta realista.": "Entrenar en Vitacura: supervisión y continuidad según tu agenda.",
+            "No todas las personas necesitan la misma combinación.": "La combinación adecuada depende de tu autonomía y disponibilidad.",
+            "La cobertura se confirma de forma individual.": "La disponibilidad se revisa junto con acceso y entorno.",
+            "Consulta disponibilidad en Vitacura.": "Consulta una modalidad viable en Vitacura.",
+        },
+        "entrenamiento-personal-providencia/index.html": {
+            "Entrenamiento personal en Providencia con una propuesta realista.": "Entrenar en Providencia: una modalidad que funcione con tu rutina.",
+            "No todas las personas necesitan la misma combinación.": "Domicilio, edificio o distancia: elegimos lo sostenible.",
+            "La cobertura se confirma de forma individual.": "La cobertura se revisa junto con tiempos y acceso.",
+            "Consulta disponibilidad en Providencia.": "Busca una opción sostenible en Providencia.",
+        },
+        "personal-trainer-nunoa/index.html": {
+            "Entrenamiento personal en Ñuñoa con una propuesta realista.": "Entrenar en Ñuñoa: decidir el plan después de evaluar.",
+            "No todas las personas necesitan la misma combinación.": "El Diagnóstico IRI orienta la modalidad antes de contratar.",
+            "La cobertura se confirma de forma individual.": "Primero revisamos sector, objetivo y entorno.",
+            "Consulta disponibilidad en Ñuñoa.": "Define tu punto de partida en Ñuñoa.",
+        },
+        "entrenador-personal-lo-barnechea/index.html": {
+            "Entrenamiento personal en Lo Barnechea con una propuesta realista.": "Entrenar en Lo Barnechea: coordinar bien para sostener el plan.",
+            "No todas las personas necesitan la misma combinación.": "La frecuencia presencial debe ser compatible con la logística.",
+            "La cobertura se confirma de forma individual.": "Sector y desplazamiento se confirman antes de reservar.",
+            "Consulta disponibilidad en Lo Barnechea.": "Revisa viabilidad presencial en Lo Barnechea.",
+        },
+        "entrenador-personal-la-reina/index.html": {
+            "Entrenamiento personal en La Reina con una propuesta realista.": "Entrenar en La Reina: aprovechar el entorno sin improvisar.",
+            "No todas las personas necesitan la misma combinación.": "El espacio y tu autonomía determinan la mejor combinación.",
+            "La cobertura se confirma de forma individual.": "Antes de reservar, validamos espacio y disponibilidad.",
+            "Consulta disponibilidad en La Reina.": "Consulta cobertura y modalidad en La Reina.",
+        },
+        "entrenador-personal-penalolen/index.html": {
+            "Entrenamiento personal en Peñalolén con una propuesta realista.": "Entrenar en Peñalolén: continuidad cuando la logística importa.",
+            "No todas las personas necesitan la misma combinación.": "La distancia puede cambiar la frecuencia, no el seguimiento.",
+            "La cobertura se confirma de forma individual.": "Primero revisamos sector y frecuencia posible.",
+            "Consulta disponibilidad en Peñalolén.": "Encuentra una frecuencia sostenible en Peñalolén.",
+        },
+    }
+    for old, new in variants.get(rel, {}).items():
+        text = text.replace(old, new)
+    return text
+
+
 def replace_spanish_report(text: str) -> str:
     start='<figure class="iri-showcase reveal">'
     s=text.index(start)
@@ -502,6 +553,7 @@ def main() -> None:
         text=text.replace("No invented overall score and no anonymous testimonials.","No invented aggregate rating and no anonymous testimonials.")
         if not rel.startswith("en/"):
             text=localize_spanish(text)
+            text=differentiate_local_page(text, rel)
         if rel in {"contacto/index.html","en/contact/index.html"}:
             text=text.replace(
                 '<form class="orientador-card reveal" data-orientador-form="" novalidate="">',
