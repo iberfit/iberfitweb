@@ -225,6 +225,73 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
   .cycle-step{min-height:205px}
 }
 
+@media (max-width:860px){
+  body.nav-panel-open{overflow:hidden;overscroll-behavior:none}
+  .site-header{isolation:isolate}
+  .nav{flex-wrap:nowrap}
+  .navlinks{
+    display:flex;
+    position:fixed;
+    top:var(--nav-panel-top,76px);
+    left:max(.75rem,env(safe-area-inset-left));
+    right:max(.75rem,env(safe-area-inset-right));
+    width:auto;
+    max-height:calc(100dvh - var(--nav-panel-top,76px) - .9rem - env(safe-area-inset-bottom));
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    margin:0;
+    padding:.75rem;
+    gap:.1rem;
+    border:1px solid rgba(184,151,58,.28);
+    border-radius:24px;
+    background:rgba(250,247,240,.97);
+    box-shadow:0 28px 75px rgba(8,31,20,.24);
+    backdrop-filter:blur(24px) saturate(150%);
+    -webkit-backdrop-filter:blur(24px) saturate(150%);
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    transform:translateY(-10px) scale(.985);
+    transform-origin:top right;
+    transition:opacity .22s ease,transform .24s cubic-bezier(.2,.7,.2,1),visibility .22s ease;
+  }
+  .navlinks.open{
+    opacity:1;
+    visibility:visible;
+    pointer-events:auto;
+    transform:none;
+  }
+  .navlinks a{
+    display:flex;
+    align-items:center;
+    min-height:48px;
+    padding:.72rem .8rem;
+    border-radius:14px;
+  }
+  .navlinks a:hover,.navlinks a:focus-visible,.navlinks a.active{background:rgba(31,61,43,.06)}
+  .navlinks a:after{display:none}
+  .menu-toggle{position:relative;z-index:2;min-height:44px}
+  .nav-panel-backdrop{
+    position:fixed;
+    inset:0;
+    z-index:90;
+    border:0;
+    padding:0;
+    background:rgba(4,22,16,.28);
+    backdrop-filter:blur(5px);
+    -webkit-backdrop-filter:blur(5px);
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    transition:opacity .22s ease,visibility .22s ease;
+  }
+  .nav-panel-backdrop.is-visible{
+    opacity:1;
+    visibility:visible;
+    pointer-events:auto;
+  }
+}
+
 @media (max-width:640px){
   .premium-rail{
     display:grid!important;
@@ -1174,6 +1241,9 @@ def validate() -> None:
                     fail(f"{asset.relative_to(DST)}: referencia a isotipo legado {legacy}")
 
     styles=(DST/"assets/styles.v628.css").read_text("utf-8")
+    app_source=(DST/"assets/app.v628.js").read_text("utf-8")
+    if ".nav-panel-backdrop" not in styles or "nav-panel-open" not in app_source:
+        fail("menú flotante adaptativo ausente")
     if "@view-transition{navigation:auto}" not in styles:
         fail("transición de navegación premium ausente")
     if "prefers-reduced-motion:reduce" not in styles:
@@ -1239,6 +1309,11 @@ def main() -> None:
 
     app_text += r"""
 ;document.addEventListener('DOMContentLoaded',()=>{const reduce=matchMedia('(prefers-reduced-motion: reduce)');const fine=matchMedia('(hover:hover) and (pointer:fine) and (min-width:1024px)');const compact=matchMedia('(max-width:640px)');const surfaces=Array.from(document.querySelectorAll('.photo-story-media,.report-preview-v2,.client-review,.review-proof-card,.alternative-note,.price-panel,.contact-option'));const syncMotion=()=>{const rich=fine.matches&&!reduce.matches;document.documentElement.classList.toggle('motion-rich',rich);surfaces.forEach(el=>el.classList.toggle('premium-surface',rich))};const watch=(mq,fn)=>{if(mq.addEventListener)mq.addEventListener('change',fn);else mq.addListener(fn)};syncMotion();watch(fine,syncMotion);watch(reduce,syncMotion);const bindDepth=()=>surfaces.forEach(el=>{let frame=0;el.addEventListener('pointermove',event=>{if(!fine.matches||reduce.matches)return;if(frame)cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{const rect=el.getBoundingClientRect();if(!rect.width||!rect.height)return;const x=Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width));const y=Math.max(0,Math.min(1,(event.clientY-rect.top)/rect.height));el.style.setProperty('--mx',(x*100)+'%');el.style.setProperty('--my',(y*100)+'%');el.style.setProperty('--rx',((0.5-y)*1.15)+'deg');el.style.setProperty('--ry',((x-0.5)*1.35)+'deg')})},{passive:true});el.addEventListener('pointerleave',()=>{if(frame)cancelAnimationFrame(frame);el.style.setProperty('--mx','50%');el.style.setProperty('--my','50%');el.style.setProperty('--rx','0deg');el.style.setProperty('--ry','0deg')},{passive:true})});if('requestIdleCallback'in window)requestIdleCallback(bindDepth,{timeout:1500});else setTimeout(bindDepth,600);const rails=Array.from(document.querySelectorAll('.system-rail,.method-cycle'));const isEn=(document.documentElement.lang||'').toLowerCase().startsWith('en');const syncRails=()=>rails.forEach(rail=>{rail.classList.toggle('premium-rail',compact.matches);if(compact.matches){rail.tabIndex=0;if(!rail.dataset.premiumLabel){rail.dataset.premiumLabel='1';rail.setAttribute('aria-label',isEn?'Training process steps. Swipe horizontally.':'Etapas del proceso. Desliza horizontalmente.')}}else{rail.removeAttribute('tabindex');if(rail.dataset.premiumLabel){rail.removeAttribute('aria-label');delete rail.dataset.premiumLabel}}});syncRails();watch(compact,syncRails)});
+"""
+
+
+    app_text += r"""
+;document.addEventListener('DOMContentLoaded',()=>{const toggle=document.querySelector('[data-menu-toggle]');const nav=document.querySelector('[data-navlinks]');const header=document.querySelector('.site-header');if(!toggle||!nav||!header)return;const compact=matchMedia('(max-width:860px)');const backdrop=document.createElement('button');backdrop.type='button';backdrop.className='nav-panel-backdrop';backdrop.tabIndex=-1;backdrop.setAttribute('aria-hidden','true');backdrop.setAttribute('aria-label',(document.documentElement.lang||'').toLowerCase().startsWith('en')?'Close menu':'Cerrar menú');document.body.appendChild(backdrop);let wasOpen=false;const position=()=>{const bottom=Math.max(0,header.getBoundingClientRect().bottom);document.documentElement.style.setProperty('--nav-panel-top',Math.round(bottom+8)+'px')};const sync=()=>{const open=compact.matches&&nav.classList.contains('open');position();document.body.classList.toggle('nav-panel-open',open);backdrop.classList.toggle('is-visible',open);if(open&&!wasOpen){requestAnimationFrame(()=>nav.querySelector('a')?.focus({preventScroll:true}))}if(!open&&wasOpen){requestAnimationFrame(()=>toggle.focus({preventScroll:true}))}wasOpen=open};const watch=(mq,fn)=>{if(mq.addEventListener)mq.addEventListener('change',fn);else mq.addListener(fn)};backdrop.addEventListener('click',()=>{if(nav.classList.contains('open'))toggle.click()});new MutationObserver(sync).observe(nav,{attributes:true,attributeFilter:['class']});addEventListener('resize',()=>{position();if(!compact.matches&&nav.classList.contains('open'))toggle.click()},{passive:true});watch(compact,sync);position();sync()});
 """
 
     app_js.write_text(app_text,encoding="utf-8")
