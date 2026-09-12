@@ -118,12 +118,12 @@ BENCHMARK_CSS = r'''
   .intent-router{grid-template-columns:1fr}
   .intent-route{min-height:0}
   .modality-row--guided{grid-template-columns:1fr}
-  .modality-meta span{grid-template-columns:minmax(6.8rem,.34fr) 1fr}
+  .modality-row .modality-meta span{grid-template-columns:minmax(6.8rem,.34fr) 1fr}
 }
 @media(max-width:560px){
   .intent-router{margin:-.6rem 0 1.55rem}
   .intent-route{padding:.95rem 1rem;border-radius:16px}
-  .modality-meta span{grid-template-columns:1fr;gap:.12rem}
+  .modality-row .modality-meta span{grid-template-columns:1fr;gap:.12rem}
   .orientador-reassurance{font-size:.8rem}
 }
 @media(prefers-reduced-motion:reduce){
