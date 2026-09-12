@@ -51,6 +51,21 @@ CSS_ADD = """
 .report-comparison p{margin:0;color:#5f6f65;font-size:.72rem;line-height:1.5}
 @media(max-width:720px){.report-preview-v2 .report-profile-v2{grid-template-columns:1fr}.report-status{text-align:center}.report-metrics-v2 .report-metric>div{gap:.55rem}.report-metrics-v2 .report-metric>div strong{max-width:52%}}
 @media(max-width:430px){.report-metrics-v2 .report-metric>div{display:grid}.report-metrics-v2 .report-metric>div strong{max-width:none;text-align:left}}
+
+/* V6.28 · Ergonomía táctil premium y foco visible. */
+a,button,[role="button"],select,input,textarea{touch-action:manipulation}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:3px solid rgba(184,151,58,.58);
+  outline-offset:3px;
+}
+.lang-switch a{min-width:44px;min-height:44px;padding:.5rem .55rem;border-radius:999px}
+.menu-toggle{min-height:44px}
+.consent-close{width:44px;height:44px}
+.consent-link{display:inline-flex;align-items:center;min-height:44px;padding:.65rem}
+.choice-chip{min-height:48px}
+@media(max-width:720px){.device-dock a{min-width:44px;min-height:52px}}
+@media(max-width:430px){input,select,textarea{font-size:16px}}
+@media(hover:none){.btn:hover{transform:none}}
 """
 
 HEADERS = """/*
