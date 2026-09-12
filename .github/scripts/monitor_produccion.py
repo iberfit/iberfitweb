@@ -67,7 +67,8 @@ def add(name: str, ok: bool, detail: str, ms: int | None = None, *, required: bo
     checks.append(Check(name=name, ok=ok, detail=detail, ms=ms, required=required))
 
 def parse_version(value: str) -> tuple[int, int]:
-    match = re.search(r"(\d+)\.(\d+)", value)
+    # VERSION debe ser un payload de versión, no HTML que contenga números por casualidad.
+    match = re.fullmatch(r"\s*(\d+)\.(\d+)(?:\.\d+)?\s*", value)
     return (int(match.group(1)), int(match.group(2))) if match else (0, 0)
 
 def text(data: bytes) -> str:
@@ -174,6 +175,26 @@ try:
 except Exception as exc:
     add("robots", False, repr(exc))
 
+# Descubrimiento por IA. Se vuelve obligatorio al publicar V6.28+.
+try:
+    status, final, headers, body, ms = fetch("/llms.txt")
+    body_text = text(body)
+    llms_ok = (
+        status == 200
+        and body_text.lstrip().startswith("# IBERFIT")
+        and "https://iberfit.cl/sitemap.xml" in body_text
+        and "Diagnóstico IRI" in body_text
+    )
+    add(
+        "llms.txt",
+        llms_ok,
+        f"HTTP {status} · {len(body)} bytes",
+        ms,
+        required=require_v628_semantics,
+    )
+except Exception as exc:
+    add("llms.txt", False, repr(exc), required=require_v628_semantics)
+
 # Manifest.
 try:
     status, final, headers, body, ms = fetch("/manifest.webmanifest")
@@ -188,9 +209,9 @@ published_version = None
 try:
     status, final, headers, body, ms = fetch("/VERSION")
     raw_version = text(body).strip()
-    match = re.search(r"(\\d+)\\.(\\d+)", raw_version)
-    if match:
-        published_version = tuple(map(int, match.groups()))
+    parsed_version = parse_version(raw_version)
+    if parsed_version != (0, 0):
+        published_version = parsed_version
         add("versión publicada", True, raw_version, ms)
     else:
         add("versión publicada", True, "no declarada; se mantienen solo controles operativos", ms)
