@@ -177,6 +177,14 @@ body{background:
 PREMIUM_INTERACTION_CSS = r"""
 /* IBERFIT V6.28 · fidelidad e interacción adaptativa */
 body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+@view-transition{navigation:auto}
+.site-header .brand-mark{view-transition-name:iberfit-mark}
+.site-header .brand-text{view-transition-name:iberfit-wordmark}
+::view-transition-old(root){animation:iberfit-page-out .16s ease both}
+::view-transition-new(root){animation:iberfit-page-in .24s cubic-bezier(.2,.7,.2,1) both}
+::view-transition-group(iberfit-mark),::view-transition-group(iberfit-wordmark){animation-duration:.28s;animation-timing-function:cubic-bezier(.2,.7,.2,1)}
+@keyframes iberfit-page-out{to{opacity:0}}
+@keyframes iberfit-page-in{from{opacity:0}}
 .photo-story-media img{image-rendering:auto;transform:translateZ(0);transition:transform .8s cubic-bezier(.2,.7,.2,1),filter .8s ease}
 .premium-surface{--mx:50%;--my:50%;--rx:0deg;--ry:0deg;position:relative;isolation:isolate}
 .premium-surface:before{content:"";position:absolute;inset:0;z-index:2;border-radius:inherit;pointer-events:none;opacity:0;background:radial-gradient(420px circle at var(--mx) var(--my),rgba(217,181,104,.14),rgba(255,255,255,.035) 32%,transparent 66%);transition:opacity .35s ease}
@@ -251,6 +259,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 }
 
 @media (prefers-reduced-motion:reduce){
+  ::view-transition-old(root),::view-transition-new(root),::view-transition-group(iberfit-mark),::view-transition-group(iberfit-wordmark){animation-duration:.01ms!important;animation-delay:0s!important}
   .premium-surface{transform:none!important}
   .premium-surface:before{display:none!important}
   .photo-story-media img{transform:none!important}
@@ -1163,6 +1172,12 @@ def validate() -> None:
             ):
                 if legacy in source:
                     fail(f"{asset.relative_to(DST)}: referencia a isotipo legado {legacy}")
+
+    styles=(DST/"assets/styles.v628.css").read_text("utf-8")
+    if "@view-transition{navigation:auto}" not in styles:
+        fail("transición de navegación premium ausente")
+    if "prefers-reduced-motion:reduce" not in styles:
+        fail("protección de movimiento reducido ausente")
 
     headers=(DST/"_headers").read_text("utf-8")
     if "/assets/styles.v628.css" not in headers: fail("_headers no referencia styles.v628.css")
