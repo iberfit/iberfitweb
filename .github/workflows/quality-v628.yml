@@ -1,5 +1,6 @@
 name: Calidad profesional web V6.28
 # Gate integral: marca, estructura, enlaces, accesibilidad, rendimiento, seguridad y SEO.
+# Gate final conjunto V6.28 · SHA único
 
 on:
   workflow_dispatch:

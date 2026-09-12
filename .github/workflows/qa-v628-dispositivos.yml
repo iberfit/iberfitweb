@@ -1,5 +1,6 @@
 name: QA multidispositivo web V6.28
 # Certificación visual y funcional en móvil, tableta y escritorio.
+# Gate final conjunto V6.28 · SHA único
 
 on:
   workflow_dispatch:
