@@ -45,3 +45,33 @@ h1,h2,h3,h4{overflow-wrap:break-word}
   background:transparent!important;border-color:transparent!important;
   padding:0!important;border-radius:0!important;box-shadow:none!important
 }
+
+
+/* Microcopy y badges: contraste WCAG en superficies claras. */
+.price-card:not(.featured) .price-name,
+.iri-phase-label,
+.explore-card span,
+.local-card-number,
+.system-stage>span,
+.domain-row>span,
+.deliverable>span,
+.week-step>span,
+.cycle-step>span,
+.intent-route>span,
+.modality-row>span,
+.scope-bar>span,
+.contact-option>span,
+.scope-note>span{
+  color:var(--gold-dark)
+}
+.price-card.featured .price-name{color:var(--gold-light)}
+.price-badge{color:#13291d}
+.price-card.featured .price-badge{color:#fff}
+.alternative-note>span{color:var(--gold-light)}
+.report-head>div:first-child span,
+.report-label{color:var(--gold-dark)}
+.report-metric small,
+.report-metrics-v2 .report-metric small,
+.report-disclaimer{color:#53645a}
+.report-metric-priority small{color:#76570f}
+.site-footer p.small{color:rgba(255,255,255,.68)!important}
