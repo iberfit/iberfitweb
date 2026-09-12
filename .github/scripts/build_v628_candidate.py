@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "recovery/live-production/site"
 DST = ROOT / "candidate/v628"
+RELEASE_DATE = "2026-09-12"
 
 ES_REPORT = """<div aria-label="Ejemplo ilustrativo de Informe IRI" class="report-preview report-preview-v2 reveal">
 <div class="report-head"><div><span>Ejemplo ilustrativo · datos ficticios</span><h3>Informe IRI · Línea de base</h3></div><div class="report-brand"><img alt="" aria-hidden="true" decoding="async" height="46" src="/assets/iberfit-isotipo-oficial.png" width="41"/></div></div>
@@ -1389,6 +1390,18 @@ def main() -> None:
         "localStorage.setItem(storageKey, JSON.stringify(consent));",
         "safeStorage.set(storageKey, JSON.stringify(consent));"
     )
+    lead_anchor = "    if (canAnalytics()) window.gtag('event', eventName, payload);\n"
+    lead_replacement = (
+        "    if (canAnalytics()) {\n"
+        "      window.gtag('event', eventName, payload);\n"
+        "      if (eventName === 'whatsapp_click' || eventName === 'contact_email_click') {\n"
+        "        window.gtag('event', 'generate_lead', { ...payload, lead_source:eventName === 'whatsapp_click' ? 'whatsapp' : 'email' });\n"
+        "      }\n"
+        "    }\n"
+    )
+    if analytics_text.count(lead_anchor) != 1:
+        raise SystemExit("No se encontró exactamente una ancla de evento GA4 para generate_lead")
+    analytics_text = analytics_text.replace(lead_anchor, lead_replacement, 1)
     analytics_js.write_text(analytics_text,encoding="utf-8")
     old_analytics_js.unlink()
 
@@ -1408,6 +1421,10 @@ def main() -> None:
         text=text.replace("/assets/iberfit-isotipo-192.png","/assets/iberfit-isotipo-oficial.png")
         text=text.replace("/assets/iberfit-isotipo-verde-96.png","/assets/iberfit-isotipo-oficial.png")
         text=text.replace("/assets/iberfit-isotipo-verde-192.png","/assets/iberfit-isotipo-oficial.png")
+        text=text.replace(
+            '<meta content="index,follow" name="robots"/>',
+            '<meta content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" name="robots"/>'
+        )
         text=text.replace("No invented overall score and no anonymous testimonials.","No invented aggregate rating and no anonymous testimonials.")
         if not rel.startswith("en/"):
             text=localize_spanish(text)
@@ -1433,6 +1450,17 @@ def main() -> None:
         p=DST/rel
         p.write_text(replace_english_report(p.read_text("utf-8")),encoding="utf-8")
 
+    sitemap_path = DST / "sitemap.xml"
+    sitemap_text = sitemap_path.read_text("utf-8")
+    sitemap_text, lastmod_count = re.subn(
+        r"<lastmod>\\d{4}-\\d{2}-\\d{2}</lastmod>",
+        f"<lastmod>{RELEASE_DATE}</lastmod>",
+        sitemap_text,
+    )
+    if lastmod_count < 30:
+        raise SystemExit(f"Sitemap incompleto: solo se actualizaron {lastmod_count} fechas lastmod")
+    sitemap_path.write_text(sitemap_text, encoding="utf-8")
+
     (DST/"_headers").write_text(HEADERS,encoding="utf-8")
     (DST/"_redirects").write_text(REDIRECTS,encoding="utf-8")
     (DST/"VERSION").write_text("6.28\n",encoding="utf-8")
@@ -1450,6 +1478,8 @@ def main() -> None:
         "- Caché CSS corregida y versionada con styles.v628.css.\n"
         "- Controles automáticos contra regresiones de nomenclatura, IRI y versionado.\n"
         "- Fotografía responsive sensible a densidad para pantallas Retina/alta resolución.\n"
+        "- SEO técnico reforzado: lastmod real, previews ampliadas de Google y datos estructurados preservados.\n"
+        "- Medición de conversión reforzada con evento GA4 recomendado generate_lead, siempre posterior al consentimiento.\n"
         "- Interacción premium adaptativa: profundidad en escritorio, composición táctil específica en móvil/tableta y respeto estricto de reducir movimiento.\n",
         encoding="utf-8",
     )
