@@ -41,8 +41,14 @@ for (const route of routes) {
   }
 
   if (route === '/contacto/') {
-    await page.locator('#orientador').scrollIntoViewIfNeeded();
-    await page.waitForTimeout(120);
+    const guideForm = page.locator('[data-orientador-form]');
+    await guideForm.scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => {
+      const form = document.querySelector('[data-orientador-form]');
+      if (!form) return false;
+      const style = getComputedStyle(form);
+      return style.display !== 'none' && style.visibility !== 'hidden' && Number.parseFloat(style.opacity || '1') > 0.95;
+    }, null, { timeout: 3000 });
     const status = page.locator('[data-orientador-status]');
     if (await status.count() !== 1 || await status.getAttribute('aria-live') !== 'polite') {
       findings.push({ route, id:'orientador-live-region', impact:'serious', description:'El orientador debe exponer una región viva accesible.' });
