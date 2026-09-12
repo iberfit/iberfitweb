@@ -226,6 +226,33 @@ for (const device of devices) {
   }
 
   await context.close();
+
+  // Segunda serie visual para revisión humana sin el banner de primera visita.
+  // Se ejecuta en un contexto aislado para no alterar las pruebas de consentimiento anteriores.
+  const reviewContext = await browser.newContext({
+    viewport: { width: device.width, height: device.height },
+    hasTouch: device.touch,
+    isMobile: device.mobile,
+    deviceScaleFactor: 1,
+    locale: "es-CL",
+  });
+  const reviewPage = await reviewContext.newPage();
+  await reviewPage.goto(base + "/", { waitUntil: "networkidle", timeout: 30000 });
+  const necessary = reviewPage.locator("[data-consent-necessary]");
+  if (await necessary.count() === 1 && await necessary.isVisible()) {
+    await necessary.click();
+    await reviewPage.waitForTimeout(250);
+  }
+  for (const [reviewRoute, reviewLabel] of routes.filter(([, label]) => ["inicio", "iri", "contacto"].includes(label))) {
+    if (reviewRoute !== "/") {
+      await reviewPage.goto(base + reviewRoute, { waitUntil: "networkidle", timeout: 30000 });
+    }
+    await reviewPage.screenshot({
+      path: path.join(out, device.name + "-" + reviewLabel + "-sin-banner.png"),
+      fullPage: true,
+    });
+  }
+  await reviewContext.close();
 }
 
 await browser.close();
