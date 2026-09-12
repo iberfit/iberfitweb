@@ -151,11 +151,24 @@ for (const device of devices) {
       if (!menuState || menuState.toggleDisplay === "none") add(device.name, route, "MENU_MOVIL", "botón ausente");
       if (menuState && menuState.navDisplay !== "none") add(device.name, route, "MENU_MOVIL", "navegación abierta al cargar");
       if (menuState && menuState.toggleDisplay !== "none") {
+        const beforeTop = await page.locator("main").evaluate(el => el.getBoundingClientRect().top);
         await page.locator(".menu-toggle").click();
-        const open = await page.locator(".navlinks").evaluate(el => getComputedStyle(el).display !== "none");
+        const open = await page.locator(".navlinks").evaluate(el => {
+          const s=getComputedStyle(el);
+          return s.display !== "none" && s.visibility !== "hidden" && Number.parseFloat(s.opacity || "1") > .95;
+        });
         if (!open) add(device.name, route, "MENU_MOVIL", "no abre");
+        const backdrop = page.locator(".nav-panel-backdrop");
+        if (await backdrop.count() !== 1 || !(await backdrop.isVisible())) add(device.name, route, "MENU_MOVIL", "backdrop ausente");
+        const bodyLocked = await page.evaluate(() => document.body.classList.contains("nav-panel-open") && getComputedStyle(document.body).overflow === "hidden");
+        if (!bodyLocked) add(device.name, route, "MENU_MOVIL", "scroll no bloqueado");
+        const afterTop = await page.locator("main").evaluate(el => el.getBoundingClientRect().top);
+        if (Math.abs(afterTop-beforeTop) > 2) add(device.name, route, "MENU_LAYOUT_SHIFT", String(afterTop-beforeTop));
         await page.keyboard.press("Escape");
-        const closed = await page.locator(".navlinks").evaluate(el => getComputedStyle(el).display === "none");
+        const closed = await page.locator(".navlinks").evaluate(el => {
+          const s=getComputedStyle(el);
+          return s.visibility === "hidden" || Number.parseFloat(s.opacity || "1") < .05;
+        });
         if (!closed) add(device.name, route, "MENU_MOVIL", "Escape no cierra");
       }
     } else {
@@ -398,6 +411,18 @@ for (const device of devices) {
       path: path.join(out, device.name + "-" + reviewLabel + "-sin-banner.png"),
       fullPage: true,
     });
+    if (device.name === "movil-390" && reviewRoute === "/") {
+      const toggle = reviewPage.locator(".menu-toggle");
+      if (await toggle.count() === 1 && await toggle.isVisible()) {
+        await toggle.click();
+        await reviewPage.waitForTimeout(180);
+        await reviewPage.screenshot({
+          path: path.join(out, "movil-390-menu-abierto.png"),
+          fullPage: false,
+        });
+        await reviewPage.keyboard.press("Escape");
+      }
+    }
   }
   await reviewContext.close();
 
