@@ -1,0 +1,64 @@
+name: Auditoría visual IA · iberfit.cl
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/web-v6-28-recuperacion
+    paths:
+      - ".github/scripts/audit_live_visual.mjs"
+      - ".github/workflows/audit-live-ai.yml"
+      - "candidate/v628/llms.txt"
+      - "llms.txt"
+  schedule:
+    - cron: "17 11 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: iberfit-web-live-ai-audit
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BASE_URL: https://iberfit.cl
+      AUDIT_OUT: evidence/live-web-ai
+      FAIL_ON_REGRESSION: "1"
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v7
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Instalar navegador real
+        run: |
+          npm install --no-save playwright@1.62.1
+          npx playwright install --with-deps chromium
+
+      - name: Auditar producción visualmente
+        run: node .github/scripts/audit_live_visual.mjs
+
+      - name: Comprobar archivo IA de la candidata
+        run: |
+          set -euo pipefail
+          test -s candidate/v628/llms.txt
+          grep -q '^# IBERFIT' candidate/v628/llms.txt
+          grep -q 'Diagnóstico IRI' candidate/v628/llms.txt
+          grep -q 'https://iberfit.cl/sitemap.xml' candidate/v628/llms.txt
+
+      - name: Guardar evidencia para revisión humana e IA
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: iberfit-web-live-ai-audit
+          path: evidence/live-web-ai
+          if-no-files-found: warn
+          retention-days: 30
