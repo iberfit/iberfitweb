@@ -30,6 +30,28 @@ jobs:
         run: |
           npx --yes html-validate@9 "candidate/v628/**/*.html" --rule no-inline-style:off --rule no-trailing-whitespace:off
 
+      - name: Certificar isotipo oficial
+        run: |
+          python -m pip install --quiet pillow
+          python - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          import hashlib
+
+          expected_size=(173,192)
+          expected_rgba="b7cb99020c981bca2891298df3abe164895ec4d7c2d93974b2eeb4733696f012"
+          for path in (
+              Path("brand/Isotipo_IBERFIT_Oficial.png"),
+              Path("candidate/v628/assets/iberfit-isotipo-oficial.png"),
+          ):
+              im=Image.open(path).convert("RGBA")
+              actual=hashlib.sha256(im.tobytes()).hexdigest()
+              print(path, im.size, actual)
+              assert im.size == expected_size, (path, im.size)
+              assert actual == expected_rgba, (path, actual)
+          print("Isotipo oficial: identidad visual pixel a pixel certificada")
+          PY
+
       - name: Servir candidata
         run: |
           python -m http.server 4173 --directory candidate/v628 > /tmp/iberfit-v628.log 2>&1 &
