@@ -1,0 +1,26 @@
+name: Monitor producción IBERFIT
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/web-v6-28-recuperacion
+    paths:
+      - ".github/scripts/monitor_produccion.py"
+      - ".github/workflows/monitor-produccion.yml"
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Comprobar iberfit.cl
+        run: python .github/scripts/monitor_produccion.py
