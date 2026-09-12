@@ -292,6 +292,37 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
   }
 }
 
+.nav-mobile-languages{display:none}
+
+@media (max-width:560px){
+  .nav-mobile-languages{
+    display:flex;
+    align-items:center;
+    gap:.4rem;
+    margin-top:.35rem;
+    padding:.7rem .55rem .15rem;
+    border-top:1px solid rgba(31,61,43,.1);
+  }
+  .nav-mobile-languages a{
+    width:auto;
+    min-width:44px;
+    min-height:44px;
+    justify-content:center;
+    padding:.45rem .7rem;
+    border:1px solid rgba(31,61,43,.1);
+    border-radius:999px;
+    font-size:.78rem;
+    font-weight:800;
+    letter-spacing:.06em;
+  }
+  .nav-mobile-languages a.active,
+  .nav-mobile-languages a[aria-current="true"]{
+    border-color:rgba(184,151,58,.34);
+    background:rgba(184,151,58,.13);
+    color:var(--green);
+  }
+}
+
 @media (max-width:480px){
   .navlinks{
     left:max(.75rem,env(safe-area-inset-left));
@@ -1127,6 +1158,19 @@ def differentiate_local_page(text: str, rel: str) -> str:
 
 
 
+def add_mobile_language_switch(text: str) -> str:
+    """Duplica dentro del panel compacto el selector de idioma ya resuelto por cada página."""
+    if 'class="nav-mobile-languages"' in text:
+        return text
+    lang=re.search(r'<div class="lang-switch">(.*?)</div>',text,flags=re.I|re.S)
+    nav=re.search(r'(<nav\b[^>]*class="[^"]*navlinks[^"]*"[^>]*>.*?)(</nav>)',text,flags=re.I|re.S)
+    if not lang or not nav:
+        return text
+    label="Language" if re.search(r'<html\b[^>]*lang="en"',text,flags=re.I) else "Idioma"
+    mobile=f'<div class="nav-mobile-languages" aria-label="{label}">{lang.group(1)}</div>'
+    return text[:nav.end(1)] + mobile + text[nav.end(1):]
+
+
 def upgrade_photo_fidelity(text: str) -> str:
     """Deja que el navegador elija 640/960/1448 según ancho real y densidad de píxel."""
     def replace_picture(match):
@@ -1204,6 +1248,8 @@ def validate() -> None:
         if "photo-story-media" in text and "-1448.webp" in text:
             if " 640w" not in text or " 960w" not in text or " 1448w" not in text or ' sizes="' not in text:
                 fail(f"{rel}: fotografía sin selección por densidad")
+        if 'class="lang-switch"' in text and 'class="navlinks"' in text and 'class="nav-mobile-languages"' not in text:
+            fail(f"{rel}: selector de idioma móvil ausente")
         for term in forbidden:
             if term in low: fail(f"{rel}: lenguaje IRI obsoleto: {term}")
         if not rel.startswith("en/") and rel!="404.html":
@@ -1375,6 +1421,7 @@ def main() -> None:
                 '<form class="orientador-card reveal" data-orientador-form="" novalidate="">',
                 '<form class="orientador-card reveal" data-orientador-form="" novalidate=""><p class="sr-only" data-orientador-status="" aria-live="polite"></p>',
             )
+        text=add_mobile_language_switch(text)
         text=upgrade_photo_fidelity(text)
         text=enrich_structured_data(text, rel)
         page.write_text(text,encoding="utf-8")
