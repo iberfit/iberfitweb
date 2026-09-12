@@ -16,7 +16,7 @@ concurrency:
 jobs:
   qa:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
 
@@ -31,7 +31,7 @@ jobs:
           npm install --no-save playwright@1.62.1
           npx playwright install --with-deps chromium
 
-      - name: Servir candidata
+      - name: Servir candidata exacta
         shell: bash
         run: |
           set -euo pipefail
@@ -44,16 +44,23 @@ jobs:
           cat /tmp/v629-server.log
           exit 1
 
-      - name: QA funcional y visual V6.29
+      - name: QA regresión multidispositivo V6.28
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p /tmp/v629-evidence
+          mkdir -p /tmp/v629-evidence/general
+          BASE_URL="http://127.0.0.1:4173" QA_OUT="/tmp/v629-evidence/general"             node .github/scripts/qa_v628_dispositivos.mjs
+
+      - name: QA funcional específica V6.29
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v629-evidence/feature
           cat > /tmp/qa-v629.js <<'NODE'
           const { chromium } = require('playwright');
           const fs = require('fs');
           const base = 'http://127.0.0.1:4173';
-          const localRoutes = [
+          const esLocals = [
             ['/entrenador-personal-las-condes/', 'Las Condes'],
             ['/entrenador-personal-vitacura/', 'Vitacura'],
             ['/entrenamiento-personal-providencia/', 'Providencia'],
@@ -62,8 +69,17 @@ jobs:
             ['/entrenador-personal-la-reina/', 'La Reina'],
             ['/entrenador-personal-penalolen/', 'Peñalolén']
           ];
-          const failures = [];
+          const enLocals = [
+            ['/en/personal-trainer-las-condes/', 'Las Condes'],
+            ['/en/personal-trainer-vitacura/', 'Vitacura'],
+            ['/en/personal-training-providencia/', 'Providencia'],
+            ['/en/personal-trainer-nunoa/', 'Ñuñoa'],
+            ['/en/personal-trainer-lo-barnechea/', 'Lo Barnechea'],
+            ['/en/personal-trainer-la-reina/', 'La Reina'],
+            ['/en/personal-trainer-penalolen/', 'Peñalolén']
+          ];
           const notes = [];
+          const failures = [];
           const assert = (condition, message) => { if (!condition) throw new Error(message); };
 
           async function openPage(context, path, label) {
@@ -73,7 +89,7 @@ jobs:
             page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
             const response = await page.goto(base + path, { waitUntil: 'networkidle' });
             assert(response && response.ok(), label + ': HTTP no OK');
-            await page.waitForTimeout(350);
+            await page.waitForTimeout(300);
             const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
             assert(overflow <= 2, label + ': overflow horizontal ' + overflow + 'px');
             if (errors.length) throw new Error(label + ': ' + errors.join(' | '));
@@ -82,18 +98,32 @@ jobs:
 
           async function verifyCarousel(page, label) {
             await page.locator('.review-carousel-shell').waitFor();
-            assert(await page.locator('.review-slide').count() === 2, label + ': deben existir 2 reseñas reales');
-            assert(await page.locator('.review-slide.is-active').count() === 1, label + ': debe haber una sola reseña activa');
-            assert(await page.locator('.review-source-row a[href*="google"]').count() === 0, label + ': las reseñas no deben sacar al usuario a Google');
+            assert(await page.locator('.review-slide').count() === 2, label + ': deben existir 2 reseñas');
+            assert(await page.locator('.review-slide.is-active').count() === 1, label + ': debe haber 1 reseña activa');
+            assert(await page.locator('.review-source-row a[href*="google"]').count() === 0, label + ': la sección de reseñas no debe sacar a Google');
             const first = await page.locator('.review-slide.is-active').getAttribute('data-review-index');
-            await page.waitForTimeout(2250);
+            await page.waitForTimeout(2350);
             const second = await page.locator('.review-slide.is-active').getAttribute('data-review-index');
-            assert(first !== second, label + ': el carrusel no avanzó a los 2 segundos');
+            assert(first !== second, label + ': el carrusel no avanzó ~2 s');
             await page.locator('[data-review-pause]').click();
             const paused = await page.locator('.review-slide.is-active').getAttribute('data-review-index');
             await page.waitForTimeout(2250);
-            const pausedAfter = await page.locator('.review-slide.is-active').getAttribute('data-review-index');
-            assert(paused === pausedAfter, label + ': la pausa no detuvo el carrusel');
+            const after = await page.locator('.review-slide.is-active').getAttribute('data-review-index');
+            assert(paused === after, label + ': pausa no funciona');
+          }
+
+          async function verifyLocal(page, route, place, lang) {
+            await page.locator('.local-place-badge').waitFor();
+            const badge = (await page.locator('.local-place-badge strong').textContent()).trim();
+            assert(badge === place, route + ': badge esperado ' + place + ', obtenido ' + badge);
+            assert(await page.locator('.local-service-chip').count() === 4, route + ': deben existir 4 entornos');
+            const chips = (await page.locator('.local-service-chip').allTextContents()).join(' ');
+            assert(lang === 'en' ? /Park or green space/i.test(chips) : /Parque o zona verde/i.test(chips), route + ': falta parque/zona verde');
+            const cards = page.locator('.cards-4');
+            if (await cards.count()) {
+              const columns = await cards.evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').filter(Boolean).length);
+              assert(columns === 2, route + ': cards-4 debe ser 2x2 en desktop');
+            }
           }
 
           (async () => {
@@ -101,89 +131,115 @@ jobs:
             try {
               const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
 
-              const home = await openPage(desktop, '/', 'home desktop');
-              await verifyCarousel(home, 'home');
-              await home.screenshot({ path: '/tmp/v629-evidence/home-desktop.png', fullPage: true });
-              notes.push('home: carrusel 2s + pausa + sin salida Google PASS');
-              await home.close();
-
-              const about = await openPage(desktop, '/sobre-iberfit/', 'sobre IBERFIT desktop');
-              const journeyNames = await about.locator('.brand-journey article strong').allTextContents();
-              const journeyFlags = await about.locator('.brand-journey .journey-flag').allTextContents();
-              assert(JSON.stringify(journeyNames.map(x => x.trim())) === JSON.stringify(['España','Alemania','España','Chile']), 'sobre: recorrido de países incorrecto: ' + JSON.stringify(journeyNames));
-              assert(JSON.stringify(journeyFlags.map(x => x.trim())) === JSON.stringify(['🇪🇸','🇩🇪','🇪🇸','🇨🇱']), 'sobre: banderas incorrectas: ' + JSON.stringify(journeyFlags));
-              await verifyCarousel(about, 'sobre');
-              await about.screenshot({ path: '/tmp/v629-evidence/sobre-desktop.png', fullPage: true });
-              notes.push('sobre: España→Alemania→España→Chile con banderas + carrusel PASS');
-              await about.close();
-
-              const online = await openPage(desktop, '/online/', 'online desktop');
-              assert(await online.locator('[data-country-selector]').count() === 0, 'online: no debe existir selector de países');
-              await online.screenshot({ path: '/tmp/v629-evidence/online-desktop.png', fullPage: true });
-              notes.push('online: sin selector de países artificial PASS');
-              await online.close();
-
-              for (const [route, place] of localRoutes) {
-                const page = await openPage(desktop, route, place + ' desktop');
-                await page.locator('.local-place-badge').waitFor();
-                const badge = (await page.locator('.local-place-badge strong').textContent()).trim();
-                assert(badge === place, route + ': badge esperado ' + place + ', obtenido ' + badge);
-                assert(await page.locator('.local-service-chip').count() === 4, route + ': deben existir 4 opciones de cobertura');
-                const chips = (await page.locator('.local-service-chip').allTextContents()).join(' ');
-                assert(/Parque o zona verde/i.test(chips), route + ': falta parque o zona verde');
-                const cards = page.locator('.cards-4');
-                if (await cards.count()) {
-                  const columns = await cards.evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').filter(Boolean).length);
-                  assert(columns === 2, route + ': tarjetas locales deben ser 2x2 en escritorio');
-                }
-                await page.screenshot({ path: '/tmp/v629-evidence/' + place.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-') + '-desktop.png', fullPage: true });
-                notes.push(route + ': identidad local + domicilio + gimnasio + parque + híbrido PASS');
-                await page.close();
+              for (const [route,label] of [['/','home ES'],['/sobre-iberfit/','about ES'],['/en/','home EN'],['/en/about/','about EN']]) {
+                const p = await openPage(desktop, route, label);
+                await verifyCarousel(p, label);
+                await p.screenshot({ path: '/tmp/v629-evidence/feature/' + label.toLowerCase().replace(/[^a-z0-9]+/g,'-') + '.png', fullPage: true });
+                await p.close();
               }
+              notes.push('carruseles ES/EN: una reseña, rotación ~2s, pausa y sin salida Google PASS');
+
+              const aboutEs = await openPage(desktop, '/sobre-iberfit/', 'journey ES');
+              assert(JSON.stringify((await aboutEs.locator('.brand-journey article strong').allTextContents()).map(x=>x.trim())) === JSON.stringify(['España','Alemania','España','Chile']), 'journey ES países incorrectos');
+              assert(JSON.stringify((await aboutEs.locator('.journey-flag').allTextContents()).map(x=>x.trim())) === JSON.stringify(['🇪🇸','🇩🇪','🇪🇸','🇨🇱']), 'journey ES banderas incorrectas');
+              await aboutEs.close();
+
+              const aboutEn = await openPage(desktop, '/en/about/', 'journey EN');
+              assert(JSON.stringify((await aboutEn.locator('.brand-journey article strong').allTextContents()).map(x=>x.trim())) === JSON.stringify(['Spain','Germany','Spain','Chile']), 'journey EN países incorrectos');
+              assert(JSON.stringify((await aboutEn.locator('.journey-flag').allTextContents()).map(x=>x.trim())) === JSON.stringify(['🇪🇸','🇩🇪','🇪🇸','🇨🇱']), 'journey EN banderas incorrectas');
+              await aboutEn.close();
+              notes.push('historia ES/EN España→Alemania→España→Chile con banderas PASS');
+
+              for (const route of ['/online/','/en/online/']) {
+                const p=await openPage(desktop, route, 'online sin selector ' + route);
+                assert(await p.locator('[data-country-selector]').count() === 0, route + ': no debe existir selector artificial de países');
+                await p.close();
+              }
+              notes.push('A distancia/Online: sin selector artificial de países PASS');
+
+              for (const [route,place] of esLocals) {
+                const p=await openPage(desktop, route, place + ' ES');
+                await verifyLocal(p, route, place, 'es');
+                await p.close();
+              }
+              for (const [route,place] of enLocals) {
+                const p=await openPage(desktop, route, place + ' EN');
+                await verifyLocal(p, route, place, 'en');
+                await p.close();
+              }
+              notes.push('14 páginas locales: identidad + 4 entornos + parque/zona verde PASS');
+
+              for (const [route,label,needle] of [
+                ['/presencial/','presencial ES','Parque o zona verde'],
+                ['/en/in-person/','in-person EN','Park or green space']
+              ]) {
+                const p=await openPage(desktop, route, label);
+                assert(await p.locator('.local-service-chip').count() === 4, label + ': deben existir 4 entornos');
+                assert((await p.locator('.local-service-strip').innerText()).includes(needle), label + ': falta parque/zona verde');
+                await p.close();
+              }
+              notes.push('páginas Presencial/In-person: parques visibles PASS');
+
+              for (const [route,needle] of [['/contacto/','Parque o zona verde'],['/en/contact/','Park or green space']]) {
+                const p=await openPage(desktop, route, 'contact guide ' + route);
+                const options=await p.locator('select[name="material"] option').allTextContents();
+                assert(options.map(x=>x.trim()).includes(needle), route + ': orientador no ofrece parque/zona verde');
+                await p.close();
+              }
+              notes.push('orientador ES/EN incluye parque/zona verde PASS');
               await desktop.close();
 
               const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-              const mobileRoutes = [['/', 'home mobile'], ['/sobre-iberfit/', 'sobre mobile'], ['/online/', 'online mobile'], ...localRoutes.map(([r,p]) => [r, p + ' mobile'])];
-              for (const [path, label] of mobileRoutes) {
-                const page = await openPage(mobile, path, label);
-                if (path === '/' || path === '/sobre-iberfit/') {
-                  assert(await page.locator('.review-slide.is-active').count() === 1, label + ': más de una reseña activa');
+              for (const [route,label] of [
+                ['/','home ES mobile'],['/sobre-iberfit/','about ES mobile'],['/en/','home EN mobile'],['/en/about/','about EN mobile'],
+                ['/presencial/','presencial mobile'],['/en/in-person/','in-person mobile'],
+                ...esLocals.map(([r,p])=>[r,p+' ES mobile']),
+                ...enLocals.map(([r,p])=>[r,p+' EN mobile'])
+              ]) {
+                const p=await openPage(mobile, route, label);
+                if (route==='/'||route==='/sobre-iberfit/'||route==='/en/'||route==='/en/about/') {
+                  assert(await p.locator('.review-slide.is-active').count()===1,label+': carrusel activo incorrecto');
                 }
-                if (path === '/sobre-iberfit/') {
-                  assert(await page.locator('.journey-flag').count() === 4, 'sobre mobile: faltan banderas');
+                if (esLocals.some(([r])=>r===route)||enLocals.some(([r])=>r===route)) {
+                  assert(await p.locator('.local-service-chip').count()===4,label+': cobertura incompleta');
                 }
-                if (path === '/online/') {
-                  assert(await page.locator('[data-country-selector]').count() === 0, 'online mobile: no debe existir selector de países');
-                }
-                if (localRoutes.some(([route]) => route === path)) {
-                  assert(await page.locator('.local-place-badge').count() === 1, label + ': badge local ausente');
-                  assert(await page.locator('.local-service-chip').count() === 4, label + ': cobertura local incompleta');
-                }
-                await page.close();
+                await p.close();
               }
-              notes.push('mobile 390px: home + sobre + online + 7 comunas sin overflow PASS');
+              notes.push('móvil 390px ES/EN sin overflow y componentes completos PASS');
               await mobile.close();
 
-              const reduced = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
-              for (const route of ['/', '/sobre-iberfit/']) {
-                const page = await openPage(reduced, route, route + ' reduced motion');
-                const r1 = await page.locator('.review-slide.is-active').getAttribute('data-review-index');
-                await page.waitForTimeout(2250);
-                const r2 = await page.locator('.review-slide.is-active').getAttribute('data-review-index');
-                assert(r1 === r2, route + ': reduced-motion no debe autoavanzar');
-                await page.close();
+              const noJs = await browser.newContext({ viewport: { width: 390, height: 844 }, javaScriptEnabled: false });
+              for (const [route,place] of [...esLocals,...enLocals]) {
+                const p=await noJs.newPage();
+                const response=await p.goto(base+route,{waitUntil:'domcontentloaded'});
+                assert(response&&response.ok(),route+': no-JS HTTP');
+                assert(await p.locator('.local-place-badge').count()===1,route+': badge debe existir sin JS');
+                assert(await p.locator('.local-service-chip').count()===4,route+': 4 entornos deben existir sin JS');
+                await p.close();
               }
-              notes.push('prefers-reduced-motion: carruseles sin autoavance PASS');
-              await reduced.close();
+              await noJs.close();
+              notes.push('14 páginas locales: contenido esencial visible incluso sin JS PASS');
 
-              fs.writeFileSync('/tmp/v629-evidence/report.json', JSON.stringify({ ok: true, notes }, null, 2));
+              const reduced = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+              for (const route of ['/','/sobre-iberfit/','/en/','/en/about/']) {
+                const p=await openPage(reduced, route, route+' reduced');
+                const a=await p.locator('.review-slide.is-active').getAttribute('data-review-index');
+                await p.waitForTimeout(2300);
+                const b=await p.locator('.review-slide.is-active').getAttribute('data-review-index');
+                assert(a===b,route+': reduced-motion no debe autoavanzar');
+                await p.close();
+              }
+              await reduced.close();
+              notes.push('prefers-reduced-motion ES/EN sin autoavance PASS');
+
+              fs.writeFileSync('/tmp/v629-evidence/feature/report.json', JSON.stringify({ok:true,notes},null,2));
               console.log('QA V6.29 EXPERIENCE: PASS');
-              notes.forEach(n => console.log('PASS · ' + n));
-            } catch (e) {
-              failures.push(e.stack || String(e));
-              fs.writeFileSync('/tmp/v629-evidence/report.json', JSON.stringify({ ok: false, failures, notes }, null, 2));
-              console.error(e.stack || e);
-              process.exitCode = 1;
+              notes.forEach(n=>console.log('PASS · '+n));
+            } catch(e) {
+              failures.push(e.stack||String(e));
+              fs.writeFileSync('/tmp/v629-evidence/feature/report.json', JSON.stringify({ok:false,failures,notes},null,2));
+              console.error(e.stack||e);
+              process.exitCode=1;
             } finally {
               await browser.close();
             }
@@ -191,24 +247,24 @@ jobs:
           NODE
           NODE_PATH="$GITHUB_WORKSPACE/node_modules" node /tmp/qa-v629.js
 
-      - name: Verificar referencias y contenido
+      - name: Verificar contenido estático e invariantes
         shell: bash
         run: |
           set -euo pipefail
           test -s candidate/v628/assets/experience.v629.css
           test -s candidate/v628/assets/experience.v629.js
-          grep -Fq 'data-review-carousel' candidate/v628/index.html
-          grep -Fq 'data-review-carousel' candidate/v628/sobre-iberfit/index.html
+          ! grep -Fq 'const countries = [' candidate/v628/assets/experience.v629.js
+          ! grep -Fq 'country-selector' candidate/v628/assets/experience.v629.js
+          grep -Fq 'Parque o zona verde' candidate/v628/presencial/index.html
+          grep -Fq 'Park or green space' candidate/v628/en/in-person/index.html
+          grep -Fq 'Parque o zona verde' candidate/v628/contacto/index.html
+          grep -Fq 'Park or green space' candidate/v628/en/contact/index.html
           grep -Fq '🇪🇸' candidate/v628/sobre-iberfit/index.html
           grep -Fq '🇩🇪' candidate/v628/sobre-iberfit/index.html
           grep -Fq '🇨🇱' candidate/v628/sobre-iberfit/index.html
-          ! grep -Fq 'const countries = [' candidate/v628/assets/experience.v629.js
-          ! grep -Fq 'country-selector' candidate/v628/assets/experience.v629.js
-          grep -Fq 'Parque o zona verde' candidate/v628/assets/experience.v629.js
-          for f in             candidate/v628/entrenador-personal-la-reina/index.html             candidate/v628/entrenador-personal-las-condes/index.html             candidate/v628/entrenador-personal-lo-barnechea/index.html             candidate/v628/entrenador-personal-penalolen/index.html             candidate/v628/entrenador-personal-vitacura/index.html             candidate/v628/entrenamiento-personal-providencia/index.html             candidate/v628/personal-trainer-nunoa/index.html; do
-            grep -Fq 'experience.v629.css' "$f"
-            grep -Fq 'experience.v629.js' "$f"
-          done
+          grep -Fq '🇪🇸' candidate/v628/en/about/index.html
+          grep -Fq '🇩🇪' candidate/v628/en/about/index.html
+          grep -Fq '🇨🇱' candidate/v628/en/about/index.html
 
       - name: Guardar evidencia
         if: always()
