@@ -222,6 +222,18 @@ def validate() -> None:
             fail(f"{rel}: vista IRI longitudinal ausente")
     for old in ("iri-report-preview-es-1448.webp","iri-report-preview-es-768.webp","iri-report-preview-es.png"):
         if (DST/"assets"/old).exists(): fail(f"Recurso IRI antiguo presente: {old}")
+    for asset in DST.rglob("*"):
+        if asset.is_file() and asset.suffix.lower() in {".html",".css",".js",".json",".webmanifest",".md",".txt"}:
+            source=asset.read_text("utf-8",errors="ignore")
+            for legacy in (
+                "iberfit-isotipo-96.png",
+                "iberfit-isotipo-192.png",
+                "iberfit-isotipo-verde-96.png",
+                "iberfit-isotipo-verde-192.png",
+            ):
+                if legacy in source:
+                    fail(f"{asset.relative_to(DST)}: referencia a isotipo legado {legacy}")
+
     headers=(DST/"_headers").read_text("utf-8")
     if "/assets/styles.v628.css" not in headers: fail("_headers no referencia styles.v628.css")
     if "styles.v625.css" in headers or "styles.v626.css" in headers: fail("_headers conserva CSS antiguo")
@@ -267,6 +279,12 @@ def main() -> None:
     ):
         path=DST/"assets"/name
         if path.exists(): path.unlink()
+
+    app_js = DST / "assets/app.v623.js"
+    app_text = app_js.read_text("utf-8")
+    app_text = app_text.replace("/assets/iberfit-isotipo-96.png","/assets/iberfit-isotipo-oficial.png")
+    app_text = app_text.replace("/assets/iberfit-isotipo-192.png","/assets/iberfit-isotipo-oficial.png")
+    app_js.write_text(app_text,encoding="utf-8")
 
     for page in sorted(DST.rglob("*.html")):
         rel=page.relative_to(DST).as_posix()
