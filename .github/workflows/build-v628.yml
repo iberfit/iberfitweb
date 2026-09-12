@@ -37,6 +37,15 @@ jobs:
           install -m 0644 /tmp/iberfit-isotipo-oficial.png candidate/v628/assets/iberfit-isotipo-oficial.png
           cmp -s brand/Isotipo_IBERFIT_Oficial.png candidate/v628/assets/iberfit-isotipo-oficial.png
 
+      - name: Minificar activos propios
+        run: |
+          set -euo pipefail
+          for file in             candidate/v628/assets/styles.v628.css             candidate/v628/assets/app.v628.js             candidate/v628/assets/analytics.v628.js
+          do
+            npx --yes esbuild@0.25.9 "$file" --minify --outfile="$file.tmp"
+            mv "$file.tmp" "$file"
+          done
+
       - name: Verificar invariantes
         run: |
           test -s candidate/v628/index.html
