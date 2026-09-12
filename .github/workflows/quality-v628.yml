@@ -143,7 +143,7 @@ jobs:
           grep -q "X-Content-Type-Options: nosniff" candidate/v628/_headers
           grep -q "Referrer-Policy:" candidate/v628/_headers
           grep -q "Permissions-Policy:" candidate/v628/_headers
-          ! grep -R -P 'http://(?!127\.0\.0\.1)' candidate/v628 --include="*.html" --include="*.js" --include="*.css"
+          ! grep -R -P 'http://(?!127\.0\.0\.1|www\.w3\.org/2000/svg)' candidate/v628 --include="*.html" --include="*.js" --include="*.css"
 
       - name: SEO internacional
         run: |
