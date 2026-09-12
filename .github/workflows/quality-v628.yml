@@ -1,4 +1,5 @@
 name: Calidad profesional web V6.28
+# Revalidación Axe y marca oficial 2026-09-11
 
 on:
   workflow_dispatch:
