@@ -68,6 +68,9 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 @media(max-width:720px){.device-dock a{min-width:44px;min-height:52px}}
 @media(max-width:430px){input,select,textarea{font-size:16px}}
 @media(hover:none){.btn:hover{transform:none}}
+@media(prefers-reduced-motion:reduce){
+  .reveal{opacity:1!important;transform:none!important}
+}
 """
 
 HEADERS = """/*
