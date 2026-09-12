@@ -68,6 +68,90 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .consent-actions .btn,.consent-dialog .btn{min-height:44px}
 .consent-banner .btn-ghost{color:#fff;border-color:rgba(255,255,255,.45)}
 .consent-banner .btn-ghost:hover{background:rgba(255,255,255,.08)}
+
+/* V6.28 · Capa visual editorial premium */
+html{scroll-padding-top:96px}
+body{background:
+  radial-gradient(circle at 8% 0%,rgba(184,151,58,.055),transparent 32rem),
+  linear-gradient(180deg,#fbf8f1 0,#f7f4ee 42rem,#f7f4ee 100%)}
+h1,h2{text-wrap:balance}
+p{text-wrap:pretty}
+.hero{padding-block:clamp(4.5rem,8vw,7.75rem) clamp(3.5rem,7vw,6rem)}
+.hero-grid.hero-grid-no-media{max-width:1120px;position:relative}
+.hero-grid-no-media .hero-text{max-width:970px;padding-left:clamp(1rem,3vw,2.5rem);border-left:1px solid rgba(184,151,58,.38)}
+.hero-grid-no-media .hero-text:before{content:"";position:absolute;left:-1px;top:0;width:2px;height:clamp(3.5rem,8vw,6.5rem);background:linear-gradient(180deg,var(--gold),rgba(184,151,58,0))}
+.hero-grid-no-media h1{max-width:14ch;font-size:clamp(3.35rem,7.1vw,7rem);line-height:.94;letter-spacing:-.052em}
+.hero-grid-no-media .lead{font-size:clamp(1.08rem,1.65vw,1.32rem);max-width:46rem;line-height:1.72;margin-top:1.45rem}
+.hero-grid-no-media .hero-support{max-width:43rem;font-size:.98rem;line-height:1.7}
+.hero-grid-no-media .hero-actions{margin-top:2.45rem}
+.hero-grid-no-media .hero-meta{margin-top:.25rem;padding-top:1rem;border-top:1px solid rgba(31,61,43,.1);max-width:46rem}
+.section{padding-block:clamp(4.5rem,7vw,7.5rem)}
+.section-cream{background:linear-gradient(180deg,#f4ecdd 0%,#f9f5ee 58%,#f7f4ee 100%);border-block:1px solid rgba(184,151,58,.08)}
+.section-intro{margin-bottom:clamp(2.6rem,5vw,4.25rem)}
+.section-intro>h2{max-width:16ch}
+.section-intro>.lead{font-size:clamp(1.03rem,1.45vw,1.2rem)}
+.kicker,.eyebrow{font-size:.69rem;letter-spacing:.16em}
+.btn{position:relative;isolation:isolate;box-shadow:none}
+.btn-primary{background:linear-gradient(135deg,#173827 0%,#254d38 100%);box-shadow:0 12px 30px rgba(16,39,27,.18),inset 0 1px 0 rgba(255,255,255,.13)}
+.btn-secondary{background:rgba(255,255,255,.7);backdrop-filter:blur(12px);box-shadow:inset 0 0 0 1px rgba(184,151,58,.08)}
+@media(hover:hover){
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 18px 38px rgba(16,39,27,.24),inset 0 1px 0 rgba(255,255,255,.14)}
+  .btn-secondary:hover{transform:translateY(-2px);background:#fff;border-color:rgba(184,151,58,.44)}
+  .modality-row:hover{background:linear-gradient(90deg,rgba(184,151,58,.055),transparent 72%);padding-inline:.9rem}
+}
+.modality-row{transition:background .22s ease,padding .22s ease}
+.principle-stack{border-top-color:rgba(184,151,58,.38)}
+.principle-row{padding-block:clamp(1.55rem,2.8vw,2.15rem)}
+.principle-row h3{letter-spacing:-.03em}
+.confidence-band{position:relative;overflow:hidden;background:
+  radial-gradient(circle at 100% 0%,rgba(184,151,58,.13),transparent 28rem),
+  linear-gradient(135deg,#ebe1cf 0%,#f7f3eb 72%)}
+.confidence-band:before{content:"IBERFIT";position:absolute;right:-.03em;bottom:-.23em;font-family:Iowan Old Style,Baskerville,Georgia,serif;font-size:clamp(8rem,22vw,22rem);font-weight:700;letter-spacing:-.06em;color:rgba(31,61,43,.025);pointer-events:none}
+.confidence-grid{position:relative}
+.review-proof{background:
+  radial-gradient(circle at 15% 0%,rgba(217,181,104,.12),transparent 24rem),
+  linear-gradient(145deg,#10271b 0%,#183a29 55%,#0c2016 100%)}
+.review-proof-card{background:linear-gradient(145deg,rgba(255,255,255,.09),rgba(255,255,255,.045));border-color:rgba(217,181,104,.32)}
+.origin-section{position:relative;overflow:hidden;background:
+  radial-gradient(circle at 8% 12%,rgba(217,181,104,.12),transparent 28rem),
+  linear-gradient(145deg,#0c2016 0%,#173827 58%,#10271b 100%);border:0;color:#fff}
+.origin-section:before{content:"";position:absolute;right:-10rem;top:-14rem;width:32rem;height:32rem;border:1px solid rgba(217,181,104,.13);border-radius:50%;box-shadow:0 0 0 5rem rgba(217,181,104,.02),0 0 0 10rem rgba(217,181,104,.018)}
+.origin-section .founder-grid{position:relative;align-items:start}
+.origin-section h2{color:#fff;max-width:11ch;font-size:clamp(2.4rem,5vw,4.7rem);line-height:.98}
+.origin-section .kicker{color:var(--gold-light)}
+.origin-section .founder-copy{padding-left:clamp(1.4rem,3vw,2.6rem);border-left:1px solid rgba(217,181,104,.42)}
+.origin-section .founder-copy p,.origin-section .founder-copy p:first-child{color:rgba(255,255,255,.78);font-size:clamp(1rem,1.35vw,1.15rem)}
+.origin-section .founder-copy p:first-child{color:#fff;font-size:clamp(1.1rem,1.55vw,1.32rem)}
+.brand-journey{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;margin:2rem 0 1.8rem;background:rgba(217,181,104,.2);border:1px solid rgba(217,181,104,.22);border-radius:22px;overflow:hidden}
+.brand-journey article{min-height:178px;padding:1.35rem;background:rgba(4,22,16,.48)}
+.brand-journey span{display:block;margin-bottom:1.85rem;color:var(--gold-light);font-size:.66rem;font-weight:850;letter-spacing:.16em}
+.brand-journey strong{display:block;color:#fff;font-family:Iowan Old Style,Baskerville,Georgia,serif;font-size:1.45rem;margin-bottom:.55rem}
+.brand-journey p{margin:0!important;color:rgba(255,255,255,.66)!important;font-size:.82rem!important;line-height:1.55!important}
+.origin-section + .section-cream{border-top:0}
+.photo-story-media{box-shadow:0 28px 72px rgba(16,42,29,.16)}
+.photo-story-media:after{border-color:rgba(255,255,255,.42)}
+.site-header{background:rgba(247,244,238,.88);border-bottom-color:rgba(31,61,43,.08)}
+.site-header.scrolled{background:rgba(247,244,238,.94);box-shadow:0 8px 30px rgba(16,32,24,.08)}
+@media(max-width:820px){
+  .hero-grid-no-media .hero-text{padding-left:1.15rem}
+  .origin-section h2{max-width:14ch}
+  .brand-journey{grid-template-columns:1fr}
+  .brand-journey article{min-height:0}
+  .brand-journey span{margin-bottom:.75rem}
+}
+@media(max-width:560px){
+  .hero{padding-block:3.6rem 3.1rem}
+  .hero-grid-no-media h1{font-size:clamp(2.75rem,14vw,4.2rem);line-height:.96}
+  .hero-grid-no-media .hero-text{padding-left:.95rem}
+  .hero-grid-no-media .hero-actions{gap:.7rem}
+  .hero-grid-no-media .hero-actions .btn{width:100%}
+  .section{padding-block:4rem}
+  .origin-section .founder-copy{padding-left:1rem}
+  .brand-journey{border-radius:18px}
+}
+@media(prefers-reduced-motion:reduce){
+  .modality-row,.btn{transition:none!important}
+}
 .choice-chip{min-height:48px}
 @media(max-width:720px){.device-dock a{min-width:44px;min-height:52px}}
 @media(max-width:430px){input,select,textarea{font-size:16px}}
@@ -527,7 +611,7 @@ def humanize_brand_voice(text: str, rel: str) -> str:
         text = text.replace(old, new)
 
     if rel == "sobre-iberfit/index.html":
-        story = """<section class="section origin-section"><div class="container founder-grid"><div class="reveal"><div class="kicker">Nuestra historia</div><h2>IBERFIT no nació para añadir otra rutina. Nació para que entrenar tuviera más sentido.</h2></div><div class="founder-copy reveal"><p>IBERFIT parte de una pregunta sencilla: ¿por qué tantas personas entrenan sin tener claro si lo que hacen tiene sentido para ellas?</p><p>La pregunta nace de algo que se repetía demasiado: rutinas genéricas, mediciones que nadie explicaba y planes que seguían iguales aunque cambiara la vida de la persona.</p><p>La experiencia profesional de su fundador en Europa dio forma a una manera exigente de trabajar: entender antes de prescribir, explicar las decisiones, observar la respuesta y ajustar cuando hace falta. Al llegar a Chile, esa forma de trabajar toma el nombre de IBERFIT.</p><p>Después fueron apareciendo necesidades nuevas: evaluar mejor el punto de partida, conectar lo que ocurre entre sesiones y poder acompañar sin depender siempre de un lugar. El Diagnóstico IRI, el seguimiento y las distintas modalidades nacen de esas necesidades, no de querer acumular servicios.</p><p>Hoy IBERFIT sigue creciendo con la misma regla: si algo no ayuda a entender mejor, decidir mejor o sostener mejor el proceso, no aporta.</p></div></div></section><section class="section section-cream"><div class="container"><div class="section-intro reveal"><div class="kicker">Una marca que sigue mejorando</div><h2>Mejorar no es añadir más. Es aportar más.</h2><p class="lead">Cada herramienta, cada cambio y cada nueva forma de acompañar tiene que ganarse su lugar ayudando a la persona que entrena.</p></div><div class="principle-stack"><article class="principle-row reveal"><h3>Entender antes de proponer</h3><p>Empezamos por tu contexto y tu punto de partida, no por una rutina que ya estaba escrita.</p></article><article class="principle-row reveal"><h3>Convertir datos en decisiones</h3><p>El IRI y el seguimiento sirven para explicar qué estamos viendo y qué conviene hacer con esa información.</p></article><article class="principle-row reveal"><h3>Acompañar también entre sesiones</h3><p>El valor no termina cuando acaba una sesión. Lo que ocurre después también ayuda a decidir el siguiente paso.</p></article><article class="principle-row reveal"><h3>Usar tecnología sin perder lo humano</h3><p>La tecnología puede ayudarnos a recordar, comparar y explicar mejor. La decisión y la conversación siguen siendo humanas.</p></article></div></div></section>"""
+        story = """<section class="section origin-section"><div class="container founder-grid"><div class="reveal"><div class="kicker">Nuestra historia</div><h2>IBERFIT no nació para añadir otra rutina. Nació para que entrenar tuviera más sentido.</h2></div><div class="founder-copy reveal"><p>IBERFIT parte de una pregunta sencilla: ¿por qué tantas personas entrenan sin tener claro si lo que hacen tiene sentido para ellas?</p><p>La pregunta nace de algo que se repetía demasiado: rutinas genéricas, mediciones que nadie explicaba y planes que seguían iguales aunque cambiara la vida de la persona.</p><p>Su fundador se formó universitariamente en España y vivió también en Alemania antes de llegar a Chile. Junto con su experiencia profesional en Europa, ese recorrido fue dando forma a una manera exigente de trabajar: entender antes de prescribir, explicar las decisiones, observar la respuesta y ajustar cuando hace falta.</p><div class="brand-journey" aria-label="Recorrido que da origen a IBERFIT"><article><span>01</span><strong>España</strong><p>Formación universitaria y base profesional.</p></article><article><span>02</span><strong>Alemania</strong><p>Una etapa de vida en otro contexto europeo que amplió la perspectiva.</p></article><article><span>03</span><strong>Chile</strong><p>El lugar donde esa forma de trabajar toma el nombre de IBERFIT.</p></article></div><p>Después fueron apareciendo necesidades nuevas: evaluar mejor el punto de partida, conectar lo que ocurre entre sesiones y poder acompañar sin depender siempre de un lugar. El Diagnóstico IRI, el seguimiento y las distintas modalidades nacen de esas necesidades, no de querer acumular servicios.</p><p>Hoy IBERFIT sigue creciendo con la misma regla: si algo no ayuda a entender mejor, decidir mejor o sostener mejor el proceso, no aporta.</p></div></div></section><section class="section section-cream"><div class="container"><div class="section-intro reveal"><div class="kicker">Una marca que sigue mejorando</div><h2>Mejorar no es añadir más. Es aportar más.</h2><p class="lead">Cada herramienta, cada cambio y cada nueva forma de acompañar tiene que ganarse su lugar ayudando a la persona que entrena.</p></div><div class="principle-stack"><article class="principle-row reveal"><h3>Entender antes de proponer</h3><p>Empezamos por tu contexto y tu punto de partida, no por una rutina que ya estaba escrita.</p></article><article class="principle-row reveal"><h3>Convertir datos en decisiones</h3><p>El IRI y el seguimiento sirven para explicar qué estamos viendo y qué conviene hacer con esa información.</p></article><article class="principle-row reveal"><h3>Acompañar también entre sesiones</h3><p>El valor no termina cuando acaba una sesión. Lo que ocurre después también ayuda a decidir el siguiente paso.</p></article><article class="principle-row reveal"><h3>Usar tecnología sin perder lo humano</h3><p>La tecnología puede ayudarnos a recordar, comparar y explicar mejor. La decisión y la conversación siguen siendo humanas.</p></article></div></div></section>"""
         text = re.sub(
             r'<section class="section origin-section">.*?</section>',
             story,
