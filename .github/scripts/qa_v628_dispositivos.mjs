@@ -132,6 +132,41 @@ for (const device of devices) {
       if (menuState && menuState.navDisplay === "none") add(device.name, route, "MENU_ESCRITORIO", "navegación oculta");
     }
 
+    if (device.width <= 720) {
+      const dock = page.locator(".device-dock");
+      if (await dock.count() !== 1) {
+        add(device.name, route, "DOCK_MOVIL", "dock ausente");
+      } else {
+        const state = async () => dock.evaluate(el => {
+          const style = getComputedStyle(el);
+          return {
+            visibleClass: el.classList.contains("is-visible"),
+            opacity: Number.parseFloat(style.opacity || "1"),
+            pointerEvents: style.pointerEvents,
+          };
+        });
+
+        const initial = await state();
+        if (initial.visibleClass || initial.opacity > 0.05 || initial.pointerEvents !== "none") {
+          add(device.name, route, "DOCK_PREMATURO", JSON.stringify(initial));
+        }
+
+        await page.evaluate(() => window.scrollTo({ top: 220, behavior: "instant" }));
+        await page.waitForTimeout(120);
+        const scrolled = await state();
+        if (!scrolled.visibleClass || scrolled.opacity < 0.95 || scrolled.pointerEvents === "none") {
+          add(device.name, route, "DOCK_NO_APARECE", JSON.stringify(scrolled));
+        }
+
+        await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+        await page.waitForTimeout(120);
+        const returned = await state();
+        if (returned.visibleClass || returned.opacity > 0.05 || returned.pointerEvents !== "none") {
+          add(device.name, route, "DOCK_NO_SE_OCULTA", JSON.stringify(returned));
+        }
+      }
+    }
+
     if (device.touch) {
       for (const selector of importantTouchSelectors) {
         const boxes = await page.locator(selector).evaluateAll(nodes =>
