@@ -3,6 +3,7 @@
   'use strict';
 
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const isEnglish = (document.documentElement.lang || '').toLowerCase().startsWith('en');
   const track = (name, payload = {}) => {
     try {
       if (typeof window.iberfitTrack === 'function') window.iberfitTrack(name, payload);
@@ -21,8 +22,8 @@
 
     cards.classList.add('review-carousel');
     cards.setAttribute('role', 'region');
-    cards.setAttribute('aria-roledescription', 'carrusel');
-    cards.setAttribute('aria-label', 'Experiencias reales de clientes IBERFIT');
+    cards.setAttribute('aria-roledescription', isEnglish ? 'carousel' : 'carrusel');
+    cards.setAttribute('aria-label', isEnglish ? 'Real IBERFIT client experiences' : 'Experiencias reales de clientes IBERFIT');
 
     const shell = document.createElement('div');
     shell.className = 'review-carousel-shell';
@@ -42,19 +43,19 @@
       slide.classList.add('review-slide');
       slide.dataset.reviewIndex = String(index);
       slide.setAttribute('role', 'group');
-      slide.setAttribute('aria-roledescription', 'reseña');
-      slide.setAttribute('aria-label', `${index + 1} de ${slides.length}`);
+      slide.setAttribute('aria-roledescription', isEnglish ? 'review' : 'reseña');
+      slide.setAttribute('aria-label', isEnglish ? `${index + 1} of ${slides.length}` : `${index + 1} de ${slides.length}`);
     });
 
     const controls = document.createElement('div');
     controls.className = 'review-carousel-controls';
     controls.innerHTML = `
       <div class="review-carousel-nav">
-        <button class="review-carousel-btn" type="button" data-review-prev aria-label="Reseña anterior">←</button>
-        <button class="review-carousel-btn" type="button" data-review-pause aria-label="Pausar cambio automático">Ⅱ</button>
-        <button class="review-carousel-btn" type="button" data-review-next aria-label="Reseña siguiente">→</button>
+        <button class="review-carousel-btn" type="button" data-review-prev aria-label="${isEnglish ? 'Previous review' : 'Reseña anterior'}">←</button>
+        <button class="review-carousel-btn" type="button" data-review-pause aria-label="${isEnglish ? 'Pause automatic rotation' : 'Pausar cambio automático'}">Ⅱ</button>
+        <button class="review-carousel-btn" type="button" data-review-next aria-label="${isEnglish ? 'Next review' : 'Reseña siguiente'}">→</button>
       </div>
-      <div class="review-carousel-dots" role="tablist" aria-label="Elegir reseña"></div>
+      <div class="review-carousel-dots" role="tablist" aria-label="${isEnglish ? 'Choose review' : 'Elegir reseña'}"></div>
       <div class="review-carousel-status" aria-hidden="true"></div>
     `;
     shell.appendChild(controls);
@@ -68,7 +69,7 @@
       dot.type = 'button';
       dot.className = 'review-carousel-dot';
       dot.setAttribute('role', 'tab');
-      dot.setAttribute('aria-label', `Mostrar reseña ${index + 1}`);
+      dot.setAttribute('aria-label', isEnglish ? `Show review ${index + 1}` : `Mostrar reseña ${index + 1}`);
       dot.addEventListener('click', () => {
         show(index, 'dot');
         restart();
@@ -121,7 +122,9 @@
     pauseButton.addEventListener('click', () => {
       manuallyPaused = !manuallyPaused;
       pauseButton.textContent = manuallyPaused ? '▶' : 'Ⅱ';
-      pauseButton.setAttribute('aria-label', manuallyPaused ? 'Reanudar cambio automático' : 'Pausar cambio automático');
+      pauseButton.setAttribute('aria-label', manuallyPaused
+        ? (isEnglish ? 'Resume automatic rotation' : 'Reanudar cambio automático')
+        : (isEnglish ? 'Pause automatic rotation' : 'Pausar cambio automático'));
       track('review_carousel_toggle', { state: manuallyPaused ? 'paused' : 'playing' });
       start();
     });
@@ -153,7 +156,10 @@
     const sourceRow = document.querySelector('.review-source-row');
     if (sourceRow) {
       sourceRow.classList.add('review-source-row--internal');
-      sourceRow.innerHTML = `
+      sourceRow.innerHTML = isEnglish ? `
+        <p>Verified public reviews. We show them here so you can read the experiences without leaving IBERFIT.</p>
+        <span class="review-verified-badge">Verified reviews</span>
+      ` : `
         <p>Reseñas públicas verificadas. Las mostramos aquí para que puedas leer las experiencias sin salir de IBERFIT.</p>
         <span class="review-verified-badge">Reseñas verificadas</span>
       `;
@@ -164,20 +170,21 @@
   };
 
   const initLocalPages = () => {
-    if (document.body.dataset.page !== 'local') return;
+    if (!['local','local_en'].includes(document.body.dataset.page || '')) return;
     const heroText = document.querySelector('.hero .hero-text');
     if (!heroText || heroText.querySelector('.local-place-badge')) return;
 
     const eyebrow = heroText.querySelector('.eyebrow');
     const raw = eyebrow?.textContent?.trim() || '';
-    const match = raw.match(/IBERFIT\s+en\s+(.+)/i);
-    const place = match?.[1]?.trim() || document.querySelector('h1')?.textContent?.match(/(?:en|de)\s+([^,.]+?)(?:\s+sin|\s+con|$)/i)?.[1]?.trim() || 'tu comuna';
+    const match = isEnglish ? raw.match(/IBERFIT\s+in\s+(.+)/i) : raw.match(/IBERFIT\s+en\s+(.+)/i);
+    const fallbackPattern = isEnglish ? /\bin\s+([^,.]+?)(?:\s+without|\s+with|\.|$)/i : /(?:en|de)\s+([^,.]+?)(?:\s+sin|\s+con|$)/i;
+    const place = match?.[1]?.trim() || document.querySelector('h1')?.textContent?.match(fallbackPattern)?.[1]?.trim() || (isEnglish ? 'your area' : 'tu comuna');
 
     const badge = document.createElement('div');
     badge.className = 'local-place-badge';
     badge.innerHTML = `
       <span class="local-place-pin" aria-hidden="true">⌖</span>
-      <span class="local-place-copy"><small>Cobertura local</small><strong>${place}</strong></span>
+      <span class="local-place-copy"><small>${isEnglish ? 'Local coverage' : 'Cobertura local'}</small><strong>${place}</strong></span>
     `;
     eyebrow?.insertAdjacentElement('afterend', badge);
 
@@ -185,8 +192,13 @@
     if (meta && !heroText.querySelector('.local-service-strip')) {
       const strip = document.createElement('div');
       strip.className = 'local-service-strip';
-      strip.setAttribute('aria-label', `Opciones de entrenamiento en ${place}`);
-      strip.innerHTML = `
+      strip.setAttribute('aria-label', isEnglish ? `Training options in ${place}` : `Opciones de entrenamiento en ${place}`);
+      strip.innerHTML = isEnglish ? `
+        <div class="local-service-chip"><b>01</b><span><strong>Home training</strong><br>Subject to area and schedule.</span></div>
+        <div class="local-service-chip"><b>02</b><span><strong>Condominium gym</strong><br>When the space supports quality training.</span></div>
+        <div class="local-service-chip"><b>03</b><span><strong>Park or green space</strong><br>When the environment and conditions are suitable.</span></div>
+        <div class="local-service-chip"><b>04</b><span><strong>Hybrid</strong><br>When it improves continuity.</span></div>
+      ` : `
         <div class="local-service-chip"><b>01</b><span><strong>Domicilio</strong><br>Según sector y horario.</span></div>
         <div class="local-service-chip"><b>02</b><span><strong>Gimnasio de edificio</strong><br>Si el espacio permite trabajar bien.</span></div>
         <div class="local-service-chip"><b>03</b><span><strong>Parque o zona verde</strong><br>Cuando el entorno y las condiciones permiten entrenar bien.</span></div>
