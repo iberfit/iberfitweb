@@ -1,0 +1,155 @@
+name: WEB IBERFIT · Cloudflare Staging
+
+on:
+  push:
+    branches:
+      - deploy/web-iberfit-stage
+    paths:
+      - ".iberfit/web-iberfit-stage.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-iberfit-cloudflare-stage
+  cancel-in-progress: false
+
+env:
+  CF_ACCOUNT_ID: "5b03d387427d367674b9d05b8bdf7c84"
+  WORKER_NAME: "web-iberfit"
+  WRANGLER_VERSION: "4.120.0"
+
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Descargar despliegue exacto
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validar marcador y candidata certificada
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "deploy/web-iberfit-stage"
+          test -f .iberfit/web-iberfit-stage.json
+          node <<'NODE'
+          const fs=require('fs');
+          const cp=require('child_process');
+          const m=JSON.parse(fs.readFileSync('.iberfit/web-iberfit-stage.json','utf8'));
+          const fail=x=>{throw new Error(x)};
+          if(m.schema!=='iberfit.web.stage.v1')fail('STAGE_SCHEMA_INVALID');
+          if(m.worker!=='web-iberfit')fail('STAGE_WORKER_INVALID');
+          if(!/^[0-9a-f]{40}$/.test(m.candidateSha||''))fail('STAGE_CANDIDATE_SHA_INVALID');
+          const parent=cp.execFileSync('git',['rev-parse','HEAD^'],{encoding:'utf8'}).trim();
+          const changed=cp.execFileSync('git',['diff','--name-only',m.candidateSha,parent,'--','candidate/v628'],{encoding:'utf8'}).trim();
+          if(changed)fail('CANDIDATE_CHANGED_SINCE_CERTIFICATION:'+changed.replace(/\n/g,','));
+          fs.appendFileSync(process.env.GITHUB_ENV,`CANDIDATE_SHA=${m.candidateSha}\n`);
+          NODE
+          test -s candidate/v628/index.html
+          test -s candidate/v628/404.html
+          test -s candidate/v628/sitemap.xml
+          test -s candidate/v628/robots.txt
+          test -s candidate/v628/assets/styles.v628.css
+          test -s candidate/v628/assets/app.v628.js
+          test -s candidate/v628/assets/analytics.v628.js
+          grep -q 'max-image-preview:large' candidate/v628/index.html
+          grep -q '<lastmod>2026-09-12</lastmod>' candidate/v628/sitemap.xml
+          grep -q 'generate_lead' candidate/v628/assets/analytics.v628.js
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verificar acceso Cloudflare y descubrir infraestructura existente
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ env.CF_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo CLOUDFLARE_API_TOKEN_MISSING; exit 41; }
+          curl --fail --silent --show-error             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"             -H "Content-Type: application/json"             "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/pages/projects"             -o CLOUDFLARE_PAGES_BEFORE.json
+          curl --fail --silent --show-error             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"             -H "Content-Type: application/json"             "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/services"             -o CLOUDFLARE_WORKERS_BEFORE.json
+          node <<'NODE'
+          const fs=require('fs');
+          for(const file of ['CLOUDFLARE_PAGES_BEFORE.json','CLOUDFLARE_WORKERS_BEFORE.json']){
+            const x=JSON.parse(fs.readFileSync(file,'utf8'));
+            if(!x.success) throw new Error(file+'_LOOKUP_FAILED:'+JSON.stringify(x.errors||[]));
+          }
+          NODE
+
+      - name: Crear o actualizar WEB IBERFIT en workers.dev
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ env.CF_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes "wrangler@${WRANGLER_VERSION}" deploy             --config wrangler.web-iberfit.jsonc | tee WRANGLER_WEB_IBERFIT_STAGE.log
+          STAGE_URL="$(grep -Eo 'https://[A-Za-z0-9._-]+\.workers\.dev' WRANGLER_WEB_IBERFIT_STAGE.log | tail -1)"
+          test -n "$STAGE_URL" || { echo WEB_IBERFIT_STAGE_URL_MISSING; cat WRANGLER_WEB_IBERFIT_STAGE.log; exit 42; }
+          echo "STAGE_URL=$STAGE_URL" >> "$GITHUB_ENV"
+          echo "WEB IBERFIT staging: $STAGE_URL"
+
+      - name: Smoke HTTP del Worker real
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in / /diagnostico-iri/ /contacto/ /en/ /sitemap.xml /robots.txt; do
+            curl --fail --silent --show-error --location --retry 8 --retry-all-errors               "${STAGE_URL}${path}" -o "/tmp/web-iberfit-$(echo "$path" | tr '/.' '__').out"
+          done
+          grep -q 'IBERFIT' /tmp/web-iberfit-__.out
+          grep -q 'https://iberfit.cl/' /tmp/web-iberfit-_sitemap_xml.out
+          grep -q 'Sitemap: https://iberfit.cl/sitemap.xml' /tmp/web-iberfit-_robots_txt.out
+
+      - name: QA multidispositivo contra Cloudflare real
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.62.1
+          npx playwright install --with-deps chromium
+          BASE_URL="$STAGE_URL" QA_OUT="evidence/web-iberfit-cloudflare-stage"             node .github/scripts/qa_v628_dispositivos.mjs
+
+      - name: Registrar identidad Cloudflare después del staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"             -H "Content-Type: application/json"             "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/services"             -o CLOUDFLARE_WORKERS_AFTER.json
+          node <<'NODE'
+          const fs=require('fs');
+          const x=JSON.parse(fs.readFileSync('CLOUDFLARE_WORKERS_AFTER.json','utf8'));
+          if(!x.success||!Array.isArray(x.result))throw new Error('WORKERS_AFTER_LOOKUP_FAILED');
+          const names=x.result.map(v=>v.id||v.name).filter(Boolean);
+          if(!names.includes('web-iberfit'))throw new Error('WEB_IBERFIT_WORKER_NOT_FOUND:'+names.join(','));
+          const evidence={
+            worker:'web-iberfit',
+            candidateSha:process.env.CANDIDATE_SHA,
+            stageUrl:process.env.STAGE_URL,
+            domainPromoted:false,
+            verifiedAt:new Date().toISOString()
+          };
+          fs.writeFileSync('WEB_IBERFIT_STAGE_EVIDENCE.json',JSON.stringify(evidence,null,2)+'\n');
+          console.log(JSON.stringify(evidence,null,2));
+          NODE
+
+      - name: Guardar evidencia WEB IBERFIT
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-iberfit-cloudflare-stage-${{ github.run_id }}
+          path: |
+            .iberfit/web-iberfit-stage.json
+            WRANGLER_WEB_IBERFIT_STAGE.log
+            WEB_IBERFIT_STAGE_EVIDENCE.json
+            CLOUDFLARE_PAGES_BEFORE.json
+            CLOUDFLARE_WORKERS_BEFORE.json
+            CLOUDFLARE_WORKERS_AFTER.json
+            evidence/web-iberfit-cloudflare-stage
+          if-no-files-found: warn
+          retention-days: 30
