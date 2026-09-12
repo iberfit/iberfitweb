@@ -71,8 +71,8 @@ def main():
     # Presupuestos conservadores: evitan crecimiento silencioso sin forzar rediseño.
     limits = {
         "styles.v628.css": 120_000,
-        "app.v623.js": 40_000,
-        "analytics.v6211.js": 25_000,
+        "app.v628.js": 40_000,
+        "analytics.v628.js": 25_000,
         "analytics-config.js": 5_000,
         "iberfit-isotipo-oficial.png": 50_000,
     }
