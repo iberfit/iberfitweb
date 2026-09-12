@@ -35,6 +35,7 @@ EN_REPORT = """<div aria-label="Illustrative IRI Report" class="report-preview r
 CSS_ADD = """
 /* V6.28 · Interacción accesible y vista longitudinal IRI. */
 .brand-mark{width:auto!important;height:48px!important;aspect-ratio:173/192;object-fit:contain}
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 .lang-switch a{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:.35rem .25rem}
 .photo-story-copy > .kicker{color:#775b12}
 /* Vista longitudinal IRI: consciente del protocolo y sin puntuación global. */
@@ -457,6 +458,9 @@ def main() -> None:
     app_text = old_app_js.read_text("utf-8")
     app_text = app_text.replace("/assets/iberfit-isotipo-96.png","/assets/iberfit-isotipo-oficial.png")
     app_text = app_text.replace("/assets/iberfit-isotipo-192.png","/assets/iberfit-isotipo-oficial.png")
+    app_text += r"""
+;document.addEventListener('DOMContentLoaded',()=>{const form=document.querySelector('[data-orientador-form]');if(!form)return;const isEn=(document.documentElement.lang||'').toLowerCase().startsWith('en');const status=form.querySelector('[data-orientador-status]');const steps=Array.from(form.querySelectorAll('[data-step]'));const result=form.querySelector('[data-orientador-result]');const copy=isEn?{step:'Step',of:'of',choose:'Choose a main goal to continue.',ready:'Your initial guidance is ready. Review it before opening WhatsApp.'}:{step:'Paso',of:'de',choose:'Selecciona un objetivo principal para continuar.',ready:'Tu orientación inicial está preparada. Revísala antes de abrir WhatsApp.'};const announce=message=>{if(status)status.textContent=message};const syncSteps=()=>{let activeIndex=0;steps.forEach((step,index)=>{const active=step.classList.contains('active');step.setAttribute('aria-hidden',String(!active));if(active)activeIndex=index});const active=steps[activeIndex];if(active?.classList.contains('active')){const title=active.querySelector('h3')?.textContent?.trim()||'';announce(`${copy.step} ${activeIndex+1} ${copy.of} ${steps.length}: ${title}`)}};const observer=new MutationObserver(syncSteps);steps.forEach(step=>observer.observe(step,{attributes:true,attributeFilter:['class']}));if(result){result.setAttribute('role','region');result.setAttribute('aria-live','polite');new MutationObserver(()=>{if(!result.hidden)announce(copy.ready)}).observe(result,{attributes:true,attributeFilter:['hidden','class']})}form.addEventListener('click',event=>{if(event.target.closest('[data-next-step]'))setTimeout(()=>{if(steps[0]?.classList.contains('active')&&!form.elements.objetivo?.value)announce(copy.choose)},0)});form.querySelectorAll('select').forEach(select=>{const grid=select.nextElementSibling;if(!grid?.classList.contains('choice-grid'))return;const buttons=Array.from(grid.querySelectorAll('.choice-chip'));const syncChoice=()=>buttons.forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.value===select.value)));buttons.forEach(button=>button.setAttribute('aria-pressed','false'));select.addEventListener('change',syncChoice);syncChoice()});syncSteps()});
+"""
     app_js.write_text(app_text,encoding="utf-8")
     old_app_js.unlink()
 
@@ -498,6 +502,11 @@ def main() -> None:
         text=text.replace("No invented overall score and no anonymous testimonials.","No invented aggregate rating and no anonymous testimonials.")
         if not rel.startswith("en/"):
             text=localize_spanish(text)
+        if rel in {"contacto/index.html","en/contact/index.html"}:
+            text=text.replace(
+                '<form class="orientador-card reveal" data-orientador-form="" novalidate="">',
+                '<form class="orientador-card reveal" data-orientador-form="" novalidate=""><p class="sr-only" data-orientador-status="" aria-live="polite"></p>',
+            )
         text=enrich_structured_data(text, rel)
         page.write_text(text,encoding="utf-8")
 
