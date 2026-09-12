@@ -100,27 +100,51 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          from bs4 import BeautifulSoup
+          from html.parser import HTMLParser
+
+          class MetaParser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.canonical=False
+                  self.description=False
+                  self.og_title=False
+                  self.og_description=False
+                  self.viewport=False
+              def handle_starttag(self, tag, attrs):
+                  a=dict(attrs)
+                  if tag=="link" and a.get("rel")=="canonical" and a.get("href"):
+                      self.canonical=True
+                  if tag=="meta":
+                      if a.get("name")=="description" and a.get("content"):
+                          self.description=True
+                      if a.get("property")=="og:title" and a.get("content"):
+                          self.og_title=True
+                      if a.get("property")=="og:description" and a.get("content"):
+                          self.og_description=True
+                      if a.get("name")=="viewport" and a.get("content"):
+                          self.viewport=True
+
           pages=list(Path("candidate/v628").rglob("*.html"))
           errors=[]
           for page in pages:
-              soup=BeautifulSoup(page.read_text(encoding="utf-8"),"html.parser")
               if page.name=="404.html":
                   continue
-              if not soup.find("link",rel="canonical"):
-                  errors.append(f"{page}: canonical ausente")
-              if not soup.find("meta",attrs={"name":"description"}):
-                  errors.append(f"{page}: description ausente")
-              if not soup.find("meta",attrs={"property":"og:title"}):
-                  errors.append(f"{page}: og:title ausente")
-              if not soup.find("meta",attrs={"property":"og:description"}):
-                  errors.append(f"{page}: og:description ausente")
-              if not soup.find("meta",attrs={"name":"viewport"}):
-                  errors.append(f"{page}: viewport ausente")
+              p=MetaParser()
+              p.feed(page.read_text(encoding="utf-8"))
+              checks={
+                  "canonical":p.canonical,
+                  "description":p.description,
+                  "og:title":p.og_title,
+                  "og:description":p.og_description,
+                  "viewport":p.viewport,
+              }
+              for label, ok in checks.items():
+                  if not ok:
+                      errors.append(f"{page}: {label} ausente")
           if errors:
               print("\n".join(errors))
               raise SystemExit(1)
-          print(f"SEO base validado en {len(pages)} HTML")
+          print(f"SEO base validado en {len(pages)} HTML · sin dependencias externas")
           PY
 
       - name: Guardar informes Lighthouse
