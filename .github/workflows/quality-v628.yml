@@ -3,11 +3,11 @@ name: Calidad profesional web V6.28
 
 on:
   workflow_dispatch:
-  workflow_run:
-    workflows:
-      - Construir candidata web V6.28
-    types:
-      - completed
+    inputs:
+      target_sha:
+        description: "SHA exacto de la candidata V6.28 a certificar"
+        required: false
+        type: string
   push:
     branches:
       - work/web-v6-28-recuperacion
@@ -28,14 +28,13 @@ concurrency:
 
 jobs:
   calidad:
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Descargar candidata actual
         uses: actions/checkout@v4
         with:
-          ref: work/web-v6-28-recuperacion
+          ref: ${{ inputs.target_sha || github.sha }}
 
       - name: Preparar Node
         uses: actions/setup-node@v4
