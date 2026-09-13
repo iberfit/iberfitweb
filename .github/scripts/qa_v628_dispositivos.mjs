@@ -225,7 +225,7 @@ for (const device of devices) {
         await page.keyboard.press("Escape");
         const closed = await page.locator(".navlinks").evaluate(el => {
           const s=getComputedStyle(el);
-          return s.visibility === "hidden" || Number.parseFloat(s.opacity || "1") < .05;
+          return s.display === "none" || s.visibility === "hidden" || Number.parseFloat(s.opacity || "1") < .05;
         });
         if (!closed) add(device.name, route, "MENU_COMPACTO", "Escape no cierra");
         await page.waitForFunction(() => document.activeElement?.matches?.(".menu-toggle"), null, { timeout: 450 }).catch(() => null);
