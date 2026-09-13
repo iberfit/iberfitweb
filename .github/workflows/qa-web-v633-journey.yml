@@ -1,0 +1,164 @@
+name: QA WEB IBERFIT V6.33 journey
+
+on:
+  push:
+    branches:
+      - work/web-v6-33-journey
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-web-v633-journey
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Integridad V6.33
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat candidate/v628/VERSION)" = "6.33"
+          test -s candidate/v628/assets/quality.v633.css
+          test -s candidate/v628/assets/flag-es.svg
+          test -s candidate/v628/assets/flag-de.svg
+          test -s candidate/v628/assets/flag-cl.svg
+          total="$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')"
+          test "$total" = "33"
+          grep -q 'quality.v633.css' candidate/v628/sobre-iberfit/index.html
+          grep -q 'quality.v633.css' candidate/v628/en/about/index.html
+          grep -q 'brand-journey--editorial' candidate/v628/sobre-iberfit/index.html
+          grep -q 'brand-journey--editorial' candidate/v628/en/about/index.html
+          grep -q '/assets/flag-es.svg' candidate/v628/sobre-iberfit/index.html
+          grep -q '/assets/flag-de.svg' candidate/v628/sobre-iberfit/index.html
+          grep -q '/assets/flag-cl.svg' candidate/v628/sobre-iberfit/index.html
+          node - <<'NODE'
+          const fs=require('fs');
+          for(const f of ['candidate/v628/sobre-iberfit/index.html','candidate/v628/en/about/index.html']){
+            const s=fs.readFileSync(f,'utf8');
+            if(/[🇪🇸🇩🇪🇨🇱]/u.test(s)) throw new Error('Regional flag emoji remains in '+f);
+            if(!s.includes('journey-phase')) throw new Error('Missing narrative phase in '+f);
+          }
+          NODE
+
+      - name: Instalar Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.62.1
+          npx playwright install --with-deps chromium
+
+      - name: Servir candidata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v633-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl --fail --silent http://127.0.0.1:4173/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/v633-server.log
+          exit 1
+
+      - name: Smoke de las 33 rutas
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const { chromium }=require('playwright');
+          const routes=[
+            '/','/diagnostico-iri/','/metodo/','/presencial/','/hibrido/','/online/','/sobre-iberfit/','/contacto/','/privacidad/',
+            '/entrenador-personal-las-condes/','/entrenador-personal-vitacura/','/entrenamiento-personal-providencia/','/personal-trainer-nunoa/','/entrenador-personal-lo-barnechea/','/entrenador-personal-la-reina/','/entrenador-personal-penalolen/',
+            '/en/','/en/iri-assessment/','/en/method/','/en/in-person/','/en/hybrid/','/en/online/','/en/about/','/en/contact/','/en/privacy/',
+            '/en/personal-trainer-las-condes/','/en/personal-trainer-vitacura/','/en/personal-training-providencia/','/en/personal-trainer-nunoa/','/en/personal-trainer-lo-barnechea/','/en/personal-trainer-la-reina/','/en/personal-trainer-penalolen/'
+          ];
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1280,height:900}});
+            for(const route of routes){
+              const res=await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'domcontentloaded'});
+              if(!res || !res.ok()) throw new Error(route+' status '+(res&&res.status()));
+              const title=await page.title();
+              if(!title.trim()) throw new Error(route+' has empty title');
+            }
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: QA responsive del recorrido
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v633-evidence
+          node - <<'NODE'
+          const { chromium }=require('playwright');
+          const fs=require('fs');
+          const base='http://127.0.0.1:4173';
+          const cases=[
+            {name:'desktop',width:1440,height:1000,cols:4,minCard:220},
+            {name:'tablet',width:820,height:1180,cols:2,minCard:250},
+            {name:'mobile',width:390,height:844,cols:1,minCard:300}
+          ];
+          const routes=[['es','/sobre-iberfit/'],['en','/en/about/']];
+          const ok=(v,m)=>{if(!v)throw new Error(m)};
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const report=[];
+            for(const c of cases){
+              for(const [lang,route] of routes){
+                const page=await browser.newPage({viewport:{width:c.width,height:c.height},deviceScaleFactor:1});
+                const errors=[];
+                page.on('pageerror',e=>errors.push(String(e)));
+                const res=await page.goto(base+route,{waitUntil:'networkidle'});
+                ok(res&&res.ok(),route+' failed');
+                await page.locator('.brand-journey--editorial').scrollIntoViewIfNeeded();
+                const state=await page.evaluate(()=>{
+                  const grid=document.querySelector('.brand-journey--editorial');
+                  const cards=[...grid.querySelectorAll(':scope > article')];
+                  const imgs=[...grid.querySelectorAll('.journey-flag-img')];
+                  const columns=getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length;
+                  return {
+                    columns,
+                    count:cards.length,
+                    cardWidths:cards.map(x=>x.getBoundingClientRect().width),
+                    flags:imgs.map(x=>({complete:x.complete,naturalWidth:x.naturalWidth,naturalHeight:x.naturalHeight,src:x.getAttribute('src')})),
+                    bodyOverflow:document.documentElement.scrollWidth-window.innerWidth,
+                    oldFlagNodes:grid.querySelectorAll('.journey-flag').length,
+                    phases:[...grid.querySelectorAll('.journey-phase')].map(x=>x.textContent.trim()),
+                    countries:[...grid.querySelectorAll('strong')].map(x=>x.textContent.trim())
+                  };
+                });
+                ok(state.count===4,lang+' '+c.name+' expected 4 stages');
+                ok(state.columns===c.cols,lang+' '+c.name+' expected '+c.cols+' columns, got '+state.columns);
+                ok(Math.min(...state.cardWidths)>=c.minCard,lang+' '+c.name+' cards too narrow: '+state.cardWidths.join(','));
+                ok(state.flags.length===4,lang+' '+c.name+' expected 4 flag images');
+                ok(state.flags.every(x=>x.complete&&x.naturalWidth>0&&x.naturalHeight>0),lang+' '+c.name+' flag failed to load');
+                ok(state.bodyOverflow<=2,lang+' '+c.name+' horizontal page overflow '+state.bodyOverflow);
+                ok(state.oldFlagNodes===0,lang+' '+c.name+' old emoji flag nodes remain');
+                ok(state.phases.length===4&&state.phases.every(Boolean),lang+' '+c.name+' phase labels incomplete');
+                ok(state.countries.length===4,lang+' '+c.name+' country labels incomplete');
+                ok(errors.length===0,lang+' '+c.name+' page errors: '+errors.join(' | '));
+                const file='/tmp/v633-evidence/'+lang+'-'+c.name+'.png';
+                await page.screenshot({path:file,fullPage:true});
+                report.push({lang,case:c.name,...state});
+                await page.close();
+              }
+            }
+            fs.writeFileSync('/tmp/v633-evidence/report.json',JSON.stringify(report,null,2));
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Subir evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v633-journey-evidence
+          path: /tmp/v633-evidence
+          if-no-files-found: error
