@@ -152,3 +152,42 @@ body{
   .hero{padding-block:3.35rem 3rem!important}
   .hero-grid-no-media h1{font-size:clamp(2.65rem,13vw,3.9rem)!important}
 }
+
+
+/* Progressive enhancement real: sin JS, el contenido y la navegación nunca quedan ocultos. */
+html:not(.js-v631) .reveal{
+  opacity:1!important;
+  transform:none!important;
+  visibility:visible!important;
+}
+html:not(.js-v631) .menu-toggle{display:none!important}
+@media (max-width:1380px){
+  html:not(.js-v631) .site-header .nav{flex-wrap:wrap!important}
+  html:not(.js-v631) .site-header .navlinks{
+    display:flex!important;
+    position:static!important;
+    width:100%!important;
+    max-width:none!important;
+    flex-direction:row!important;
+    flex-wrap:wrap!important;
+    align-items:center!important;
+    gap:.35rem .85rem!important;
+    margin:.25rem 0 .65rem!important;
+    padding:.55rem 0 0!important;
+    background:transparent!important;
+    border:0!important;
+    border-top:1px solid rgba(31,61,43,.10)!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+    opacity:1!important;
+    visibility:visible!important;
+    pointer-events:auto!important;
+    transform:none!important;
+  }
+  html:not(.js-v631) .site-header .navlinks>a{
+    width:auto!important;
+    padding:.5rem .25rem!important;
+  }
+  html:not(.js-v631) .site-header .nav-mobile-languages{display:none!important}
+  html:not(.js-v631) .site-header .lang-switch{display:flex!important}
+}
