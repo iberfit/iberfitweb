@@ -90,6 +90,7 @@ body{
 }
 @media (min-width:861px) and (max-width:1380px){
   .site-header .nav{position:relative;flex-wrap:nowrap}
+  .site-header .nav-cta{display:inline-flex!important}
   .site-header .menu-toggle{
     display:inline-flex!important;
     min-height:44px;
