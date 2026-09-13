@@ -181,7 +181,7 @@ main{background:#fbf8f3}
 }
 @media (max-width:720px){
   .site-header .nav{min-height:64px}
-  .site-header .brand-mark{width:39px!important;height:39px!important;padding:0!important;border-radius:0!important}
+  .site-header .brand-mark{width:42px!important;height:42px!important;padding:0!important;border-radius:0!important}
   .hero{padding-block:3.35rem 3rem!important}
   .hero-grid-no-media h1{font-size:clamp(2.65rem,13vw,3.9rem)!important}
 }
