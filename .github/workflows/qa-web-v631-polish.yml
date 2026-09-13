@@ -1,0 +1,173 @@
+name: QA WEB IBERFIT V6.31 visual polish
+
+on:
+  push:
+    branches:
+      - work/web-v6-31-visual-polish
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-web-v631-polish
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Integridad V6.31
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat candidate/v628/VERSION)" = "6.31"
+          test -s candidate/v628/assets/polish.v631.css
+          total="$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')"
+          css="$(grep -rl '/assets/polish.v631.css' candidate/v628 --include='*.html' | wc -l | tr -d ' ')"
+          js="$(grep -rl "js-v631" candidate/v628 --include='*.html' | wc -l | tr -d ' ')"
+          echo "HTML=${total} CSS=${css} JSFLAG=${js}"
+          test "${total}" = "33"
+          test "${css}" = "${total}"
+          test "${js}" = "${total}"
+
+      - name: Instalar Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.62.1
+          npx playwright install --with-deps chromium
+
+      - name: Servir candidata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v631-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl --fail --silent http://127.0.0.1:4173/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/v631-server.log
+          exit 1
+
+      - name: QA visual y navegación V6.31
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v631-evidence
+          cat > /tmp/qa-v631.js <<'NODE'
+          const { chromium } = require('playwright');
+          const fs=require('fs');
+          const base='http://127.0.0.1:4173';
+          const routes=[
+            '/','/diagnostico-iri/','/metodo/','/presencial/','/hibrido/','/online/','/sobre-iberfit/','/contacto/','/privacidad/',
+            '/entrenador-personal-las-condes/','/entrenador-personal-vitacura/','/entrenamiento-personal-providencia/','/personal-trainer-nunoa/','/entrenador-personal-lo-barnechea/','/entrenador-personal-la-reina/','/entrenador-personal-penalolen/',
+            '/en/','/en/iri-assessment/','/en/method/','/en/in-person/','/en/hybrid/','/en/online/','/en/about/','/en/contact/','/en/privacy/',
+            '/en/personal-trainer-las-condes/','/en/personal-trainer-vitacura/','/en/personal-training-providencia/','/en/personal-trainer-nunoa/','/en/personal-trainer-lo-barnechea/','/en/personal-trainer-la-reina/','/en/personal-trainer-penalolen/'
+          ];
+          const ok=(c,m)=>{if(!c)throw new Error(m)};
+          const rgb=s=>{const m=String(s).match(/rgba?\(([^)]+)\)/i);if(!m)return null;const p=m[1].split(',').map(x=>+x.trim());return {r:p[0],g:p[1],b:p[2],a:p.length>3?p[3]:1}};
+          const dist=(a,b)=>Math.sqrt((a.r-b.r)**2+(a.g-b.g)**2+(a.b-b.b)**2);
+
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            try{
+              const laptop=await browser.newContext({viewport:{width:1365,height:900}});
+              for(const route of ['/','/diagnostico-iri/','/sobre-iberfit/','/entrenador-personal-las-condes/','/en/','/en/about/']){
+                const p=await laptop.newPage();
+                const errs=[];p.on('pageerror',e=>errs.push(e.message));p.on('console',m=>{if(m.type()==='error')errs.push(m.text())});
+                const res=await p.goto(base+route,{waitUntil:'networkidle'});ok(res&&res.ok(),route+' HTTP');ok(!errs.length,route+' console '+errs.join('|'));
+
+                const state=await p.evaluate(()=>{
+                  const header=document.querySelector('.site-header'),hero=document.querySelector('.hero')||document.querySelector('main'),body=document.body;
+                  const hs=getComputedStyle(header),bs=getComputedStyle(body),ys=getComputedStyle(hero);
+                  const nav=document.querySelector('.navlinks'),toggle=document.querySelector('.menu-toggle'),cta=document.querySelector('.nav-cta');
+                  const hr=header.getBoundingClientRect(),nr=nav.getBoundingClientRect(),tr=toggle.getBoundingClientRect();
+                  return {
+                    headerBg:hs.backgroundColor,bodyBg:bs.backgroundColor,heroBg:ys.backgroundColor,
+                    headerH:hr.height,toggleDisplay:getComputedStyle(toggle).display,toggleW:tr.width,
+                    navDisplay:getComputedStyle(nav).display,navW:nr.width,ctaVisible:cta?cta.getClientRects().length>0:false,
+                    scrollW:document.documentElement.scrollWidth,clientW:document.documentElement.clientWidth
+                  };
+                });
+                const hb=rgb(state.headerBg), bb=rgb(state.bodyBg);
+                ok(hb&&bb&&dist(hb,bb)>12,route+' header insufficiently separated '+JSON.stringify(state));
+                ok(state.headerH<=82,route+' header too tall '+state.headerH);
+                ok(state.toggleDisplay!=='none'&&state.toggleW>=44,route+' laptop menu not compact');
+                ok(state.navDisplay==='none',route+' laptop nav should start collapsed');
+                ok(state.ctaVisible,route+' header CTA missing');
+                ok(state.scrollW-state.clientW<=2,route+' horizontal overflow');
+
+                await p.locator('.menu-toggle').click();
+                await p.waitForTimeout(100);
+                const open=await p.locator('.navlinks').evaluate(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return {display:s.display,w:r.width,h:r.height,links:el.querySelectorAll('a[href]').length}});
+                ok(open.display!=='none'&&open.w>250&&open.h>100&&open.links>=8,route+' compact menu failed '+JSON.stringify(open));
+                await p.close();
+              }
+              await laptop.close();
+
+              const wide=await browser.newContext({viewport:{width:1600,height:1000}});
+              const wp=await wide.newPage();await wp.goto(base+'/',{waitUntil:'networkidle'});
+              const wideState=await wp.evaluate(()=>{
+                const nav=document.querySelector('.navlinks'),toggle=document.querySelector('.menu-toggle'),h=document.querySelector('.site-header');
+                return {nav:getComputedStyle(nav).display,toggle:getComputedStyle(toggle).display,h:h.getBoundingClientRect().height,ov:document.documentElement.scrollWidth-document.documentElement.clientWidth};
+              });
+              ok(wideState.nav!=='none', 'wide nav hidden');ok(wideState.toggle==='none','wide menu toggle visible');ok(wideState.h<=82,'wide header tall');ok(wideState.ov<=2,'wide overflow');
+              await wp.close();await wide.close();
+
+              const desktop=await browser.newContext({viewport:{width:1440,height:1000}});
+              for(const route of routes){
+                const p=await desktop.newPage();const res=await p.goto(base+route,{waitUntil:'networkidle'});ok(res&&res.ok(),route+' HTTP desktop');
+                const h1=await p.locator('h1').first();ok(await h1.count()===1,route+' H1 count');
+                const h1s=await h1.evaluate(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return {o:+s.opacity,v:s.visibility,w:r.width,h:r.height}});
+                ok(h1s.o>.9&&h1s.v!=='hidden'&&h1s.w>0&&h1s.h>0,route+' H1 hidden');
+                const logo=await p.locator('.site-header .brand-mark').first().evaluate(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return {bg:s.backgroundColor,pad:parseFloat(s.paddingTop),w:r.width,h:r.height}});
+                const lbg=rgb(logo.bg);ok(lbg&&lbg.a>.9&&logo.pad>=4&&logo.w>=40&&logo.h>=40,route+' logo support');
+                const broken=await p.locator('img').evaluateAll(imgs=>imgs.filter(i=>i.getBoundingClientRect().width>0&&(!i.complete||i.naturalWidth===0)).map(i=>i.src));ok(!broken.length,route+' broken images');
+                const ov=await p.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);ok(ov<=2,route+' desktop overflow '+ov);
+                await p.close();
+              }
+              await desktop.close();
+
+              const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2});
+              for(const route of ['/','/diagnostico-iri/','/presencial/','/sobre-iberfit/','/contacto/','/en/','/en/in-person/','/en/about/']){
+                const p=await mobile.newPage();await p.goto(base+route,{waitUntil:'networkidle'});
+                const ov=await p.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);ok(ov<=2,route+' mobile overflow '+ov);
+                const toggle=p.locator('.menu-toggle');ok(await toggle.isVisible(),route+' mobile toggle hidden');await toggle.click();await p.waitForTimeout(120);ok(await p.locator('.navlinks').evaluate(el=>getComputedStyle(el).visibility!=='hidden'&&el.getBoundingClientRect().height>0),route+' mobile menu failed');
+                await p.close();
+              }
+              await mobile.close();
+
+              const nojsLaptop=await browser.newContext({viewport:{width:1365,height:900},javaScriptEnabled:false});
+              for(const route of ['/','/metodo/','/sobre-iberfit/','/contacto/','/en/','/en/method/','/en/about/']){
+                const p=await nojsLaptop.newPage();await p.goto(base+route,{waitUntil:'domcontentloaded'});
+                const hidden=await p.locator('.reveal').evaluateAll(els=>els.filter(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return r.width>0&&r.height>0&&(+s.opacity<.9||s.visibility==='hidden')}).length);ok(hidden===0,route+' no-JS reveal hidden');
+                const nav=await p.locator('.navlinks').first().evaluate(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return {d:s.display,v:s.visibility,w:r.width,h:r.height}});
+                ok(nav.d!=='none'&&nav.v!=='hidden'&&nav.w>0&&nav.h>0,route+' no-JS nav hidden');
+                ok(!(await p.locator('.menu-toggle').isVisible()),route+' no-JS toggle should be hidden');
+                await p.close();
+              }
+              await nojsLaptop.close();
+
+              fs.writeFileSync('/tmp/v631-evidence/report.json',JSON.stringify({ok:true,checks:['1365 compact header','1600 full header','33 routes desktop','mobile menus','no-JS progressive enhancement']},null,2));
+              console.log('V631_VISUAL_POLISH_QA=PASS');
+            } finally {await browser.close()}
+          })().catch(e=>{fs.writeFileSync('/tmp/v631-evidence/report.json',JSON.stringify({ok:false,error:e.stack||String(e)},null,2));console.error(e.stack||e);process.exit(1)});
+          NODE
+          NODE_PATH="$GITHUB_WORKSPACE/node_modules" node /tmp/qa-v631.js
+
+      - name: Guardar evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-web-v631-polish-${{ github.run_id }}
+          path: /tmp/v631-evidence
+          if-no-files-found: warn
+          retention-days: 30
