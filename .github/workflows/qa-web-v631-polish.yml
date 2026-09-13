@@ -172,6 +172,8 @@ jobs:
               for(const route of ['/','/diagnostico-iri/','/presencial/','/sobre-iberfit/','/contacto/','/en/','/en/in-person/','/en/about/']){
                 const p=await mobile.newPage();await p.goto(base+route,{waitUntil:'networkidle'});
                 const ov=await p.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);ok(ov<=2,route+' mobile overflow '+ov);
+                const clipped=await p.locator('h1,h2').evaluateAll(nodes=>nodes.filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&(el.scrollWidth>el.clientWidth+1||r.left<-1||r.right>innerWidth+1)}).map(el=>(el.textContent||'').trim()));
+                ok(!clipped.length,route+' mobile heading clipped '+JSON.stringify(clipped));
                 const toggle=p.locator('.menu-toggle');ok(await toggle.isVisible(),route+' mobile toggle hidden');await toggle.click();await p.waitForTimeout(120);ok(await p.locator('.navlinks').evaluate(el=>getComputedStyle(el).visibility!=='hidden'&&el.getBoundingClientRect().height>0),route+' mobile menu failed');
                 await p.close();
               }
