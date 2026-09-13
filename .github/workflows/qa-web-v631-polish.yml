@@ -143,7 +143,7 @@ jobs:
               }));
               ok(visualSeparation.canvas==='#faf7f1','canvas warm neutral missing');
               ok(visualSeparation.header!=='rgba(0, 0, 0, 0)'&&visualSeparation.header!=='transparent','header separation missing');
-              ok(visualSeparation.logo==='rgba(0, 0, 0, 0)'||visualSeparation.logo==='transparent','logo has artificial tile');
+              ok(visualSeparation.logo!=='rgba(0, 0, 0, 0)'&&visualSeparation.logo!=='transparent','logo support missing');
               await wp.close();await wide.close();
 
               const desktop=await browser.newContext({viewport:{width:1440,height:1000}});
@@ -153,7 +153,7 @@ jobs:
                 const h1s=await h1.evaluate(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return {o:+s.opacity,v:s.visibility,w:r.width,h:r.height}});
                 ok(h1s.o>.9&&h1s.v!=='hidden'&&h1s.w>0&&h1s.h>0,route+' H1 hidden');
                 const logo=await p.locator('.site-header .brand-mark').first().evaluate(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return {bg:s.backgroundColor,pad:parseFloat(s.paddingTop),w:r.width,h:r.height}});
-                const lbg=rgb(logo.bg);ok((!lbg||lbg.a<.08)&&logo.pad<=.5&&logo.w>=39&&logo.h>=39,route+' logo integration');
+                const lbg=rgb(logo.bg);ok(lbg&&lbg.a>.85&&logo.pad>=4&&logo.w>=44&&logo.h>=44,route+' logo support');
                 await p.evaluate(async()=>{
                   const max=Math.max(document.body.scrollHeight,document.documentElement.scrollHeight);
                   for(let y=0;y<max;y+=Math.max(420,innerHeight*.72)){scrollTo(0,y);await new Promise(r=>setTimeout(r,35))}
