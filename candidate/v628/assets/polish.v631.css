@@ -266,3 +266,53 @@ html:not(.js-v631) .menu-toggle{display:none!important}
   .hero-grid-no-media h1{font-size:clamp(2.08rem,10vw,2.62rem)!important}
   .site-header .brand-text span{font-size:1.23rem!important}
 }
+
+
+/* V6.31 mobile-safe typography + isolated brand mark. */
+.site-header .brand{gap:.70rem}
+.site-header .brand-text{padding-left:0!important}
+.site-header .brand-mark{
+  border-radius:50%!important;
+  background:rgba(255,252,246,.96)!important;
+  border:1px solid rgba(184,151,58,.30)!important;
+  box-shadow:
+    0 6px 18px rgba(31,61,43,.09),
+    inset 0 0 0 1px rgba(255,255,255,.48)!important;
+}
+@media (max-width:720px){
+  .hero-grid,.hero-text,.page-hero .container{min-width:0;width:100%}
+  .hero h1,.page-hero h1,.hero-grid-no-media h1,h2,h3,h4{
+    overflow-wrap:normal!important;
+    word-break:normal!important;
+    hyphens:none!important;
+  }
+  .hero h1,.page-hero h1,.hero-grid-no-media h1{
+    max-width:100%!important;
+    font-size:clamp(2.16rem,10.35vw,3.05rem)!important;
+    line-height:1!important;
+    letter-spacing:-.038em!important;
+    text-wrap:balance;
+  }
+  .hero-grid-no-media .hero-text{
+    max-width:100%!important;
+    padding-left:.64rem!important;
+  }
+  .eyebrow,.kicker{
+    max-width:100%;
+    white-space:normal;
+    line-height:1.35;
+  }
+  .site-header .brand-mark{
+    width:46px!important;
+    height:46px!important;
+    padding:5px!important;
+    border-radius:50%!important;
+  }
+}
+@media (max-width:360px){
+  .site-header .brand{gap:.56rem}
+  .site-header .brand-mark{width:44px!important;height:44px!important;padding:4px!important}
+  .site-header .brand-text span{font-size:1.17rem!important}
+  .hero h1,.page-hero h1,.hero-grid-no-media h1{font-size:clamp(2.02rem,10.1vw,2.42rem)!important}
+  .hero-grid-no-media .hero-text{padding-left:.52rem!important}
+}
