@@ -33,7 +33,7 @@ const init=()=>{
   };
   const sync=()=>{
     setTop();
-    if(!mq.matches){cleanup();return}
+    if(!mq.matches)return;
     const open=nav.classList.contains("open");
     document.body.classList.toggle("nav-panel-open",open);
     backdrop.classList.toggle("is-visible",open);
@@ -56,7 +56,11 @@ const init=()=>{
     if(event.shiftKey&&idx<=0){event.preventDefault();items[items.length-1].focus()}
     else if(!event.shiftKey&&idx===items.length-1){event.preventDefault();items[0].focus()}
   });
-  const onMedia=()=>{if(!mq.matches&&nav.classList.contains("open"))toggle.click();queueMicrotask(sync)};
+  const onMedia=()=>{
+    if(!mq.matches&&innerWidth>1380&&nav.classList.contains("open"))toggle.click();
+    if(!mq.matches&&innerWidth>1380)cleanup();
+    else queueMicrotask(sync);
+  };
   mq.addEventListener?mq.addEventListener("change",onMedia):mq.addListener(onMedia);
   addEventListener("resize",()=>{setTop();queueMicrotask(sync)},{passive:true});
   sync();
