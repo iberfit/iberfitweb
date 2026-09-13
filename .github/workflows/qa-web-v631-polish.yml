@@ -200,16 +200,23 @@ jobs:
                 await mp.close();await mc.close();
               }
 
-              const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2});
-              for(const route of ['/','/diagnostico-iri/','/presencial/','/sobre-iberfit/','/contacto/','/en/','/en/in-person/','/en/about/']){
-                const p=await mobile.newPage();await p.goto(base+route,{waitUntil:'networkidle'});
-                const ov=await p.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);ok(ov<=2,route+' mobile overflow '+ov);
-                const clipped=await p.locator('h1,h2').evaluateAll(nodes=>nodes.filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&(el.scrollWidth>el.clientWidth+1||r.left<-1||r.right>innerWidth+1)}).map(el=>(el.textContent||'').trim()));
-                ok(!clipped.length,route+' mobile heading clipped '+JSON.stringify(clipped));
-                const toggle=p.locator('.menu-toggle');ok(await toggle.isVisible(),route+' mobile toggle hidden');await toggle.click();await p.waitForTimeout(120);ok(await p.locator('.navlinks').evaluate(el=>getComputedStyle(el).visibility!=='hidden'&&el.getBoundingClientRect().height>0),route+' mobile menu failed');
-                await p.close();
+              for(const width of [320,390]){
+                const mobile=await browser.newContext({viewport:{width,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2});
+                for(const route of routes){
+                  const p=await mobile.newPage();await p.goto(base+route,{waitUntil:'networkidle'});
+                  const ov=await p.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);ok(ov<=2,route+' mobile overflow '+width+' '+ov);
+                  const headings=await p.locator('h1,h2').evaluateAll(nodes=>nodes.filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0}).map(el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return {text:(el.textContent||'').trim(),scroll:el.scrollWidth,client:el.clientWidth,left:r.left,right:r.right,wordBreak:s.wordBreak,overflowWrap:s.overflowWrap}}));
+                  const clipped=headings.filter(h=>h.scroll>h.client+1||h.left<-1||h.right>innerWidth+1);
+                  const split=headings.filter(h=>h.wordBreak!=='normal'||h.overflowWrap==='anywhere'||h.overflowWrap==='break-word');
+                  ok(!clipped.length,route+' mobile heading clipped '+width+' '+JSON.stringify(clipped));
+                  ok(!split.length,route+' mobile heading forced split '+width+' '+JSON.stringify(split));
+                  if(width===390){
+                    const toggle=p.locator('.menu-toggle');ok(await toggle.isVisible(),route+' mobile toggle hidden');await toggle.click();await p.waitForTimeout(120);ok(await p.locator('.navlinks').evaluate(el=>getComputedStyle(el).visibility!=='hidden'&&el.getBoundingClientRect().height>0),route+' mobile menu failed');
+                  }
+                  await p.close();
+                }
+                await mobile.close();
               }
-              await mobile.close();
 
               const nojsLaptop=await browser.newContext({viewport:{width:1365,height:900},javaScriptEnabled:false});
               for(const route of ['/','/metodo/','/sobre-iberfit/','/contacto/','/en/','/en/method/','/en/about/']){
@@ -224,7 +231,7 @@ jobs:
               }
               await nojsLaptop.close();
 
-              fs.writeFileSync('/tmp/v631-evidence/report.json',JSON.stringify({ok:true,checks:['1365 compact header','1024 compact accessibility','1600 full header','33 routes desktop','320/360/390/430 mobile typography + logo','mobile menus','no-JS progressive enhancement']},null,2));
+              fs.writeFileSync('/tmp/v631-evidence/report.json',JSON.stringify({ok:true,checks:['1365 compact header','1024 compact accessibility','1600 full header','33 routes desktop','320/360/390/430 home typography + logo','all routes at 320/390 no clipped or forced-split headings','mobile menus','no-JS progressive enhancement']},null,2));
               console.log('V631_VISUAL_POLISH_QA=PASS');
             } finally {await browser.close()}
           })().catch(e=>{fs.writeFileSync('/tmp/v631-evidence/report.json',JSON.stringify({ok:false,error:e.stack||String(e)},null,2));console.error(e.stack||e);process.exit(1)});
