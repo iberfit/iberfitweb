@@ -155,14 +155,16 @@ for (const device of devices) {
       };
     });
 
-    if (device.width <= 860) {
-      if (!menuState || menuState.toggleDisplay === "none") add(device.name, route, "MENU_MOVIL", "botón ausente");
+    if (device.width <= 1380) {
+      if (!menuState || menuState.toggleDisplay === "none") add(device.name, route, "MENU_COMPACTO", "botón ausente");
       if (menuState && (
         menuState.navOpenClass ||
-        menuState.navVisibility !== "hidden" ||
-        menuState.navOpacity > 0.05 ||
-        menuState.navPointerEvents !== "none"
-      )) add(device.name, route, "MENU_MOVIL", "navegación visible/interactiva al cargar");
+        (menuState.navDisplay !== "none" && (
+          menuState.navVisibility !== "hidden" ||
+          menuState.navOpacity > 0.05 ||
+          menuState.navPointerEvents !== "none"
+        ))
+      )) add(device.name, route, "MENU_COMPACTO", "navegación visible/interactiva al cargar");
       if (menuState && menuState.toggleDisplay !== "none") {
         const beforeTop = await page.locator("main").evaluate(el => el.getBoundingClientRect().top);
         await page.locator(".menu-toggle").click();
@@ -170,7 +172,7 @@ for (const device of devices) {
           const s=getComputedStyle(el);
           return s.display !== "none" && s.visibility !== "hidden" && Number.parseFloat(s.opacity || "1") > .95;
         });
-        if (!open) add(device.name, route, "MENU_MOVIL", "no abre");
+        if (!open) add(device.name, route, "MENU_COMPACTO", "no abre");
         const panelBox = await page.locator(".navlinks").boundingBox();
         if (!panelBox) {
           add(device.name, route, "MENU_PANEL", "sin geometría");
@@ -178,17 +180,17 @@ for (const device of devices) {
           if (panelBox.x < -1 || panelBox.x + panelBox.width > device.width + 1) {
             add(device.name, route, "MENU_PANEL_VIEWPORT", JSON.stringify(panelBox));
           }
-          if (device.width >= 641 && device.width <= 860 && panelBox.width > 460) {
-            add(device.name, route, "MENU_PANEL_TABLET", "panel demasiado ancho: " + Math.round(panelBox.width));
+          if (device.width >= 641 && device.width <= 1380 && panelBox.width > 460) {
+            add(device.name, route, "MENU_PANEL_COMPACTO", "panel demasiado ancho: " + Math.round(panelBox.width));
           }
           if (device.width <= 480 && panelBox.width < device.width - 48) {
             add(device.name, route, "MENU_PANEL_MOVIL", "panel demasiado estrecho: " + Math.round(panelBox.width));
           }
         }
         const backdrop = page.locator(".nav-panel-backdrop");
-        if (await backdrop.count() !== 1 || !(await backdrop.isVisible())) add(device.name, route, "MENU_MOVIL", "backdrop ausente");
+        if (await backdrop.count() !== 1 || !(await backdrop.isVisible())) add(device.name, route, "MENU_COMPACTO", "backdrop ausente");
         const bodyLocked = await page.evaluate(() => document.body.classList.contains("nav-panel-open") && getComputedStyle(document.body).overflow === "hidden");
-        if (!bodyLocked) add(device.name, route, "MENU_MOVIL", "scroll no bloqueado");
+        if (!bodyLocked) add(device.name, route, "MENU_COMPACTO", "scroll no bloqueado");
         await page.waitForFunction(() => !!document.activeElement?.closest?.(".navlinks"), null, { timeout: 450 }).catch(() => null);
         const focusState = await page.evaluate(() => ({
           activeInside: !!document.activeElement?.closest?.(".navlinks"),
@@ -225,7 +227,7 @@ for (const device of devices) {
           const s=getComputedStyle(el);
           return s.visibility === "hidden" || Number.parseFloat(s.opacity || "1") < .05;
         });
-        if (!closed) add(device.name, route, "MENU_MOVIL", "Escape no cierra");
+        if (!closed) add(device.name, route, "MENU_COMPACTO", "Escape no cierra");
         await page.waitForFunction(() => document.activeElement?.matches?.(".menu-toggle"), null, { timeout: 450 }).catch(() => null);
         const closeState = await page.evaluate(() => ({
           focusReturned: document.activeElement?.matches?.(".menu-toggle") || false,
@@ -585,7 +587,7 @@ for (const device of devices) {
 await browser.close();
 
 const report = {
-  version: "6.28",
+  version: "6.31",
   generatedAt: new Date().toISOString(),
   devices,
   routes: routes.map(([route]) => route),
@@ -600,4 +602,4 @@ if (findings.length) {
   process.exit(1);
 }
 
-console.log("QA dispositivos V6.28: PASS · 9 perfiles · 7 rutas · 0 hallazgos");
+console.log("QA dispositivos V6.31: PASS · 9 perfiles · 10 rutas · 0 hallazgos");
