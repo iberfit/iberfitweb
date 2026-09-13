@@ -118,6 +118,7 @@ jobs:
                 const res=await page.goto(base+route,{waitUntil:'networkidle'});
                 ok(res&&res.ok(),route+' failed');
                 await page.locator('.brand-journey--editorial').scrollIntoViewIfNeeded();
+                await page.waitForFunction(()=>[...document.querySelectorAll('.journey-flag-img')].every(img=>img.complete&&img.naturalWidth>0),null,{timeout:5000});
                 const state=await page.evaluate(()=>{
                   const grid=document.querySelector('.brand-journey--editorial');
                   const cards=[...grid.querySelectorAll(':scope > article')];
