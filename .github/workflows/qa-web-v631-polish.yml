@@ -130,7 +130,15 @@ jobs:
                 ok(h1s.o>.9&&h1s.v!=='hidden'&&h1s.w>0&&h1s.h>0,route+' H1 hidden');
                 const logo=await p.locator('.site-header .brand-mark').first().evaluate(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return {bg:s.backgroundColor,pad:parseFloat(s.paddingTop),w:r.width,h:r.height}});
                 const lbg=rgb(logo.bg);ok(lbg&&lbg.a>.9&&logo.pad>=4&&logo.w>=40&&logo.h>=40,route+' logo support');
-                const broken=await p.locator('img').evaluateAll(imgs=>imgs.filter(i=>i.getBoundingClientRect().width>0&&(!i.complete||i.naturalWidth===0)).map(i=>i.src));ok(!broken.length,route+' broken images');
+                await p.evaluate(async()=>{
+                  const max=Math.max(document.body.scrollHeight,document.documentElement.scrollHeight);
+                  for(let y=0;y<max;y+=Math.max(420,innerHeight*.72)){scrollTo(0,y);await new Promise(r=>setTimeout(r,35))}
+                  scrollTo(0,max);await new Promise(r=>setTimeout(r,500));
+                });
+                const broken=await p.locator('img').evaluateAll(imgs=>imgs.filter(i=>i.getBoundingClientRect().width>0&&i.complete&&i.naturalWidth===0).map(i=>i.src));
+                ok(!broken.length,route+' broken images '+JSON.stringify(broken));
+                const pending=await p.locator('img').evaluateAll(imgs=>imgs.filter(i=>i.getBoundingClientRect().width>0&&!i.complete).map(i=>i.src));
+                ok(!pending.length,route+' images still pending after full scroll '+JSON.stringify(pending));
                 const ov=await p.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);ok(ov<=2,route+' desktop overflow '+ov);
                 await p.close();
               }
