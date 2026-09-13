@@ -206,7 +206,7 @@ jobs:
                   const p=await mobile.newPage();await p.goto(base+route,{waitUntil:'networkidle'});
                   const ov=await p.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);ok(ov<=2,route+' mobile overflow '+width+' '+ov);
                   const headings=await p.locator('h1,h2').evaluateAll(nodes=>nodes.filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0}).map(el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return {text:(el.textContent||'').trim(),scroll:el.scrollWidth,client:el.clientWidth,left:r.left,right:r.right,wordBreak:s.wordBreak,overflowWrap:s.overflowWrap}}));
-                  const clipped=headings.filter(h=>h.scroll>h.client+1||h.left<-1||h.right>innerWidth+1);
+                  const clipped=headings.filter(h=>h.scroll>h.client+1||h.left<-1||h.right>width+1);
                   const split=headings.filter(h=>h.wordBreak!=='normal'||h.overflowWrap==='anywhere'||h.overflowWrap==='break-word');
                   ok(!clipped.length,route+' mobile heading clipped '+width+' '+JSON.stringify(clipped));
                   ok(!split.length,route+' mobile heading forced split '+width+' '+JSON.stringify(split));
