@@ -1,4 +1,4 @@
-name: QA WEB IBERFIT V6.32 visual polish
+name: QA WEB IBERFIT V6.32 quality
 
 on:
   push:
@@ -232,7 +232,7 @@ jobs:
               await nojsLaptop.close();
 
               fs.writeFileSync('/tmp/v632-evidence/report.json',JSON.stringify({ok:true,checks:['1365 compact header','1024 compact accessibility','1600 full header','33 routes desktop','320/360/390/430 home typography + logo','all routes at 320/390 no clipped or forced-split headings','mobile menus','no-JS progressive enhancement']},null,2));
-              console.log('V631_VISUAL_POLISH_QA=PASS');
+              console.log('V632_VISUAL_POLISH_QA=PASS');
             } finally {await browser.close()}
           })().catch(e=>{fs.writeFileSync('/tmp/v632-evidence/report.json',JSON.stringify({ok:false,error:e.stack||String(e)},null,2));console.error(e.stack||e);process.exit(1)});
           NODE

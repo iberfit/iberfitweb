@@ -22,7 +22,9 @@ const base = 'http://127.0.0.1:4173';
     assert.equal(await page.locator('[data-navlinks]').getAttribute('aria-hidden'),'false');
     await page.setViewportSize({width,height:900});
    }
-   await page.screenshot({path:`${out}/home-${width}.png`,fullPage:true});
+   await page.waitForFunction(()=>{const i=document.querySelector('.editorial-hero-media img');return i?.complete&&i.naturalWidth>0&&i.getBoundingClientRect().height>150});
+   await page.screenshot({path:`${out}/home-${width}.png`,fullPage:false});
+   if(width===390||width===1365)await page.screenshot({path:`${out}/home-${width}-full.png`,fullPage:true});
    assert.deepEqual(errors,[],`no errors ${width}`);await context.close();
   }
   for(const [route,en] of [['/contacto/',false],['/en/contact/',true]]){
@@ -58,7 +60,7 @@ const base = 'http://127.0.0.1:4173';
   await p.locator('[data-review-next]').click();const active=await p.locator('.review-slide.is-active').getAttribute('data-review-index');
   await p.waitForTimeout(6500);assert.equal(await p.locator('.review-slide.is-active').getAttribute('data-review-index'),active,'rotation stays paused while using controls');
   assert.equal(await p.locator('.review-carousel-dot[aria-pressed="true"]').count(),1);
-  await p.emulateMedia({reducedMotion:'reduce'});assert.equal(await p.locator('[data-review-pause]').isDisabled(),true);
+  await p.emulateMedia({reducedMotion:'reduce'});await p.locator('[data-review-pause][disabled]').waitFor({state:'attached'});assert.equal(await p.locator('[data-review-pause]').isDisabled(),true);
   await context.close();
   fs.writeFileSync(`${out}/interactions.json`,JSON.stringify({ok:true,checks:['single menu and resize recovery','visible guide focus','summary and edit ES/EN','consent keyboard and restore','carousel focus pause and reduced motion']},null,2));
   console.log('V632_INTERACTIONS=PASS');

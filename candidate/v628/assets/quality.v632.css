@@ -68,3 +68,6 @@ body[data-page="home"] .section-intro .lead{max-width:52ch}
  .editorial-intro h2{margin:.7rem 0 1.15rem}
  .editorial-intro{padding:2.2rem 0!important}
 }
+/* Content stays readable even if an animation observer never runs. */
+.reveal{opacity:1!important;visibility:visible!important;transform:none!important}
+.editorial-hero-media picture{flex:none;width:100%}
