@@ -23,6 +23,10 @@ const base = 'http://127.0.0.1:4173';
     await page.setViewportSize({width,height:900});
    }
    await page.waitForFunction(()=>{const i=document.querySelector('.editorial-hero-media img');return i?.complete&&i.naturalWidth>0&&i.getBoundingClientRect().height>150});
+   if(width<=768){
+    const margins=await page.locator('.editorial-hero h1').evaluate(el=>({left:el.getBoundingClientRect().left,right:innerWidth-el.getBoundingClientRect().right}));
+    assert.ok(margins.left>=16&&margins.right>=16,`mobile reading gutters ${width}`);
+   }
    await page.screenshot({path:`${out}/home-${width}.png`,fullPage:false});
    if(width===390||width===1365)await page.screenshot({path:`${out}/home-${width}-full.png`,fullPage:true});
    assert.deepEqual(errors,[],`no errors ${width}`);await context.close();
