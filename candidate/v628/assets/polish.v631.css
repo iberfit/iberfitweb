@@ -96,6 +96,8 @@ main{background:#fbf8f3}
   .site-header .brand-text{padding-left:.62rem!important}
 }
 @media (min-width:861px) and (max-width:1380px){
+  body.nav-panel-open{overflow:hidden;overscroll-behavior:none}
+  .site-header{isolation:isolate}
   .site-header .nav{position:relative;flex-wrap:nowrap}
   .site-header .nav-cta{display:inline-flex!important}
   .site-header .menu-toggle{
@@ -122,8 +124,31 @@ main{background:#fbf8f3}
     box-shadow:0 24px 60px rgba(12,35,23,.18);
     backdrop-filter:blur(18px);
     -webkit-backdrop-filter:blur(18px);
+    max-height:calc(100dvh - var(--nav-panel-top,76px) - 1rem);
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    z-index:101;
   }
   .site-header .navlinks.open{display:flex}
+  .nav-panel-backdrop{
+    position:fixed;
+    inset:0;
+    z-index:90;
+    border:0;
+    padding:0;
+    background:rgba(4,22,16,.28);
+    backdrop-filter:blur(5px);
+    -webkit-backdrop-filter:blur(5px);
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    transition:opacity .22s ease,visibility .22s ease;
+  }
+  .nav-panel-backdrop.is-visible{
+    opacity:1;
+    visibility:visible;
+    pointer-events:auto;
+  }
   .site-header .navlinks>a{
     width:100%;
     padding:.72rem .82rem;
