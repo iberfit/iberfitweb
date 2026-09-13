@@ -224,3 +224,45 @@ html:not(.js-v631) .menu-toggle{display:none!important}
   html:not(.js-v631) .site-header .nav-mobile-languages{display:none!important}
   html:not(.js-v631) .site-header .lang-switch{display:flex!important}
 }
+
+
+/* V6.31 mobile refinement: readable hero + premium logo support. */
+.site-header .brand-mark{
+  width:48px!important;
+  height:48px!important;
+  padding:5px!important;
+  background:rgba(255,252,246,.94)!important;
+  border:1px solid rgba(184,151,58,.24)!important;
+  border-radius:15px!important;
+  box-shadow:0 6px 18px rgba(31,61,43,.09)!important;
+  object-fit:contain!important;
+}
+@media (max-width:720px){
+  .site-header .nav{min-height:66px}
+  .site-header .brand{gap:.68rem}
+  .site-header .brand-mark{
+    width:46px!important;
+    height:46px!important;
+    padding:5px!important;
+    border-radius:14px!important;
+    background:rgba(255,252,246,.96)!important;
+    border:1px solid rgba(184,151,58,.26)!important;
+    box-shadow:0 5px 14px rgba(31,61,43,.09)!important;
+  }
+  .site-header .brand-text{padding-left:0!important}
+  .site-header .brand-text span{font-size:1.30rem!important}
+  .hero-grid-no-media .hero-text{max-width:100%!important;padding-left:.82rem!important}
+  .hero-grid-no-media h1{
+    max-width:100%!important;
+    font-size:clamp(2.2rem,10.4vw,3.05rem)!important;
+    line-height:.98!important;
+    letter-spacing:-.04em!important;
+  }
+  .hero-grid-no-media .lead,
+  .hero-grid-no-media .hero-support{max-width:100%!important}
+  h1,h2,h3,h4{max-width:100%}
+}
+@media (max-width:420px){
+  .hero-grid-no-media h1{font-size:clamp(2.08rem,10vw,2.62rem)!important}
+  .site-header .brand-text span{font-size:1.23rem!important}
+}
