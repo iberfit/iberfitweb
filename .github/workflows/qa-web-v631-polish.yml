@@ -136,6 +136,14 @@ jobs:
                 return {nav:getComputedStyle(nav).display,toggle:getComputedStyle(toggle).display,h:h.getBoundingClientRect().height,ov:document.documentElement.scrollWidth-document.documentElement.clientWidth};
               });
               ok(wideState.nav!=='none', 'wide nav hidden');ok(wideState.toggle==='none','wide menu toggle visible');ok(wideState.h<=82,'wide header tall');ok(wideState.ov<=2,'wide overflow');
+              const visualSeparation=await wp.evaluate(()=>({
+                header:getComputedStyle(document.querySelector('.site-header')).backgroundColor,
+                canvas:getComputedStyle(document.documentElement).getPropertyValue('--v631-canvas').trim(),
+                logo:getComputedStyle(document.querySelector('.site-header .brand-mark')).backgroundColor
+              }));
+              ok(visualSeparation.canvas==='#faf7f1','canvas warm neutral missing');
+              ok(visualSeparation.header!=='rgba(0, 0, 0, 0)'&&visualSeparation.header!=='transparent','header separation missing');
+              ok(visualSeparation.logo==='rgba(0, 0, 0, 0)'||visualSeparation.logo==='transparent','logo has artificial tile');
               await wp.close();await wide.close();
 
               const desktop=await browser.newContext({viewport:{width:1440,height:1000}});
@@ -145,7 +153,7 @@ jobs:
                 const h1s=await h1.evaluate(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return {o:+s.opacity,v:s.visibility,w:r.width,h:r.height}});
                 ok(h1s.o>.9&&h1s.v!=='hidden'&&h1s.w>0&&h1s.h>0,route+' H1 hidden');
                 const logo=await p.locator('.site-header .brand-mark').first().evaluate(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return {bg:s.backgroundColor,pad:parseFloat(s.paddingTop),w:r.width,h:r.height}});
-                const lbg=rgb(logo.bg);ok(lbg&&lbg.a>.9&&logo.pad>=4&&logo.w>=40&&logo.h>=40,route+' logo support');
+                const lbg=rgb(logo.bg);ok((!lbg||lbg.a<.08)&&logo.pad<=.5&&logo.w>=39&&logo.h>=39,route+' logo integration');
                 await p.evaluate(async()=>{
                   const max=Math.max(document.body.scrollHeight,document.documentElement.scrollHeight);
                   for(let y=0;y<max;y+=Math.max(420,innerHeight*.72)){scrollTo(0,y);await new Promise(r=>setTimeout(r,35))}
@@ -173,7 +181,7 @@ jobs:
               for(const route of ['/','/metodo/','/sobre-iberfit/','/contacto/','/en/','/en/method/','/en/about/']){
                 const p=await nojsLaptop.newPage();await p.goto(base+route,{waitUntil:'networkidle'});
                 const polish=await p.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--v631-canvas').trim());
-                ok(polish==='#f3ece2',route+' V6.31 CSS not applied');
+                ok(polish==='#faf7f1',route+' V6.31 CSS not applied');
                 const hidden=await p.locator('.reveal').evaluateAll(els=>els.filter(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return r.width>0&&r.height>0&&(+s.opacity<.9||s.visibility==='hidden')}).length);ok(hidden===0,route+' no-JS reveal hidden');
                 const nav=await p.locator('.navlinks').first().evaluate(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return {d:s.display,v:s.visibility,w:r.width,h:r.height}});
                 ok(nav.d!=='none'&&nav.v!=='hidden'&&nav.w>0&&nav.h>0,route+' no-JS nav hidden');
