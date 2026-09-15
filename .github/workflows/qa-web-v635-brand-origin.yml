@@ -1,0 +1,183 @@
+name: QA WEB IBERFIT V6.35 brand origin
+
+on:
+  push:
+    branches:
+      - work/web-v6-35-brand-origin
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-web-v635-brand-origin
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Integridad narrativa V6.35
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat candidate/v628/VERSION)" = "6.35"
+          test -s candidate/v628/assets/quality.v635.css
+          total="$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')"
+          test "$total" = "33"
+
+          # La web pública no debe personalizar la marca alrededor de una persona.
+          ! grep -R -n -i --exclude='CHANGELOG.md' --exclude-dir='.git' 'Carlos' candidate/v628
+          ! grep -R -n --include='*.html' '"@id":"https://iberfit.cl/#founder"' candidate/v628
+          ! grep -R -n --include='*.html' 'founder-identity-section' candidate/v628
+          ! grep -R -n 'la persona detrás de IBERFIT' candidate/v628
+          ! grep -R -n 'the person behind IBERFIT' candidate/v628
+
+          grep -q 'formación universitaria en España' candidate/v628/sobre-iberfit/index.html
+          grep -q 'contextos distintos, el español y el alemán' candidate/v628/sobre-iberfit/index.html
+          grep -q 'precisión, el proceso y la consistencia' candidate/v628/sobre-iberfit/index.html
+          grep -q 'recorrido europeo se adapta y se convierte en IBERFIT' candidate/v628/sobre-iberfit/index.html
+
+          grep -q 'university training in Spain' candidate/v628/en/about/index.html
+          grep -q 'Spanish and German contexts' candidate/v628/en/about/index.html
+          grep -q 'precision, process and consistency' candidate/v628/en/about/index.html
+
+          grep -q 'Conocer el origen y la filosofía de IBERFIT' candidate/v628/index.html
+          grep -q 'Explore the origin and philosophy of IBERFIT' candidate/v628/en/index.html
+          grep -q 'historia pública debe presentarse como origen y evolución de la marca' candidate/v628/llms.txt
+
+          # Hoja versionada en todas las páginas que dependen del sistema V6.34+.
+          grep -q 'quality.v635.css' candidate/v628/index.html
+          grep -q 'quality.v635.css' candidate/v628/sobre-iberfit/index.html
+          grep -q 'quality.v635.css' candidate/v628/online/index.html
+          grep -q 'quality.v635.css' candidate/v628/en/index.html
+          grep -q 'quality.v635.css' candidate/v628/en/about/index.html
+          grep -q 'quality.v635.css' candidate/v628/entrenador-personal-las-condes/index.html
+          grep -q 'quality.v635.css' candidate/v628/en/personal-trainer-las-condes/index.html
+
+      - name: Validar JSON-LD
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('fs');
+          const files=['candidate/v628/index.html','candidate/v628/en/index.html','candidate/v628/sobre-iberfit/index.html','candidate/v628/en/about/index.html','candidate/v628/online/index.html'];
+          for(const file of files){
+            const html=fs.readFileSync(file,'utf8');
+            const m=html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+            if(!m) throw new Error('Missing JSON-LD '+file);
+            const data=JSON.parse(m[1]);
+            const raw=JSON.stringify(data);
+            if(raw.includes('#founder')) throw new Error('Founder entity remains '+file);
+            if(raw.toLowerCase().includes('"carlos"')) throw new Error('Personal name remains '+file);
+          }
+          NODE
+
+      - name: Instalar Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.62.1
+          npx playwright install --with-deps chromium
+
+      - name: Servir candidata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v635-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl --fail --silent http://127.0.0.1:4173/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/v635-server.log
+          exit 1
+
+      - name: Smoke de 33 rutas
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { chromium }=require('playwright');
+          const routes=[
+            '/','/diagnostico-iri/','/metodo/','/presencial/','/hibrido/','/online/','/sobre-iberfit/','/contacto/','/privacidad/',
+            '/entrenador-personal-las-condes/','/entrenador-personal-vitacura/','/entrenamiento-personal-providencia/','/personal-trainer-nunoa/','/entrenador-personal-lo-barnechea/','/entrenador-personal-la-reina/','/entrenador-personal-penalolen/',
+            '/en/','/en/iri-assessment/','/en/method/','/en/in-person/','/en/hybrid/','/en/online/','/en/about/','/en/contact/','/en/privacy/',
+            '/en/personal-trainer-las-condes/','/en/personal-trainer-vitacura/','/en/personal-training-providencia/','/en/personal-trainer-nunoa/','/en/personal-trainer-lo-barnechea/','/en/personal-trainer-la-reina/','/en/personal-trainer-penalolen/'
+          ];
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1280,height:900}});
+            for(const route of routes){
+              const errors=[];
+              page.removeAllListeners('pageerror');
+              page.on('pageerror',e=>errors.push(String(e)));
+              const res=await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'domcontentloaded'});
+              if(!res||!res.ok()) throw new Error(route+' status '+(res&&res.status()));
+              if(!(await page.title()).trim()) throw new Error(route+' empty title');
+              if(errors.length) throw new Error(route+' page errors '+errors.join(' | '));
+            }
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Responsive y ausencia de personalización
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v635-evidence
+          node <<'NODE'
+          const { chromium }=require('playwright');
+          const fs=require('fs');
+          const base='http://127.0.0.1:4173';
+          const cases=[
+            {name:'desktop',width:1440,height:1000},
+            {name:'tablet',width:820,height:1180},
+            {name:'mobile',width:390,height:844}
+          ];
+          const routes=['/','/sobre-iberfit/','/en/about/','/online/','/entrenador-personal-las-condes/'];
+          const ok=(v,m)=>{if(!v)throw new Error(m)};
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const report=[];
+            for(const vp of cases){
+              for(const route of routes){
+                const page=await browser.newPage({viewport:{width:vp.width,height:vp.height},deviceScaleFactor:1});
+                const errors=[];
+                page.on('pageerror',e=>errors.push(String(e)));
+                const res=await page.goto(base+route,{waitUntil:'networkidle'});
+                ok(res&&res.ok(),route+' '+vp.name+' failed');
+                const state=await page.evaluate(()=>({
+                  overflow:document.documentElement.scrollWidth-window.innerWidth,
+                  text:(document.body.innerText||''),
+                  css635:[...document.styleSheets].some(s=>String(s.href||'').includes('quality.v635.css')),
+                  journey:!!document.querySelector('.brand-journey--editorial'),
+                  personalBlock:!!document.querySelector('.founder-identity-section')
+                }));
+                ok(state.overflow<=2,route+' '+vp.name+' horizontal overflow '+state.overflow);
+                ok(!/\bCarlos\b/i.test(state.text),route+' '+vp.name+' personal name visible');
+                ok(!state.personalBlock,route+' '+vp.name+' personal block visible');
+                if(route==='/'||route==='/sobre-iberfit/'||route==='/en/about/'||route==='/online/'||route.includes('las-condes')) ok(state.css635,route+' '+vp.name+' V6.35 CSS missing');
+                if(route==='/sobre-iberfit/'||route==='/en/about/') ok(state.journey,route+' '+vp.name+' brand journey missing');
+                ok(errors.length===0,route+' '+vp.name+' page errors '+errors.join(' | '));
+                const slug=route==='/'?'home':route.replace(/^\//,'').replace(/\/$/,'').replaceAll('/','-');
+                await page.screenshot({path:'/tmp/v635-evidence/'+vp.name+'-'+slug+'.png',fullPage:true});
+                report.push({route,viewport:vp.name,overflow:state.overflow,css635:state.css635,journey:state.journey});
+                await page.close();
+              }
+            }
+            fs.writeFileSync('/tmp/v635-evidence/report.json',JSON.stringify(report,null,2));
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Subir evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v635-brand-origin-evidence
+          path: /tmp/v635-evidence
+          if-no-files-found: warn
+          retention-days: 30
