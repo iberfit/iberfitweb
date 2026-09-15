@@ -1,0 +1,202 @@
+name: QA WEB IBERFIT V6.34 authenticity
+
+on:
+  push:
+    branches:
+      - work/web-v6-34-authenticity
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-web-v634-authenticity
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Integridad V6.34
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat candidate/v628/VERSION)" = "6.34"
+          test -s candidate/v628/assets/quality.v634.css
+          total="$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')"
+          test "$total" = "33"
+
+          grep -q 'Entrenamiento personal online y a distancia' candidate/v628/online/index.html
+          grep -q 'online-semantic' candidate/v628/online/index.html
+          grep -q 'entrenamiento personal online / a distancia' candidate/v628/llms.txt
+
+          grep -q 'founder-identity-section' candidate/v628/sobre-iberfit/index.html
+          grep -q 'Carlos' candidate/v628/sobre-iberfit/index.html
+          grep -q '"@id":"https://iberfit.cl/#founder"' candidate/v628/sobre-iberfit/index.html
+          grep -q 'founder-identity-section' candidate/v628/en/about/index.html
+
+          grep -q 'authenticity-editorial' candidate/v628/index.html
+          grep -q 'authenticity-editorial' candidate/v628/en/index.html
+          ! grep -q 'class="section confidence-band"' candidate/v628/index.html
+
+          for f in             candidate/v628/entrenador-personal-las-condes/index.html             candidate/v628/entrenador-personal-vitacura/index.html             candidate/v628/entrenamiento-personal-providencia/index.html             candidate/v628/personal-trainer-nunoa/index.html             candidate/v628/entrenador-personal-lo-barnechea/index.html             candidate/v628/entrenador-personal-la-reina/index.html             candidate/v628/entrenador-personal-penalolen/index.html             candidate/v628/en/personal-trainer-las-condes/index.html             candidate/v628/en/personal-trainer-vitacura/index.html             candidate/v628/en/personal-training-providencia/index.html             candidate/v628/en/personal-trainer-nunoa/index.html             candidate/v628/en/personal-trainer-lo-barnechea/index.html             candidate/v628/en/personal-trainer-la-reina/index.html             candidate/v628/en/personal-trainer-penalolen/index.html
+          do
+            grep -q 'quality.v634.css' "$f"
+            grep -q 'local-context-note' "$f"
+          done
+
+          ! grep -R -q 'The right level of support depends on more than a postcode' candidate/v628/en/personal-trainer-* candidate/v628/en/personal-training-providencia || {
+            echo 'GENERIC_EN_LOCAL_TEMPLATE_REMAINS'
+            exit 1
+          }
+
+      - name: Instalar Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.62.1
+          npx playwright install --with-deps chromium
+
+      - name: Servir candidata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v634-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl --fail --silent http://127.0.0.1:4173/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/v634-server.log
+          exit 1
+
+      - name: Smoke de las 33 rutas
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const { chromium }=require('playwright');
+          const routes=[
+            '/','/diagnostico-iri/','/metodo/','/presencial/','/hibrido/','/online/','/sobre-iberfit/','/contacto/','/privacidad/',
+            '/entrenador-personal-las-condes/','/entrenador-personal-vitacura/','/entrenamiento-personal-providencia/','/personal-trainer-nunoa/','/entrenador-personal-lo-barnechea/','/entrenador-personal-la-reina/','/entrenador-personal-penalolen/',
+            '/en/','/en/iri-assessment/','/en/method/','/en/in-person/','/en/hybrid/','/en/online/','/en/about/','/en/contact/','/en/privacy/',
+            '/en/personal-trainer-las-condes/','/en/personal-trainer-vitacura/','/en/personal-training-providencia/','/en/personal-trainer-nunoa/','/en/personal-trainer-lo-barnechea/','/en/personal-trainer-la-reina/','/en/personal-trainer-penalolen/'
+          ];
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1280,height:900}});
+            for(const route of routes){
+              const errors=[];
+              page.removeAllListeners('pageerror');
+              page.on('pageerror',e=>errors.push(String(e)));
+              const res=await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'domcontentloaded'});
+              if(!res || !res.ok()) throw new Error(route+' status '+(res&&res.status()));
+              if(!(await page.title()).trim()) throw new Error(route+' empty title');
+              if(errors.length) throw new Error(route+' page errors '+errors.join(' | '));
+            }
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: QA responsive y editorial V6.34
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v634-evidence
+          node - <<'NODE'
+          const { chromium }=require('playwright');
+          const fs=require('fs');
+          const base='http://127.0.0.1:4173';
+          const routes=[
+            '/','/online/','/sobre-iberfit/',
+            '/entrenador-personal-las-condes/','/entrenador-personal-vitacura/','/entrenamiento-personal-providencia/','/personal-trainer-nunoa/','/entrenador-personal-lo-barnechea/','/entrenador-personal-la-reina/','/entrenador-personal-penalolen/',
+            '/en/','/en/about/',
+            '/en/personal-trainer-las-condes/','/en/personal-trainer-vitacura/','/en/personal-training-providencia/','/en/personal-trainer-nunoa/','/en/personal-trainer-lo-barnechea/','/en/personal-trainer-la-reina/','/en/personal-trainer-penalolen/'
+          ];
+          const viewports=[
+            {name:'desktop',width:1440,height:1000},
+            {name:'tablet',width:820,height:1180},
+            {name:'mobile',width:390,height:844}
+          ];
+          const screenshotRoutes=new Set(['/','/online/','/sobre-iberfit/','/entrenador-personal-las-condes/','/entrenador-personal-vitacura/']);
+          const ok=(v,m)=>{if(!v)throw new Error(m)};
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const report=[];
+            for(const vp of viewports){
+              for(const route of routes){
+                const page=await browser.newPage({viewport:{width:vp.width,height:vp.height},deviceScaleFactor:1});
+                const errors=[];
+                page.on('pageerror',e=>errors.push(String(e)));
+                const res=await page.goto(base+route,{waitUntil:'networkidle'});
+                ok(res&&res.ok(),route+' '+vp.name+' failed');
+                const state=await page.evaluate(()=>({
+                  overflow:document.documentElement.scrollWidth-window.innerWidth,
+                  h1:(document.querySelector('h1')?.textContent||'').trim(),
+                  main:!!document.querySelector('main'),
+                  css634:[...document.styleSheets].some(s=>String(s.href||'').includes('quality.v634.css')),
+                  localNote:!!document.querySelector('.local-context-note'),
+                  founder:!!document.querySelector('.founder-identity-section'),
+                  authenticity:!!document.querySelector('.authenticity-editorial')
+                }));
+                ok(state.main&&state.h1,route+' '+vp.name+' missing main/h1');
+                ok(state.overflow<=2,route+' '+vp.name+' horizontal overflow '+state.overflow);
+                ok(errors.length===0,route+' '+vp.name+' page errors '+errors.join(' | '));
+                if(route.includes('personal-trainer')||route.includes('personal-training')||route.includes('entrenador-personal')){
+                  ok(state.localNote,route+' '+vp.name+' missing local context');
+                  ok(state.css634,route+' '+vp.name+' missing V6.34 CSS');
+                }
+                if(route==='/sobre-iberfit/'||route==='/en/about/') ok(state.founder,route+' '+vp.name+' missing founder identity');
+                if(route==='/'||route==='/en/') ok(state.authenticity,route+' '+vp.name+' missing editorial authenticity block');
+                report.push({route,viewport:vp.name,...state});
+                if(screenshotRoutes.has(route)){
+                  const slug=route==='/'?'home':route.replace(/^\//,'').replace(/\/$/,'').replaceAll('/','-');
+                  await page.screenshot({path:'/tmp/v634-evidence/'+vp.name+'-'+slug+'.png',fullPage:true});
+                }
+                await page.close();
+              }
+            }
+            fs.writeFileSync('/tmp/v634-evidence/report.json',JSON.stringify(report,null,2));
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Verificar SEO y sitemap
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('fs');
+          for(const file of ['candidate/v628/index.html','candidate/v628/online/index.html','candidate/v628/sobre-iberfit/index.html']){
+            const html=fs.readFileSync(file,'utf8');
+            const m=html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+            if(!m) throw new Error('Missing JSON-LD '+file);
+            JSON.parse(m[1]);
+          }
+          const online=fs.readFileSync('candidate/v628/online/index.html','utf8');
+          if(!/Entrenamiento personal online/i.test(online)) throw new Error('Online search intent missing');
+          const about=fs.readFileSync('candidate/v628/sobre-iberfit/index.html','utf8');
+          if(!about.includes('"@id":"https://iberfit.cl/#founder"')) throw new Error('Founder schema missing');
+          const sitemap=fs.readFileSync('candidate/v628/sitemap.xml','utf8');
+          for(const u of [
+            'https://iberfit.cl/',
+            'https://iberfit.cl/online/',
+            'https://iberfit.cl/sobre-iberfit/',
+            'https://iberfit.cl/entrenador-personal-las-condes/',
+            'https://iberfit.cl/en/personal-trainer-las-condes/'
+          ]){
+            const block=sitemap.split('<url>').find(x=>x.includes('<loc>'+u+'</loc>'));
+            if(!block||!block.includes('<lastmod>2026-09-15</lastmod>')) throw new Error('Stale lastmod '+u);
+          }
+          NODE
+
+      - name: Subir evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v634-authenticity-evidence
+          path: /tmp/v634-evidence
+          if-no-files-found: warn
+          retention-days: 30
