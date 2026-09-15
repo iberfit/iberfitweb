@@ -1,0 +1,266 @@
+/* IBERFIT WEB V6.34 — authenticity, local editorial treatment and search semantics */
+
+/* Home: merge brand philosophy and promise into one less modular editorial composition */
+.authenticity-editorial{
+  position:relative;
+  overflow:hidden;
+  background:linear-gradient(145deg,#f2e9d9 0%,#faf6ef 58%,#f7f4ee 100%);
+  border-block:1px solid rgba(184,151,58,.10);
+}
+.authenticity-editorial:after{
+  content:"IBERFIT";
+  position:absolute;
+  right:-.04em;
+  bottom:-.2em;
+  color:rgba(31,61,43,.035);
+  font-family:Iowan Old Style,Baskerville,Georgia,serif;
+  font-size:clamp(8rem,22vw,22rem);
+  font-weight:700;
+  line-height:.8;
+  letter-spacing:-.06em;
+  pointer-events:none;
+}
+.authenticity-grid{
+  position:relative;
+  z-index:1;
+  display:grid;
+  grid-template-columns:minmax(0,.88fr) minmax(0,1.12fr);
+  gap:clamp(2.5rem,6vw,6rem);
+  align-items:start;
+}
+.authenticity-copy{max-width:38rem}
+.authenticity-copy h2{max-width:11ch}
+.authenticity-copy .lead{max-width:34rem}
+.authenticity-ledger{
+  border-top:1px solid rgba(31,61,43,.18);
+}
+.authenticity-line{
+  display:grid;
+  grid-template-columns:minmax(8.5rem,.42fr) 1fr;
+  gap:1.25rem;
+  padding:1.25rem 0;
+  border-bottom:1px solid rgba(31,61,43,.13);
+}
+.authenticity-line strong{
+  color:var(--green);
+  font-family:Iowan Old Style,Baskerville,Georgia,serif;
+  font-size:1.22rem;
+  line-height:1.15;
+}
+.authenticity-line p{margin:0;color:var(--muted);line-height:1.65}
+.authenticity-signoff{
+  margin-top:1.5rem;
+  padding-top:1.3rem;
+  border-top:1px solid rgba(184,151,58,.32);
+  color:var(--green);
+  font-size:.92rem;
+  line-height:1.65;
+}
+.authenticity-signoff strong{font-weight:850}
+
+/* About: human identity without turning IBERFIT into a personal brand */
+.founder-identity-section{background:#f8f3e9}
+.founder-identity{
+  display:grid;
+  grid-template-columns:minmax(0,.72fr) minmax(0,1.28fr);
+  gap:clamp(2.2rem,6vw,6rem);
+  align-items:start;
+}
+.founder-identity-mark{
+  position:relative;
+  min-height:310px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  padding:clamp(1.5rem,3vw,2.4rem);
+  overflow:hidden;
+  border:1px solid rgba(184,151,58,.24);
+  border-radius:30px;
+  background:linear-gradient(155deg,#123021,#1f4934);
+  box-shadow:0 24px 60px rgba(9,30,20,.18);
+}
+.founder-identity-mark:after{
+  content:"C";
+  position:absolute;
+  right:-.04em;
+  bottom:-.21em;
+  color:rgba(217,181,104,.10);
+  font-family:Iowan Old Style,Baskerville,Georgia,serif;
+  font-size:clamp(12rem,26vw,20rem);
+  font-weight:700;
+  line-height:.8;
+  pointer-events:none;
+}
+.founder-identity-mark small,
+.founder-identity-mark strong,
+.founder-identity-mark span{position:relative;z-index:1}
+.founder-identity-mark small{
+  color:var(--gold-light);
+  font-size:.68rem;
+  font-weight:850;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+.founder-identity-mark strong{
+  color:#fff;
+  font-family:Iowan Old Style,Baskerville,Georgia,serif;
+  font-size:clamp(2.4rem,5vw,4.4rem);
+  line-height:.95;
+}
+.founder-identity-mark span{color:rgba(255,255,255,.7);font-size:.9rem}
+.founder-identity-copy h2{max-width:12ch}
+.founder-identity-copy .lead{max-width:42rem}
+.founder-facts{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:0;
+  margin-top:2rem;
+  border-block:1px solid rgba(31,61,43,.15);
+}
+.founder-fact{padding:1.1rem 1rem 1.1rem 0}
+.founder-fact+ .founder-fact{padding-left:1rem;border-left:1px solid rgba(31,61,43,.12)}
+.founder-fact small{
+  display:block;
+  margin-bottom:.32rem;
+  color:#7a661f;
+  font-size:.64rem;
+  font-weight:850;
+  letter-spacing:.11em;
+  text-transform:uppercase;
+}
+.founder-fact strong{
+  display:block;
+  color:var(--green);
+  font-size:.92rem;
+  line-height:1.45;
+}
+
+/* Evidence: make the source explicit instead of adding another card module */
+.review-source-link{
+  display:inline-flex;
+  align-items:center;
+  gap:.45rem;
+  margin-top:.85rem;
+  color:var(--gold-light);
+  font-size:.78rem;
+  font-weight:800;
+  letter-spacing:.03em;
+  text-decoration:underline;
+  text-decoration-color:rgba(217,181,104,.45);
+  text-underline-offset:.22rem;
+}
+.review-source-link:after{content:"↗";font-size:.85rem}
+
+/* Online semantics: visible but restrained */
+.online-semantic{
+  display:inline-flex;
+  align-items:center;
+  gap:.45rem;
+  color:#80671b;
+  font-size:.7rem;
+  font-weight:850;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+.online-semantic:before{content:"";width:18px;height:1px;background:currentColor}
+
+/* Local pages: remove the repeated SaaS-card look and turn decisions into an editorial ledger */
+body[data-page="local"] .local-service-strip{
+  gap:0;
+  margin-top:2rem;
+  overflow:hidden;
+  border:1px solid rgba(31,61,43,.13);
+  border-radius:22px;
+  background:rgba(255,255,255,.48);
+}
+body[data-page="local"] .local-service-chip{
+  min-height:108px;
+  padding:1.05rem 1rem;
+  border:0;
+  border-right:1px solid rgba(31,61,43,.11);
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+body[data-page="local"] .local-service-chip:last-child{border-right:0}
+body[data-page="local"] .local-service-chip b{
+  color:#8b6f1d;
+  font-size:.62rem;
+  letter-spacing:.12em;
+}
+body[data-page="local"] .cards-4{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:0;
+  margin-top:1.6rem;
+  border-top:1px solid rgba(31,61,43,.16);
+}
+body[data-page="local"] .cards-4 .card{
+  min-height:0;
+  padding:1.55rem 1.4rem 1.55rem 0;
+  border:0;
+  border-bottom:1px solid rgba(31,61,43,.13);
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  transform:none;
+}
+body[data-page="local"] .cards-4 .card:nth-child(even){
+  padding-left:1.4rem;
+  padding-right:0;
+  border-left:1px solid rgba(31,61,43,.10);
+}
+body[data-page="local"] .cards-4 .card:hover{transform:none;box-shadow:none}
+body[data-page="local"] .card-index{
+  margin-bottom:.65rem;
+  color:#8a701f;
+  font-size:.64rem;
+  font-weight:850;
+  letter-spacing:.13em;
+}
+.local-context-note{
+  display:grid;
+  grid-template-columns:minmax(0,.65fr) minmax(0,1.35fr);
+  gap:clamp(1.5rem,4vw,4rem);
+  align-items:start;
+  margin-top:clamp(1.7rem,3vw,2.5rem);
+  padding-top:clamp(1.5rem,3vw,2rem);
+  border-top:1px solid rgba(184,151,58,.26);
+}
+.local-context-note strong{
+  color:var(--green);
+  font-family:Iowan Old Style,Baskerville,Georgia,serif;
+  font-size:1.25rem;
+  line-height:1.2;
+}
+.local-context-note p{margin:0;color:var(--muted);line-height:1.7}
+
+@media (max-width:900px){
+  .authenticity-grid,.founder-identity{grid-template-columns:1fr}
+  .founder-identity-mark{min-height:240px}
+  body[data-page="local"] .local-service-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+  body[data-page="local"] .local-service-chip:nth-child(2){border-right:0}
+  body[data-page="local"] .local-service-chip:nth-child(-n+2){border-bottom:1px solid rgba(31,61,43,.11)}
+}
+@media (max-width:640px){
+  .authenticity-line{grid-template-columns:1fr;gap:.35rem}
+  .founder-facts{grid-template-columns:1fr}
+  .founder-fact,.founder-fact+ .founder-fact{padding:1rem 0;border-left:0;border-bottom:1px solid rgba(31,61,43,.10)}
+  .founder-fact:last-child{border-bottom:0}
+  body[data-page="local"] .local-service-strip{grid-template-columns:1fr}
+  body[data-page="local"] .local-service-chip,
+  body[data-page="local"] .local-service-chip:nth-child(2){
+    border-right:0;
+    border-bottom:1px solid rgba(31,61,43,.11);
+  }
+  body[data-page="local"] .local-service-chip:last-child{border-bottom:0}
+  body[data-page="local"] .cards-4{grid-template-columns:1fr}
+  body[data-page="local"] .cards-4 .card,
+  body[data-page="local"] .cards-4 .card:nth-child(even){
+    padding:1.25rem 0;
+    border-left:0;
+  }
+  .local-context-note{grid-template-columns:1fr;gap:.55rem}
+}
+@media (prefers-reduced-motion:reduce){
+  .review-source-link{scroll-behavior:auto}
+}
