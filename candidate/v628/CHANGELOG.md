@@ -1,13 +1,25 @@
+# Cambios V6.35
+
+- IBERFIT vuelve a ser el centro absoluto de la narrativa: se elimina la exposición pública del nombre y la identidad personal del fundador.
+- “Sobre IBERFIT” presenta el origen como una trayectoria de marca: formación universitaria en España, conocimiento de los contextos español y alemán y adaptación posterior en Chile.
+- El recorrido España → Alemania → España → Chile se conserva porque explica el origen metodológico de IBERFIT, pero deja de contar circunstancias personales.
+- Alemania se vincula a precisión, proceso y consistencia; España a la formación y maduración metodológica; Chile a la adaptación de ese recorrido en una marca propia.
+- Se eliminan la entidad Person y las referencias founder del schema público para evitar personalizar la entidad IBERFIT.
+- Home y versión inglesa sustituyen cualquier llamada a “la persona detrás” por origen, filosofía y criterio de marca.
+- llms.txt queda alineado con la misma regla: historia institucional, no marca personal.
+- Estilos de identidad personal retirados; la nueva hoja V6.35 evita caché heredada de V6.34.
+- Se conservan intactas las mejoras V6.34 de páginas locales, SEO online/a distancia, reseñas verificables, IRI y composición editorial.
+
 # Cambios V6.34
 
 - Arquitectura semántica cerrada para la modalidad remota: “entrenamiento personal online” se mantiene como término SEO y “a distancia” como lenguaje de marca; la URL canónica /online/ se conserva.
 - Home menos modular y menos “builder/IA”: se fusionan filosofía y promesa en una composición editorial con ledger de principios, reduciendo bloques conceptuales consecutivos.
-- Humanización verificable en “Sobre IBERFIT”: Carlos aparece como fundador y entrenador responsable, sin convertir la marca en una marca personal; se añade entidad Person en datos estructurados.
+- Se reforzó la autenticidad de “Sobre IBERFIT”; esta línea se revisa en V6.35 para mantener la historia centrada en la marca y no en una persona concreta.
 - Las siete páginas locales en español se reescriben con contexto propio de cada comuna y dejan de compartir el mismo patrón de chips/copy.
 - Las siete páginas locales en inglés dejan de ser traducciones parametrizadas y reciben narrativa específica por comuna.
 - Diseño local refinado: las cards repetitivas pasan a un tratamiento editorial más sobrio, con mejor jerarquía y menor apariencia SaaS/IA.
 - Se añaden enlaces visibles a las reseñas completas en Google como evidencia verificable.
-- llms.txt reforzado con entidad de fundador y equivalencia semántica online/a distancia.
+- llms.txt reforzado con contexto de marca y equivalencia semántica online/a distancia.
 - Se preservan el nuevo hero, el IRI como línea de base, el orientador no-chatbot y la separación Diagnóstico IRI / seguimiento.
 
 # Cambios V6.33
