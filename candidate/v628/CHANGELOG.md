@@ -1,3 +1,15 @@
+# Cambios V6.34
+
+- Arquitectura semántica cerrada para la modalidad remota: “entrenamiento personal online” se mantiene como término SEO y “a distancia” como lenguaje de marca; la URL canónica /online/ se conserva.
+- Home menos modular y menos “builder/IA”: se fusionan filosofía y promesa en una composición editorial con ledger de principios, reduciendo bloques conceptuales consecutivos.
+- Humanización verificable en “Sobre IBERFIT”: Carlos aparece como fundador y entrenador responsable, sin convertir la marca en una marca personal; se añade entidad Person en datos estructurados.
+- Las siete páginas locales en español se reescriben con contexto propio de cada comuna y dejan de compartir el mismo patrón de chips/copy.
+- Las siete páginas locales en inglés dejan de ser traducciones parametrizadas y reciben narrativa específica por comuna.
+- Diseño local refinado: las cards repetitivas pasan a un tratamiento editorial más sobrio, con mejor jerarquía y menor apariencia SaaS/IA.
+- Se añaden enlaces visibles a las reseñas completas en Google como evidencia verificable.
+- llms.txt reforzado con entidad de fundador y equivalencia semántica online/a distancia.
+- Se preservan el nuevo hero, el IRI como línea de base, el orientador no-chatbot y la separación Diagnóstico IRI / seguimiento.
+
 # Cambios V6.33
 
 - Rediseño editorial del recorrido de marca en “Sobre IBERFIT”.
