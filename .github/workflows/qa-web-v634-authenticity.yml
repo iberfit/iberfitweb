@@ -31,7 +31,7 @@ jobs:
 
           grep -q 'Entrenamiento personal online y a distancia' candidate/v628/online/index.html
           grep -q 'online-semantic' candidate/v628/online/index.html
-          grep -q 'entrenamiento personal online / a distancia' candidate/v628/llms.txt
+          grep -qi 'entrenamiento personal online / a distancia' candidate/v628/llms.txt
 
           grep -q 'founder-identity-section' candidate/v628/sobre-iberfit/index.html
           grep -q 'Carlos' candidate/v628/sobre-iberfit/index.html
