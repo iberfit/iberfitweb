@@ -1,3 +1,16 @@
+# Cambios V6.36
+
+- “Online” pasa a ser la nomenclatura canónica visible y semántica del servicio remoto; “a distancia” queda reservado como expresión editorial secundaria.
+- La home reduce repetición conceptual: se elimina un bloque explicativo redundante y se sustituye la introducción fotográfica por una composición de evidencia de proceso (evaluar → entrenar/registrar → ajustar).
+- Las imágenes dejan de atribuir rostros o personas concretas a la identidad de IBERFIT; los alt y captions describen la escena, no una persona como cara de la marca.
+- Contacto prioriza WhatsApp directo y presenta el orientador como herramienta opcional para preparar la consulta.
+- Se añaden breadcrumbs visibles y semánticos en páginas profundas y locales.
+- Las páginas locales se dividen en tres familias editoriales (logística, entorno y ritmo urbano) para romper el patrón de landing parametrizada sin inventar información local.
+- BreadcrumbList local pasa a Inicio → Presencial → comuna (y Home → In person → area en inglés).
+- Home y versión inglesa comparten la misma lógica evidence-first.
+- SEO/GEO: llms.txt declara “entrenamiento personal online” como término canónico y mantiene “a distancia” solo como sinónimo editorial.
+- Se preservan IRI como línea de base, reseñas verificadas, origen de marca europeo y separación IRI/seguimiento.
+
 # Cambios V6.35
 
 - IBERFIT vuelve a ser el centro absoluto de la narrativa: se elimina la exposición pública del nombre y la identidad personal del fundador.
