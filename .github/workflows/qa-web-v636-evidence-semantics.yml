@@ -1,0 +1,268 @@
+name: QA WEB IBERFIT V6.36 evidence semantics
+
+on:
+  push:
+    branches:
+      - work/web-v6-36-evidence-semantics
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-web-v636-evidence-semantics
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Integridad V6.36
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat candidate/v628/VERSION)" = "6.36"
+          test -s candidate/v628/assets/quality.v636.css
+          total="$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')"
+          test "$total" = "33"
+
+          grep -q 'evidence-process-section' candidate/v628/index.html
+          grep -q 'evidence-process-section' candidate/v628/en/index.html
+          ! grep -q 'class="section decision-section"' candidate/v628/index.html
+          ! grep -q 'class="section decision-section"' candidate/v628/en/index.html
+
+          grep -q '<h3>Online</h3>' candidate/v628/index.html
+          grep -q 'Entrenamiento personal online desde cualquier lugar | IBERFIT' candidate/v628/online/index.html
+          grep -q 'Entrenamiento personal online' candidate/v628/llms.txt
+          ! grep -R -n 'href="/online/">A distancia</a>' candidate/v628 --include='*.html'
+          ! grep -R -n 'Entrenador IBERFIT supervisando' candidate/v628 --include='*.html'
+          ! grep -R -n 'An IBERFIT trainer' candidate/v628/en --include='*.html'
+
+          grep -q 'contact-direct-note' candidate/v628/contacto/index.html
+          grep -q 'Orientador opcional' candidate/v628/contacto/index.html
+          grep -q 'Optional enquiry guide' candidate/v628/en/contact/index.html
+
+          grep -q 'local--logistics' candidate/v628/entrenador-personal-las-condes/index.html
+          grep -q 'local--environment' candidate/v628/entrenador-personal-vitacura/index.html
+          grep -q 'local--rhythm' candidate/v628/entrenamiento-personal-providencia/index.html
+          grep -q 'page-breadcrumbs' candidate/v628/entrenador-personal-las-condes/index.html
+          grep -q 'page-breadcrumbs' candidate/v628/en/personal-trainer-las-condes/index.html
+
+      - name: Validar JSON-LD, canonical y hreflang
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('fs');
+          const pairs=[
+            ['candidate/v628/index.html','candidate/v628/en/index.html','https://iberfit.cl/','https://iberfit.cl/en/'],
+            ['candidate/v628/diagnostico-iri/index.html','candidate/v628/en/iri-assessment/index.html','https://iberfit.cl/diagnostico-iri/','https://iberfit.cl/en/iri-assessment/'],
+            ['candidate/v628/metodo/index.html','candidate/v628/en/method/index.html','https://iberfit.cl/metodo/','https://iberfit.cl/en/method/'],
+            ['candidate/v628/presencial/index.html','candidate/v628/en/in-person/index.html','https://iberfit.cl/presencial/','https://iberfit.cl/en/in-person/'],
+            ['candidate/v628/hibrido/index.html','candidate/v628/en/hybrid/index.html','https://iberfit.cl/hibrido/','https://iberfit.cl/en/hybrid/'],
+            ['candidate/v628/online/index.html','candidate/v628/en/online/index.html','https://iberfit.cl/online/','https://iberfit.cl/en/online/'],
+            ['candidate/v628/sobre-iberfit/index.html','candidate/v628/en/about/index.html','https://iberfit.cl/sobre-iberfit/','https://iberfit.cl/en/about/'],
+            ['candidate/v628/contacto/index.html','candidate/v628/en/contact/index.html','https://iberfit.cl/contacto/','https://iberfit.cl/en/contact/'],
+            ['candidate/v628/privacidad/index.html','candidate/v628/en/privacy/index.html','https://iberfit.cl/privacidad/','https://iberfit.cl/en/privacy/'],
+            ['candidate/v628/entrenador-personal-las-condes/index.html','candidate/v628/en/personal-trainer-las-condes/index.html','https://iberfit.cl/entrenador-personal-las-condes/','https://iberfit.cl/en/personal-trainer-las-condes/'],
+            ['candidate/v628/entrenador-personal-vitacura/index.html','candidate/v628/en/personal-trainer-vitacura/index.html','https://iberfit.cl/entrenador-personal-vitacura/','https://iberfit.cl/en/personal-trainer-vitacura/'],
+            ['candidate/v628/entrenamiento-personal-providencia/index.html','candidate/v628/en/personal-training-providencia/index.html','https://iberfit.cl/entrenamiento-personal-providencia/','https://iberfit.cl/en/personal-training-providencia/'],
+            ['candidate/v628/personal-trainer-nunoa/index.html','candidate/v628/en/personal-trainer-nunoa/index.html','https://iberfit.cl/personal-trainer-nunoa/','https://iberfit.cl/en/personal-trainer-nunoa/'],
+            ['candidate/v628/entrenador-personal-lo-barnechea/index.html','candidate/v628/en/personal-trainer-lo-barnechea/index.html','https://iberfit.cl/entrenador-personal-lo-barnechea/','https://iberfit.cl/en/personal-trainer-lo-barnechea/'],
+            ['candidate/v628/entrenador-personal-la-reina/index.html','candidate/v628/en/personal-trainer-la-reina/index.html','https://iberfit.cl/entrenador-personal-la-reina/','https://iberfit.cl/en/personal-trainer-la-reina/'],
+            ['candidate/v628/entrenador-personal-penalolen/index.html','candidate/v628/en/personal-trainer-penalolen/index.html','https://iberfit.cl/entrenador-personal-penalolen/','https://iberfit.cl/en/personal-trainer-penalolen/']
+          ];
+          function parse(file){
+            const html=fs.readFileSync(file,'utf8');
+            const json=html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+            if(!json) throw new Error('Missing JSON-LD '+file);
+            JSON.parse(json[1]);
+            return html;
+          }
+          function hasLink(html,rel,href,lang){
+            const links=[...html.matchAll(/<link\s+([^>]+)>/g)].map(x=>x[1]);
+            return links.some(attrs=>{
+              const r=(attrs.match(/rel="([^"]+)"/)||[])[1];
+              const h=(attrs.match(/href="([^"]+)"/)||[])[1];
+              const l=(attrs.match(/hreflang="([^"]+)"/)||[])[1];
+              return r===rel&&h===href&&(lang===undefined||l===lang);
+            });
+          }
+          for(const [esFile,enFile,esUrl,enUrl] of pairs){
+            const es=parse(esFile), en=parse(enFile);
+            if(!hasLink(es,'canonical',esUrl)) throw new Error('ES canonical mismatch '+esFile);
+            if(!hasLink(en,'canonical',enUrl)) throw new Error('EN canonical mismatch '+enFile);
+            if(!hasLink(es,'alternate',esUrl,'es')||!hasLink(es,'alternate',enUrl,'en')) throw new Error('ES hreflang mismatch '+esFile);
+            if(!hasLink(en,'alternate',esUrl,'es')||!hasLink(en,'alternate',enUrl,'en')) throw new Error('EN hreflang mismatch '+enFile);
+          }
+
+          const localFiles=[
+            'candidate/v628/entrenador-personal-las-condes/index.html',
+            'candidate/v628/entrenador-personal-vitacura/index.html',
+            'candidate/v628/entrenamiento-personal-providencia/index.html',
+            'candidate/v628/personal-trainer-nunoa/index.html',
+            'candidate/v628/entrenador-personal-lo-barnechea/index.html',
+            'candidate/v628/entrenador-personal-la-reina/index.html',
+            'candidate/v628/entrenador-personal-penalolen/index.html',
+            'candidate/v628/en/personal-trainer-las-condes/index.html',
+            'candidate/v628/en/personal-trainer-vitacura/index.html',
+            'candidate/v628/en/personal-training-providencia/index.html',
+            'candidate/v628/en/personal-trainer-nunoa/index.html',
+            'candidate/v628/en/personal-trainer-lo-barnechea/index.html',
+            'candidate/v628/en/personal-trainer-la-reina/index.html',
+            'candidate/v628/en/personal-trainer-penalolen/index.html'
+          ];
+          for(const file of localFiles){
+            const html=fs.readFileSync(file,'utf8');
+            const m=html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+            const data=JSON.parse(m[1]);
+            const bc=(data['@graph']||[]).find(x=>x['@type']==='BreadcrumbList');
+            if(!bc||bc.itemListElement?.length!==3) throw new Error('Local BreadcrumbList must have 3 levels '+file);
+            const mid=bc.itemListElement[1];
+            if(file.includes('/en/')){
+              if(mid.name!=='In person'||mid.item!=='https://iberfit.cl/en/in-person/') throw new Error('EN local breadcrumb mismatch '+file);
+            } else {
+              if(mid.name!=='Presencial'||mid.item!=='https://iberfit.cl/presencial/') throw new Error('ES local breadcrumb mismatch '+file);
+            }
+          }
+          NODE
+
+      - name: Presupuesto básico de imágenes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          for p in Path('candidate/v628/assets').glob('*.webp'):
+              size=p.stat().st_size
+              if size>450_000:
+                  raise SystemExit(f'Image too large: {p} {size}')
+          PY
+
+      - name: Instalar Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.62.1
+          npx playwright install --with-deps chromium
+
+      - name: Servir candidata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v636-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl --fail --silent http://127.0.0.1:4173/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/v636-server.log
+          exit 1
+
+      - name: Smoke de las 33 rutas
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { chromium }=require('playwright');
+          const routes=[
+            '/','/diagnostico-iri/','/metodo/','/presencial/','/hibrido/','/online/','/sobre-iberfit/','/contacto/','/privacidad/',
+            '/entrenador-personal-las-condes/','/entrenador-personal-vitacura/','/entrenamiento-personal-providencia/','/personal-trainer-nunoa/','/entrenador-personal-lo-barnechea/','/entrenador-personal-la-reina/','/entrenador-personal-penalolen/',
+            '/en/','/en/iri-assessment/','/en/method/','/en/in-person/','/en/hybrid/','/en/online/','/en/about/','/en/contact/','/en/privacy/',
+            '/en/personal-trainer-las-condes/','/en/personal-trainer-vitacura/','/en/personal-training-providencia/','/en/personal-trainer-nunoa/','/en/personal-trainer-lo-barnechea/','/en/personal-trainer-la-reina/','/en/personal-trainer-penalolen/'
+          ];
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1280,height:900}});
+            for(const route of routes){
+              const errors=[];
+              page.removeAllListeners('pageerror');
+              page.on('pageerror',e=>errors.push(String(e)));
+              const res=await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'networkidle'});
+              if(!res||!res.ok()) throw new Error(route+' status '+(res&&res.status()));
+              if(!(await page.title()).trim()) throw new Error(route+' empty title');
+              if(errors.length) throw new Error(route+' JS errors '+errors.join(' | '));
+            }
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: QA responsive y evidencia visual
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v636-evidence
+          node <<'NODE'
+          const { chromium }=require('playwright');
+          const fs=require('fs');
+          const base='http://127.0.0.1:4173';
+          const vps=[
+            {name:'desktop',width:1440,height:1000},
+            {name:'tablet',width:820,height:1180},
+            {name:'mobile',width:390,height:844}
+          ];
+          const routes=[
+            '/', '/online/', '/contacto/',
+            '/entrenador-personal-las-condes/',
+            '/entrenador-personal-vitacura/',
+            '/entrenamiento-personal-providencia/',
+            '/en/', '/en/online/', '/en/contact/',
+            '/en/personal-trainer-las-condes/'
+          ];
+          const ok=(v,m)=>{if(!v)throw new Error(m)};
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const report=[];
+            for(const vp of vps){
+              for(const route of routes){
+                const page=await browser.newPage({viewport:{width:vp.width,height:vp.height},deviceScaleFactor:1});
+                const errors=[];
+                page.on('pageerror',e=>errors.push(String(e)));
+                const res=await page.goto(base+route,{waitUntil:'networkidle'});
+                ok(res&&res.ok(),route+' '+vp.name+' failed');
+                const state=await page.evaluate(()=>({
+                  overflow:document.documentElement.scrollWidth-window.innerWidth,
+                  css636:[...document.styleSheets].some(s=>String(s.href||'').includes('quality.v636.css')),
+                  brokenImages:[...document.images].filter(i=>!i.complete||i.naturalWidth===0).map(i=>i.currentSrc||i.src),
+                  brandedTrainerAlt:[...document.images].map(i=>i.alt||'').filter(a=>/Entrenador IBERFIT|IBERFIT trainer/i.test(a)),
+                  breadcrumb:!!document.querySelector('.page-breadcrumbs'),
+                  evidence:!!document.querySelector('.evidence-process-section'),
+                  localClass:document.querySelector('main')?.className||'',
+                  contactDirect:!!document.querySelector('.contact-direct-note')
+                }));
+                ok(state.overflow<=2,route+' '+vp.name+' horizontal overflow '+state.overflow);
+                ok(state.brokenImages.length===0,route+' '+vp.name+' broken images '+state.brokenImages.join(','));
+                ok(state.brandedTrainerAlt.length===0,route+' '+vp.name+' personal-brand alt remains');
+                ok(errors.length===0,route+' '+vp.name+' page errors '+errors.join(' | '));
+                if(['/','/en/'].includes(route)){
+                  ok(state.evidence,route+' '+vp.name+' evidence section missing');
+                  ok(state.css636,route+' '+vp.name+' V6.36 CSS missing');
+                }
+                if(route.includes('online')||route.includes('contact')||route.includes('personal-trainer')||route.includes('entrenador-personal')||route.includes('entrenamiento-personal')){
+                  ok(state.breadcrumb,route+' '+vp.name+' breadcrumb missing');
+                }
+                if(route.includes('contact')) ok(state.contactDirect,route+' '+vp.name+' direct contact cue missing');
+                if(route.includes('las-condes')) ok(state.localClass.includes('local--logistics'),route+' wrong local family');
+                if(route.includes('vitacura')) ok(state.localClass.includes('local--environment'),route+' wrong local family');
+                if(route.includes('providencia')) ok(state.localClass.includes('local--rhythm'),route+' wrong local family');
+                const slug=route==='/'?'home':route.replace(/^\//,'').replace(/\/$/,'').replaceAll('/','-');
+                await page.screenshot({path:'/tmp/v636-evidence/'+vp.name+'-'+slug+'.png',fullPage:true});
+                report.push({route,viewport:vp.name,...state});
+                await page.close();
+              }
+            }
+            fs.writeFileSync('/tmp/v636-evidence/report.json',JSON.stringify(report,null,2));
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Subir evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v636-evidence-semantics
+          path: /tmp/v636-evidence
+          if-no-files-found: warn
+          retention-days: 30
