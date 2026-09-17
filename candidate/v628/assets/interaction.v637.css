@@ -145,3 +145,15 @@ textarea{min-height:120px}
   a,button{-webkit-tap-highlight-color:rgba(184,151,58,.16)}
   .btn:active,.choice-chip:active,.menu-toggle:active{opacity:.86}
 }
+
+/* Reduced motion must beat component-level !important transitions by specificity. */
+@media (prefers-reduced-motion:reduce){
+  .btn,.choice-chip,.menu-toggle,.consent-close,.review-carousel-btn,.review-carousel-dot,
+  .card,.price-card,.client-review,.review-proof-card,.contact-option,.intent-route,.explore-card,
+  .evidence-shot,.report-preview,.report-preview-v2,.premium-surface,.photo-grid img,
+  input,select,textarea,.nav-panel-backdrop,.site-header,.site-header *{
+    animation:none!important;
+    transition:none!important;
+    transform:none!important;
+  }
+}
