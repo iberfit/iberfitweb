@@ -1,0 +1,233 @@
+name: QA WEB IBERFIT V6.37 interaction quality
+
+on:
+  push:
+    branches:
+      - work/web-v6-37-interaction-quality
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-web-v637-interaction
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Integridad V6.37
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat candidate/v628/VERSION)" = "6.37"
+          test -s candidate/v628/assets/interaction.v637.css
+          total="$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')"
+          test "$total" = "33"
+          linked="$(grep -R -l 'interaction.v637.css' candidate/v628 --include='*.html' | wc -l | tr -d ' ')"
+          test "$linked" = "33"
+          grep -q -- '--v637-hit:44px' candidate/v628/assets/interaction.v637.css
+          grep -q 'prefers-reduced-motion:reduce' candidate/v628/assets/interaction.v637.css
+          grep -q 'focus-visible' candidate/v628/assets/interaction.v637.css
+          grep -q 'pointer:coarse' candidate/v628/assets/interaction.v637.css
+          grep -q '<h3>Online</h3>' candidate/v628/index.html
+          ! grep -R -n 'Entrenador IBERFIT supervisando' candidate/v628 --include='*.html'
+          ! grep -R -n 'An IBERFIT trainer' candidate/v628/en --include='*.html'
+          ! grep -R -ni --exclude='CHANGELOG.md' --exclude-dir='.git' 'Carlos' candidate/v628
+          git diff --check
+
+      - name: Verificar que no se degradó lógica o media
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='bb9332abd06f86b3db59d2e10004964d906ecbe0'
+          git cat-file -e "$base^{commit}"
+          changed="$(git diff --name-only "$base"...HEAD)"
+          echo "$changed"
+          if echo "$changed" | grep -E '^candidate/v628/assets/.*\.(js|webp|png|jpg|jpeg|svg)$' | grep -v '^candidate/v628/assets/interaction\.v637\.css$'; then
+            echo 'UNEXPECTED_LOGIC_OR_MEDIA_CHANGE'
+            exit 1
+          fi
+
+      - name: Instalar Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.62.1
+          npx playwright install --with-deps chromium
+
+      - name: Servir candidata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v637-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl --fail --silent http://127.0.0.1:4173/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/v637-server.log
+          exit 1
+
+      - name: Smoke 33 rutas
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { chromium }=require('playwright');
+          const routes=[
+            '/','/diagnostico-iri/','/metodo/','/presencial/','/hibrido/','/online/','/sobre-iberfit/','/contacto/','/privacidad/',
+            '/entrenador-personal-las-condes/','/entrenador-personal-vitacura/','/entrenamiento-personal-providencia/','/personal-trainer-nunoa/','/entrenador-personal-lo-barnechea/','/entrenador-personal-la-reina/','/entrenador-personal-penalolen/',
+            '/en/','/en/iri-assessment/','/en/method/','/en/in-person/','/en/hybrid/','/en/online/','/en/about/','/en/contact/','/en/privacy/',
+            '/en/personal-trainer-las-condes/','/en/personal-trainer-vitacura/','/en/personal-training-providencia/','/en/personal-trainer-nunoa/','/en/personal-trainer-lo-barnechea/','/en/personal-trainer-la-reina/','/en/personal-trainer-penalolen/'
+          ];
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1280,height:900}});
+            for(const route of routes){
+              const errors=[];
+              page.removeAllListeners('pageerror');
+              page.on('pageerror',e=>errors.push(String(e)));
+              const res=await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'networkidle'});
+              if(!res||!res.ok()) throw new Error(route+' status '+(res&&res.status()));
+              if(!(await page.title()).trim()) throw new Error(route+' empty title');
+              const loaded=await page.evaluate(()=>[...document.styleSheets].some(s=>String(s.href||'').includes('interaction.v637.css')));
+              if(!loaded) throw new Error(route+' V6.37 stylesheet not loaded');
+              if(errors.length) throw new Error(route+' JS errors '+errors.join(' | '));
+            }
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Responsive 360 390 820 1024 1440
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v637-evidence
+          node <<'NODE'
+          const { chromium }=require('playwright');
+          const fs=require('fs');
+          const base='http://127.0.0.1:4173';
+          const vps=[
+            {name:'mobile-360',width:360,height:800},
+            {name:'mobile-390',width:390,height:844},
+            {name:'tablet-820',width:820,height:1180},
+            {name:'laptop-1024',width:1024,height:900},
+            {name:'desktop-1440',width:1440,height:1000}
+          ];
+          const routes=['/','/diagnostico-iri/','/contacto/','/online/','/sobre-iberfit/','/entrenador-personal-las-condes/','/en/','/en/contact/'];
+          const ok=(v,m)=>{if(!v) throw new Error(m)};
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const report=[];
+            for(const vp of vps){
+              for(const route of routes){
+                const page=await browser.newPage({viewport:{width:vp.width,height:vp.height},deviceScaleFactor:1});
+                const errors=[];
+                page.on('pageerror',e=>errors.push(String(e)));
+                const res=await page.goto(base+route,{waitUntil:'networkidle'});
+                ok(res&&res.ok(),route+' '+vp.name+' failed');
+                await page.evaluate(async()=>{
+                  for(const img of document.images) img.loading='eager';
+                  window.scrollTo(0,document.body.scrollHeight);
+                  await Promise.all([...document.images].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});})));
+                  window.scrollTo(0,0);
+                });
+                const state=await page.evaluate(()=>({
+                  overflow:document.documentElement.scrollWidth-window.innerWidth,
+                  broken:[...document.images].filter(i=>!i.complete||i.naturalWidth===0).map(i=>i.currentSrc||i.src),
+                  loaded:[...document.styleSheets].some(s=>String(s.href||'').includes('interaction.v637.css')),
+                  h1:(document.querySelector('h1')?.textContent||'').trim()
+                }));
+                ok(state.overflow<=2,route+' '+vp.name+' overflow '+state.overflow);
+                ok(state.broken.length===0,route+' '+vp.name+' broken images '+state.broken.join(','));
+                ok(state.loaded,route+' '+vp.name+' CSS missing');
+                ok(state.h1,route+' '+vp.name+' h1 missing');
+                ok(errors.length===0,route+' '+vp.name+' errors '+errors.join(' | '));
+                report.push({route,viewport:vp.name,...state});
+                if(['mobile-390','tablet-820','desktop-1440'].includes(vp.name) && ['/','/contacto/','/diagnostico-iri/'].includes(route)){
+                  const slug=route==='/'?'home':route.replace(/^\//,'').replace(/\/$/,'').replaceAll('/','-');
+                  await page.screenshot({path:'/tmp/v637-evidence/'+vp.name+'-'+slug+'.png',fullPage:true});
+                }
+                await page.close();
+              }
+            }
+            fs.writeFileSync('/tmp/v637-evidence/responsive.json',JSON.stringify(report,null,2));
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Teclado, foco y targets táctiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { chromium }=require('playwright');
+          const ok=(v,m)=>{if(!v)throw new Error(m)};
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+
+            // Keyboard focus must be visually explicit.
+            const page=await browser.newPage({viewport:{width:1440,height:1000}});
+            await page.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
+            await page.keyboard.press('Tab');
+            let focus=await page.evaluate(()=>({tag:document.activeElement?.tagName,outline:getComputedStyle(document.activeElement).outlineStyle,width:parseFloat(getComputedStyle(document.activeElement).outlineWidth)||0}));
+            ok(focus.tag==='A' && focus.outline!=='none' && focus.width>=2,'Skip/focus indicator is not visible');
+
+            // No visual lift on primary CTA hover, but clear pressed state remains.
+            const cta=page.locator('.hero-actions .btn-primary').first();
+            await cta.hover();
+            const hoverTransform=await cta.evaluate(el=>getComputedStyle(el).transform);
+            ok(hoverTransform==='none','Primary CTA still lifts on hover: '+hoverTransform);
+
+            // Compact navigation remains keyboard-contained.
+            const tablet=await browser.newPage({viewport:{width:820,height:1180}});
+            await tablet.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
+            const toggle=tablet.locator('[data-menu-toggle]');
+            await toggle.click();
+            ok(await toggle.getAttribute('aria-expanded')==='true','Compact nav did not open');
+            const hidden=await tablet.locator('[data-navlinks]').getAttribute('aria-hidden');
+            ok(hidden==='false','Open compact nav remains aria-hidden');
+            await tablet.keyboard.press('Escape');
+            ok(await toggle.getAttribute('aria-expanded')==='false','Escape did not close compact nav');
+
+            // Mobile controls respect minimum target sizes; form chips really work.
+            const mobile=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+            await mobile.goto('http://127.0.0.1:4173/contacto/',{waitUntil:'networkidle'});
+            const targetFailures=await mobile.evaluate(()=>{
+              const sels=['.btn','.menu-toggle','.choice-chip','select','.device-dock a'];
+              return sels.flatMap(sel=>[...document.querySelectorAll(sel)].filter(el=>{
+                const r=el.getBoundingClientRect();
+                const s=getComputedStyle(el);
+                return s.display!=='none' && s.visibility!=='hidden' && r.width>0 && r.height>0 && (r.height<44 || (sel!=='.btn' && r.width<44));
+              }).map(el=>({sel,text:(el.textContent||'').trim().slice(0,40),w:el.getBoundingClientRect().width,h:el.getBoundingClientRect().height})));
+            });
+            ok(targetFailures.length===0,'Small touch targets '+JSON.stringify(targetFailures));
+            const firstChip=mobile.locator('.choice-chip').first();
+            await firstChip.click();
+            ok(await firstChip.getAttribute('aria-pressed')==='true','Choice chip did not expose pressed state');
+
+            // Reduced motion should collapse transition duration.
+            const reduced=await browser.newPage({viewport:{width:390,height:844},reducedMotion:'reduce'});
+            await reduced.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
+            const duration=await reduced.locator('.btn').first().evaluate(el=>getComputedStyle(el).transitionDuration);
+            const max=Math.max(...duration.split(',').map(v=>parseFloat(v)||0));
+            ok(max<=0.001,'Reduced motion transition remains too long: '+duration);
+
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Subir evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v637-interaction-quality-evidence
+          path: /tmp/v637-evidence
+          if-no-files-found: warn
+          retention-days: 30
