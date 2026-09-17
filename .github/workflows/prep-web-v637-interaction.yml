@@ -1,0 +1,99 @@
+name: Prepare WEB IBERFIT V6.37 interaction quality
+
+on:
+  push:
+    branches:
+      - work/web-v6-37-interaction-quality
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prep-web-v637-interaction
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.actor != 'github-actions[bot]' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/web-v6-37-interaction-quality
+          fetch-depth: 0
+
+      - name: Aplicar sistema V6.37 a todas las páginas
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          root = Path('candidate/v628')
+          stylesheet = '<link href="/assets/interaction.v637.css" rel="stylesheet"/>'
+          html_files = sorted(root.rglob('*.html'))
+          if len(html_files) != 33:
+              raise SystemExit(f'Expected 33 HTML files, found {len(html_files)}')
+
+          for path in html_files:
+              text = path.read_text(encoding='utf-8')
+              if stylesheet not in text:
+                  if '</head>' not in text:
+                      raise SystemExit(f'Missing </head> in {path}')
+                  text = text.replace('</head>', stylesheet + '</head>', 1)
+
+              # Copy polish: keep Online canonical and remove internal implementation language from public captions.
+              text = text.replace(
+                  'Diagnóstico, planificación, control y seguimiento. Entrenamiento presencial en comunas seleccionadas de Santiago y a distancia desde cualquier lugar.',
+                  'Diagnóstico, planificación, control y seguimiento. Entrenamiento presencial en comunas seleccionadas de Santiago y entrenamiento online desde cualquier lugar.'
+              )
+              text = text.replace(
+                  'Preparación de sesión · imagen sin identidad personal',
+                  'Preparación de sesión · material y entorno de trabajo'
+              )
+              text = text.replace(
+                  'Session preparation · no personal identity used',
+                  'Session preparation · training environment and equipment'
+              )
+              if path.as_posix().endswith('/contacto/index.html'):
+                  text = text.replace('utiliza el orientador breve', 'utiliza el orientador opcional')
+              if path.as_posix().endswith('/en/contact/index.html'):
+                  text = text.replace('short format guide', 'optional enquiry guide')
+
+              path.write_text(text, encoding='utf-8')
+
+          (root / 'VERSION').write_text('6.37\n', encoding='utf-8')
+
+          changelog = root / 'CHANGELOG.md'
+          current = changelog.read_text(encoding='utf-8')
+          if not current.startswith('# Cambios V6.37'):
+              entry = '''# Cambios V6.37\n\n- Se introduce un quality floor de interacción inspirado en principios de UI/UX Pro Max, adaptado a la identidad IBERFIT y sin copiar ningún sistema externo.\n- Focus visible unificado para enlaces, botones y controles; objetivos táctiles mínimos de 44 px y formularios de 48 px.\n- Botones con estados hover/pressed claros y sin elevaciones decorativas; el verde y el dorado pasan a tratamientos sólidos y más sobrios.\n- Se eliminan lifts, escalados y profundidad 3D de cards, fotografías y superficies donde no aportaban significado.\n- Reduced motion endurecido globalmente y movimiento limitado a feedback de causa/efecto.\n- Inputs y choice chips quedan protegidos frente a zoom involuntario y problemas táctiles en móvil.\n- Safe areas, scroll-margin y dock móvil reforzados.\n- Se refina el lenguaje público de las escenas de evidencia para describir proceso y material, no decisiones internas de implementación.\n- Se conserva la arquitectura V6.36: IRI, evidencia visual, Online canónico, páginas locales diferenciadas y marca no personalista.\n\n'''
+              changelog.write_text(entry + current, encoding='utf-8')
+          PY
+
+      - name: Comprobar alcance
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat candidate/v628/VERSION)" = "6.37"
+          test -s candidate/v628/assets/interaction.v637.css
+          test "$(grep -R -l 'interaction.v637.css' candidate/v628 --include='*.html' | wc -l | tr -d ' ')" = "33"
+          ! git diff --name-only | grep -E '^candidate/v628/assets/(styles\.v628|app\.v632|analytics\.v632)\.(css|js)$'
+          git diff --check
+          git status --short
+
+      - name: Commit V6.37 preparado
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'No changes to commit'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add candidate/v628
+          git commit -m 'style(web): apply V6.37 interaction quality system'
+          git push origin HEAD:work/web-v6-37-interaction-quality
