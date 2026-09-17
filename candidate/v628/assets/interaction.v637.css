@@ -1,0 +1,147 @@
+/* IBERFIT WEB V6.37 — interaction quality floor and restrained premium motion */
+:root{
+  --v637-focus:#8a6a16;
+  --v637-motion-fast:140ms;
+  --v637-motion-ui:190ms;
+  --v637-ease:cubic-bezier(.2,.7,.2,1);
+  --v637-hit:44px;
+  --v637-border:rgba(31,61,43,.17);
+  --v637-border-strong:rgba(31,61,43,.26);
+  --v637-surface:#fffdf9;
+}
+
+/* One consistent interaction language: clear state changes, no gratuitous lift. */
+.btn{
+  min-height:var(--v637-hit);
+  box-shadow:none!important;
+  transition:background-color var(--v637-motion-ui) var(--v637-ease),border-color var(--v637-motion-ui) var(--v637-ease),color var(--v637-motion-ui) var(--v637-ease),opacity var(--v637-motion-ui) var(--v637-ease),transform var(--v637-motion-fast) var(--v637-ease)!important;
+}
+.btn-primary{
+  background:var(--green)!important;
+  border-color:var(--green)!important;
+  color:#fff!important;
+}
+.btn-gold{
+  background:var(--gold)!important;
+  border-color:var(--gold)!important;
+  color:var(--green-dark)!important;
+}
+.btn-secondary{
+  background:rgba(255,253,249,.92)!important;
+  border-color:var(--v637-border-strong)!important;
+  color:var(--green)!important;
+}
+.btn-ghost{border-color:var(--v637-border-strong)!important}
+.btn:active{transform:scale(.985)!important}
+
+/* Premium means restraint: no card/photo jumps or 3D tilt. */
+.card,.price-card,.client-review,.review-proof-card,.contact-option,.intent-route,.explore-card,.evidence-shot,.report-preview,.report-preview-v2,.premium-surface,.photo-grid img{
+  transform:none!important;
+  transition:border-color var(--v637-motion-ui) var(--v637-ease),background-color var(--v637-motion-ui) var(--v637-ease),color var(--v637-motion-ui) var(--v637-ease),opacity var(--v637-motion-ui) var(--v637-ease)!important;
+}
+.price-card.featured{transform:none!important}
+.card:not(.card-dark),.price-card:not(.featured),.client-review,.review-proof-card,.contact-option,.intent-route,.explore-card,.report-preview,.report-preview-v2{
+  box-shadow:none!important;
+}
+.cta-band,.cta-panel-inner{box-shadow:none!important}
+
+/* Global keyboard focus: always visible and brand-consistent. */
+a[href]:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:not([tabindex="-1"]):focus-visible{
+  outline:3px solid var(--v637-focus)!important;
+  outline-offset:3px!important;
+  box-shadow:none!important;
+}
+.skip:focus-visible{outline-offset:2px!important}
+
+/* Inputs and form controls: touch-safe, stable and legible on iOS/Android. */
+input,select,textarea{
+  min-height:48px;
+  border-color:var(--v637-border)!important;
+  transition:border-color var(--v637-motion-ui) var(--v637-ease),background-color var(--v637-motion-ui) var(--v637-ease)!important;
+}
+textarea{min-height:120px}
+.field-label{line-height:1.45}
+.choice-chip,.menu-toggle,.consent-close,.review-carousel-btn,.review-carousel-dot{
+  min-width:var(--v637-hit);
+  min-height:var(--v637-hit);
+}
+.choice-chip{transition:background-color var(--v637-motion-fast) var(--v637-ease),border-color var(--v637-motion-fast) var(--v637-ease),color var(--v637-motion-fast) var(--v637-ease)!important}
+.choice-chip:active{transform:none!important}
+
+/* Header/nav hit areas without making the interface visually heavier. */
+.site-header .navlinks>a,.site-header .nav-mobile-languages a,.site-header .lang-switch a{
+  min-height:var(--v637-hit);
+  display:inline-flex;
+  align-items:center;
+}
+.site-header .lang-switch a{min-width:var(--v637-hit);justify-content:center}
+.site-header .menu-toggle{min-height:var(--v637-hit)}
+.text-link{
+  min-height:var(--v637-hit);
+  display:inline-flex;
+  align-items:center;
+  text-underline-offset:.22em;
+}
+.site-footer a{min-height:var(--v637-hit);display:inline-flex;align-items:center}
+
+/* Editorial surface discipline: less SaaS-card feel, stronger hierarchy. */
+.intent-route,.contact-option,.client-review,.review-proof-card{
+  border-color:var(--v637-border)!important;
+}
+.evidence-shot{border-radius:18px!important;box-shadow:none!important}
+.authenticity-editorial:after{opacity:.72}
+.report-preview,.report-preview-v2{border-color:rgba(31,61,43,.16)!important}
+
+/* Keep mobile controls comfortable around safe areas and sticky UI. */
+.device-dock a{min-height:52px}
+@supports(padding:max(0px)){
+  .device-dock{padding-bottom:max(.45rem,env(safe-area-inset-bottom))}
+}
+[id]{scroll-margin-top:96px}
+
+/* Fine pointers get subtle feedback; touch does not depend on hover. */
+@media (hover:hover) and (pointer:fine){
+  .btn:hover{transform:none!important}
+  .btn-primary:hover{background:#173626!important;border-color:#173626!important}
+  .btn-gold:hover{background:#c3a14b!important;border-color:#c3a14b!important}
+  .btn-secondary:hover{background:#fffdf9!important;border-color:rgba(31,61,43,.38)!important}
+  .card:hover,.price-card:hover,.client-review:hover,.review-proof-card:hover,.contact-option:hover,.intent-route:hover,.explore-card:hover{
+    transform:none!important;
+    box-shadow:none!important;
+    border-color:rgba(31,61,43,.28)!important;
+  }
+  .photo-grid img:hover{transform:none!important}
+  .text-link:hover{text-decoration:underline}
+}
+
+/* Avoid low-value animation, preserve cause/effect feedback only. */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto!important}
+  *,*:before,*:after{
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+    scroll-behavior:auto!important;
+  }
+  .btn:active{transform:none!important}
+}
+
+/* Tablet and mobile: typography and controls should never trade clarity for compactness. */
+@media (max-width:900px){
+  .container{width:min(var(--container),calc(100% - 36px))}
+  .section{padding-block:clamp(3.75rem,8vw,5rem)}
+  .site-header .navlinks>a{min-height:46px}
+}
+@media (max-width:640px){
+  .container{width:min(var(--container),calc(100% - 32px))}
+  input,select,textarea,.choice-chip{font-size:16px!important}
+  .hero-actions .btn,.orientador-actions .btn,.cta-panel .btn,.cta-panel-inner .btn{width:100%}
+  .orientador-actions{gap:.7rem}
+  .page-breadcrumbs a,.page-breadcrumbs [aria-current="page"]{min-height:36px;display:inline-flex;align-items:center}
+}
+
+/* Coarse pointers: explicit pressed state, never a hover-only cue. */
+@media (hover:none),(pointer:coarse){
+  a,button{-webkit-tap-highlight-color:rgba(184,151,58,.16)}
+  .btn:active,.choice-chip:active,.menu-toggle:active{opacity:.86}
+}
