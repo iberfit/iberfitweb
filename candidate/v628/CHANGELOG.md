@@ -1,3 +1,15 @@
+# Cambios V6.37
+
+- Se introduce un quality floor de interacción inspirado en principios de UI/UX Pro Max, adaptado a la identidad IBERFIT y sin copiar ningún sistema externo.
+- Focus visible unificado para enlaces, botones y controles; objetivos táctiles mínimos de 44 px y formularios de 48 px.
+- Botones con estados hover/pressed claros y sin elevaciones decorativas; el verde y el dorado pasan a tratamientos sólidos y más sobrios.
+- Se eliminan lifts, escalados y profundidad 3D de cards, fotografías y superficies donde no aportaban significado.
+- Reduced motion endurecido globalmente y movimiento limitado a feedback de causa/efecto.
+- Inputs y choice chips quedan protegidos frente a zoom involuntario y problemas táctiles en móvil.
+- Safe areas, scroll-margin y dock móvil reforzados.
+- Se refina el lenguaje público de las escenas de evidencia para describir proceso y material, no decisiones internas de implementación.
+- Se conserva la arquitectura V6.36: IRI, evidencia visual, Online canónico, páginas locales diferenciadas y marca no personalista.
+
 # Cambios V6.36
 
 - “Online” pasa a ser la nomenclatura canónica visible y semántica del servicio remoto; “a distancia” queda reservado como expresión editorial secundaria.
