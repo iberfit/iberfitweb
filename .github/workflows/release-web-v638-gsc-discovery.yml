@@ -1,0 +1,310 @@
+name: Release WEB IBERFIT V6.38 GSC discovery
+
+on:
+  push:
+    branches:
+      - work/web-v6-38-gsc-discovery
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-web-v638-gsc-discovery
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.actor != 'github-actions[bot]' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/web-v6-38-gsc-discovery
+          fetch-depth: 0
+
+      - name: Aplicar mejoras V6.38 basadas en Search Console
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          root = Path('candidate/v628')
+          local = root / 'entrenador-personal-las-condes/index.html'
+          text = local.read_text(encoding='utf-8')
+
+          def replace_once(source, old, new, label):
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 occurrence, found {count}')
+              return source.replace(old, new, 1)
+
+          # Align the indexed Las Condes landing page with the real query language seen in GSC,
+          # while preserving the editorial Spanish body and avoiding keyword stuffing.
+          text = replace_once(
+              text,
+              '<title>Entrenamiento personal en Las Condes | IBERFIT</title>',
+              '<title>Personal trainer en Las Condes | Entrenamiento personal IBERFIT</title>',
+              'las-condes title'
+          )
+          text = replace_once(
+              text,
+              '<meta content="Entrenamiento personal en Las Condes: domicilio, gimnasio de edificio, parque o zona verde, o formato híbrido según sector, entorno y horarios." name="description"/>',
+              '<meta content="Personal trainer y entrenamiento personal en Las Condes con Diagnóstico IRI, planificación y seguimiento. Domicilio, gimnasio de edificio o formato híbrido según cobertura." name="description"/>',
+              'las-condes meta description'
+          )
+          text = replace_once(
+              text,
+              '<meta content="Entrenamiento personal en Las Condes | IBERFIT" property="og:title"/>',
+              '<meta content="Personal trainer en Las Condes | IBERFIT" property="og:title"/>',
+              'las-condes og title'
+          )
+          text = replace_once(
+              text,
+              '<meta content="Entrenamiento personal en Las Condes con diagnóstico, planificación y seguimiento, en domicilio, gimnasio de edificio o parque/zona verde según cobertura." property="og:description"/>',
+              '<meta content="Entrenamiento personal en Las Condes con Diagnóstico IRI, planificación y seguimiento, en domicilio, gimnasio de edificio o modalidad híbrida según cobertura." property="og:description"/>',
+              'las-condes og description'
+          )
+          text = replace_once(
+              text,
+              '<meta content="Entrenamiento personal en Las Condes | IBERFIT" name="twitter:title"/>',
+              '<meta content="Personal trainer en Las Condes | IBERFIT" name="twitter:title"/>',
+              'las-condes twitter title'
+          )
+          text = replace_once(
+              text,
+              '<meta content="Entrenamiento personal en Las Condes con diagnóstico, planificación y seguimiento, en domicilio, gimnasio de edificio o parque/zona verde según cobertura." name="twitter:description"/>',
+              '<meta content="Entrenamiento personal en Las Condes con Diagnóstico IRI, planificación y seguimiento, en domicilio, gimnasio de edificio o modalidad híbrida según cobertura." name="twitter:description"/>',
+              'las-condes twitter description'
+          )
+
+          service_old = '"@type":"Service","@id":"https://iberfit.cl/entrenador-personal-las-condes/#service","name":"Entrenamiento personal en Las Condes","description":"Entrenamiento personal en Las Condes: domicilio, gimnasio de edificio, parque o zona verde, o formato híbrido según sector, entorno y horarios."'
+          service_new = '"@type":"Service","@id":"https://iberfit.cl/entrenador-personal-las-condes/#service","name":"Entrenamiento personal en Las Condes","alternateName":"Personal trainer Las Condes","description":"Entrenamiento personal en Las Condes con Diagnóstico IRI, planificación y seguimiento; domicilio, gimnasio de edificio o modalidad híbrida según cobertura."'
+          text = replace_once(text, service_old, service_new, 'las-condes service schema')
+
+          marker = '</section><section class="section"><div class="container"><div class="section-head reveal"><div class="kicker">Antes de reservar</div>'
+          if marker not in text:
+              raise SystemExit('Las Condes insertion marker missing')
+          section = '''</section><section class="section"><div class="container"><div class="section-intro reveal"><div class="kicker">Más que una sesión</div><h2>Entrenamiento personal con un sistema detrás.</h2><p class="lead">Si buscas un personal trainer en Las Condes, IBERFIT no se limita a acompañar la hora de entrenamiento: conectamos el diagnóstico, el plan, lo que ocurre en la sesión y la siguiente decisión.</p></div><div class="deliverable-grid"><article class="deliverable reveal"><span>01</span><h3>Diagnóstico IRI</h3><p>El punto de partida organiza prioridades antes de prescribir el plan.</p></article><article class="deliverable reveal"><span>02</span><h3>Plan individual</h3><p>La frecuencia, la carga y el formato se definen según objetivo, contexto y disponibilidad real.</p></article><article class="deliverable reveal"><span>03</span><h3>Registro útil</h3><p>Lo relevante de cada sesión queda conectado con la próxima decisión, sin medir por medir.</p></article><article class="deliverable reveal"><span>04</span><h3>Seguimiento</h3><p>La evolución y la adherencia se revisan para ajustar cuando existe una razón.</p></article></div><div class="scope-note reveal"><div><span>El criterio no cambia con la modalidad</span><p>Evaluación, planificación, control y seguimiento forman un solo proceso.</p></div><a class="text-link" href="/metodo/">Ver el método IBERFIT</a></div></div>'''
+          text = text.replace(marker, section + marker, 1)
+          local.write_text(text, encoding='utf-8')
+
+          # GEO / AI discovery: make canonical local URLs explicit without creating new pages.
+          llms = root / 'llms.txt'
+          ltxt = llms.read_text(encoding='utf-8')
+          old_zone = 'La web incluye información local para Las Condes, Vitacura, Providencia, Ñuñoa, Lo Barnechea, La Reina y Peñalolén.'
+          new_zone = '''La web incluye información local para comunas seleccionadas de Santiago. URLs canónicas:\n\n- Las Condes — entrenamiento personal / personal trainer: https://iberfit.cl/entrenador-personal-las-condes/\n- Vitacura: https://iberfit.cl/entrenador-personal-vitacura/\n- Providencia: https://iberfit.cl/entrenamiento-personal-providencia/\n- Ñuñoa: https://iberfit.cl/personal-trainer-nunoa/\n- Lo Barnechea: https://iberfit.cl/entrenador-personal-lo-barnechea/\n- La Reina: https://iberfit.cl/entrenador-personal-la-reina/\n- Peñalolén: https://iberfit.cl/entrenador-personal-penalolen/'''
+          if old_zone not in ltxt:
+              raise SystemExit('llms local-zone marker missing')
+          llms.write_text(ltxt.replace(old_zone, new_zone, 1), encoding='utf-8')
+
+          # Accurate lastmod only for the page materially changed in this release.
+          sitemap = root / 'sitemap.xml'
+          tree = ET.parse(sitemap)
+          ns = {'sm': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
+          target = 'https://iberfit.cl/entrenador-personal-las-condes/'
+          found = False
+          for url in tree.getroot().findall('sm:url', ns):
+              loc = url.find('sm:loc', ns)
+              if loc is not None and loc.text == target:
+                  lastmod = url.find('sm:lastmod', ns)
+                  if lastmod is None:
+                      lastmod = ET.SubElement(url, '{http://www.sitemaps.org/schemas/sitemap/0.9}lastmod')
+                  lastmod.text = '2026-09-18'
+                  found = True
+                  break
+          if not found:
+              raise SystemExit('Las Condes not found in sitemap')
+          ET.register_namespace('', 'http://www.sitemaps.org/schemas/sitemap/0.9')
+          tree.write(sitemap, encoding='utf-8', xml_declaration=True)
+
+          (root / 'VERSION').write_text('6.38\n', encoding='utf-8')
+
+          changelog = root / 'CHANGELOG.md'
+          current = changelog.read_text(encoding='utf-8')
+          if not current.startswith('# Cambios V6.38'):
+              entry = '''# Cambios V6.38\n\n- Release guiada por datos reales de Google Search Console, sin reescribir la Home que ya muestra señales orgánicas saludables.\n- Las Condes se refuerza como landing local prioritaria: title y metadatos alineados con la consulta real “personal trainer Las Condes”, manteniendo el cuerpo editorial en español.\n- Se añade una capa de evidencia de servicio en Las Condes: Diagnóstico IRI, plan individual, registro útil y seguimiento.\n- Structured data de Las Condes incorpora `alternateName` para conectar “personal trainer” con el servicio canónico de entrenamiento personal.\n- `llms.txt` explicita las URLs locales canónicas para mejorar descubrimiento semántico y GEO sin crear nuevas páginas.\n- Sitemap actualiza `lastmod` únicamente para Las Condes, la URL materialmente modificada.\n- Se preservan V6.37, la semántica principal de Home, Online canónico, historia institucional y toda la capa de interacción/accesibilidad certificada.\n\n'''
+              changelog.write_text(entry + current, encoding='utf-8')
+          PY
+
+      - name: Validar SEO, contenido e integridad
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat candidate/v628/VERSION)" = "6.38"
+          test "$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')" = "33"
+          grep -q '<title>IBERFIT | Entrenamiento personal con criterio</title>' candidate/v628/index.html
+          grep -q '<title>Personal trainer en Las Condes | Entrenamiento personal IBERFIT</title>' candidate/v628/entrenador-personal-las-condes/index.html
+          grep -q 'alternateName":"Personal trainer Las Condes"' candidate/v628/entrenador-personal-las-condes/index.html
+          grep -q 'Si buscas un personal trainer en Las Condes' candidate/v628/entrenador-personal-las-condes/index.html
+          grep -q 'Diagnóstico IRI</h3>' candidate/v628/entrenador-personal-las-condes/index.html
+          grep -q 'href="/metodo/">Ver el método IBERFIT</a>' candidate/v628/entrenador-personal-las-condes/index.html
+          grep -q 'Entrenamiento personal online desde cualquier lugar | IBERFIT' candidate/v628/online/index.html
+          grep -q 'formación universitaria en España' candidate/v628/sobre-iberfit/index.html
+          grep -q 'Las Condes — entrenamiento personal / personal trainer: https://iberfit.cl/entrenador-personal-las-condes/' candidate/v628/llms.txt
+          grep -A4 'https://iberfit.cl/entrenador-personal-las-condes/' candidate/v628/sitemap.xml | grep -q '2026-09-18'
+          ! grep -R -ni --exclude='CHANGELOG.md' --exclude-dir='.git' 'Carlos' candidate/v628
+          git diff --check
+
+      - name: Verificar alcance respecto de V6.37
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='29cba94937db9b0ab850b8fa5d9794332235f18c'
+          git cat-file -e "$base^{commit}"
+          changed="$(git diff --name-only "$base")"
+          echo "$changed"
+          echo "$changed" | grep -qx 'candidate/v628/CHANGELOG.md'
+          echo "$changed" | grep -qx 'candidate/v628/VERSION'
+          echo "$changed" | grep -qx 'candidate/v628/entrenador-personal-las-condes/index.html'
+          echo "$changed" | grep -qx 'candidate/v628/llms.txt'
+          echo "$changed" | grep -qx 'candidate/v628/sitemap.xml'
+          if echo "$changed" | grep -E '^candidate/v628/assets/.*\.(js|css|webp|png|jpg|jpeg|svg)$'; then
+            echo 'UNEXPECTED_ASSET_CHANGE'
+            exit 1
+          fi
+
+      - name: Instalar Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.62.1
+          npx playwright install --with-deps chromium
+
+      - name: Servir candidata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v638-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl --fail --silent http://127.0.0.1:4173/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/v638-server.log
+          exit 1
+
+      - name: Smoke completo, enlaces y metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { chromium }=require('playwright');
+          const routes=[
+            '/','/diagnostico-iri/','/metodo/','/presencial/','/hibrido/','/online/','/sobre-iberfit/','/contacto/','/privacidad/',
+            '/entrenador-personal-las-condes/','/entrenador-personal-vitacura/','/entrenamiento-personal-providencia/','/personal-trainer-nunoa/','/entrenador-personal-lo-barnechea/','/entrenador-personal-la-reina/','/entrenador-personal-penalolen/',
+            '/en/','/en/iri-assessment/','/en/method/','/en/in-person/','/en/hybrid/','/en/online/','/en/about/','/en/contact/','/en/privacy/',
+            '/en/personal-trainer-las-condes/','/en/personal-trainer-vitacura/','/en/personal-training-providencia/','/en/personal-trainer-nunoa/','/en/personal-trainer-lo-barnechea/','/en/personal-trainer-la-reina/','/en/personal-trainer-penalolen/'
+          ];
+          const base='http://127.0.0.1:4173';
+          const ok=(v,m)=>{if(!v) throw new Error(m)};
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1280,height:900}});
+            for(const route of routes){
+              const errors=[];
+              page.removeAllListeners('pageerror');
+              page.on('pageerror',e=>errors.push(String(e)));
+              const res=await page.goto(base+route,{waitUntil:'networkidle'});
+              ok(res&&res.ok(),route+' status '+(res&&res.status()));
+              const state=await page.evaluate(()=>({
+                title:document.title.trim(),
+                h1:(document.querySelector('h1')?.textContent||'').trim(),
+                canonical:document.querySelector('link[rel="canonical"]')?.href||'',
+                robots:document.querySelector('meta[name="robots"]')?.content||'',
+                css:[...document.styleSheets].some(s=>String(s.href||'').includes('interaction.v637.css')),
+                broken:[...document.images].filter(i=>i.complete&&i.naturalWidth===0).map(i=>i.currentSrc||i.src)
+              }));
+              ok(state.title,route+' empty title');
+              ok(state.h1||route.includes('privacidad')||route.includes('privacy'),route+' missing h1');
+              ok(state.canonical.startsWith('https://iberfit.cl/'),route+' invalid canonical '+state.canonical);
+              ok(state.robots.includes('index,follow'),route+' not indexable '+state.robots);
+              ok(state.css,route+' V6.37 interaction CSS missing');
+              ok(state.broken.length===0,route+' broken images '+state.broken.join(','));
+              ok(errors.length===0,route+' JS errors '+errors.join(' | '));
+            }
+            await page.goto(base+'/entrenador-personal-las-condes/',{waitUntil:'networkidle'});
+            ok((await page.title())==='Personal trainer en Las Condes | Entrenamiento personal IBERFIT','Las Condes title mismatch');
+            ok(await page.locator('text=Más que una sesión').count()===1,'Las Condes evidence section missing');
+            ok(await page.locator('a[href="/metodo/"]', {hasText:'Ver el método IBERFIT'}).count()===1,'Las Condes method link missing');
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Responsive y evidencia visual
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v638-evidence
+          node <<'NODE'
+          const { chromium }=require('playwright');
+          const fs=require('fs');
+          const base='http://127.0.0.1:4173';
+          const viewports=[
+            {name:'mobile-390',width:390,height:844},
+            {name:'tablet-820',width:820,height:1180},
+            {name:'desktop-1440',width:1440,height:1000}
+          ];
+          const routes=['/','/entrenador-personal-las-condes/','/metodo/','/online/','/sobre-iberfit/','/en/','/en/method/','/en/online/'];
+          const ok=(v,m)=>{if(!v) throw new Error(m)};
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const report=[];
+            for(const vp of viewports){
+              for(const route of routes){
+                const page=await browser.newPage({viewport:{width:vp.width,height:vp.height},deviceScaleFactor:1});
+                const errors=[];
+                page.on('pageerror',e=>errors.push(String(e)));
+                const res=await page.goto(base+route,{waitUntil:'networkidle'});
+                ok(res&&res.ok(),route+' '+vp.name+' load failed');
+                await page.evaluate(async()=>{
+                  for(const img of document.images) img.loading='eager';
+                  window.scrollTo(0,document.body.scrollHeight);
+                  await Promise.all([...document.images].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});})));
+                  window.scrollTo(0,0);
+                });
+                const state=await page.evaluate(()=>({
+                  overflow:document.documentElement.scrollWidth-window.innerWidth,
+                  broken:[...document.images].filter(i=>!i.complete||i.naturalWidth===0).map(i=>i.currentSrc||i.src),
+                  h1:(document.querySelector('h1')?.textContent||'').trim()
+                }));
+                ok(state.overflow<=2,route+' '+vp.name+' overflow '+state.overflow);
+                ok(state.broken.length===0,route+' '+vp.name+' broken '+state.broken.join(','));
+                ok(state.h1,route+' '+vp.name+' h1 missing');
+                ok(errors.length===0,route+' '+vp.name+' errors '+errors.join(' | '));
+                report.push({route,viewport:vp.name,...state});
+                if(route==='/entrenador-personal-las-condes/'){
+                  await page.screenshot({path:'/tmp/v638-evidence/'+vp.name+'-las-condes.png',fullPage:true});
+                }
+                await page.close();
+              }
+            }
+            fs.writeFileSync('/tmp/v638-evidence/responsive.json',JSON.stringify(report,null,2));
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Guardar evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v638-gsc-discovery-evidence
+          path: /tmp/v638-evidence
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Commit y push V6.38 certificado
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'No changes to commit'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add candidate/v628
+          git commit -m 'seo(web): release V6.38 GSC-driven discovery hardening'
+          git push origin HEAD:work/web-v6-38-gsc-discovery
