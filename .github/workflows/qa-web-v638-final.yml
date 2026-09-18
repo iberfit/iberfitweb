@@ -1,0 +1,186 @@
+name: QA WEB IBERFIT V6.38 final
+
+on:
+  push:
+    branches:
+      - work/web-v6-38-gsc-discovery
+    paths:
+      - '.github/workflows/qa-web-v638-final.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-web-v638-final
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Probar lineage exacto desde V6.38 preparada
+        shell: bash
+        run: |
+          set -euo pipefail
+          prepared='2cd780fcdf0929445354bfc0f113da67b64dded3'
+          git cat-file -e "$prepared^{commit}"
+          changed="$(git diff --name-only "$prepared"...HEAD)"
+          printf '%s\n' "$changed"
+          test "$changed" = '.github/workflows/qa-web-v638-final.yml'
+          test "$(cat candidate/v628/VERSION)" = '6.38'
+
+      - name: Integridad SEO y producto
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=candidate/v628
+          test "$(find "$base" -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          grep -q '<title>IBERFIT | Entrenamiento personal con criterio</title>' "$base/index.html"
+          grep -q '<title>Personal trainer en Las Condes | Entrenamiento personal IBERFIT</title>' "$base/entrenador-personal-las-condes/index.html"
+          grep -q 'alternateName":"Personal trainer Las Condes"' "$base/entrenador-personal-las-condes/index.html"
+          grep -q 'Si buscas un personal trainer en Las Condes' "$base/entrenador-personal-las-condes/index.html"
+          grep -q 'Diagnóstico IRI</h3>' "$base/entrenador-personal-las-condes/index.html"
+          grep -q 'Entrenamiento personal online desde cualquier lugar | IBERFIT' "$base/online/index.html"
+          grep -q 'formación universitaria en España' "$base/sobre-iberfit/index.html"
+          grep -q 'Las Condes — entrenamiento personal / personal trainer:' "$base/llms.txt"
+          grep -A4 'https://iberfit.cl/entrenador-personal-las-condes/' "$base/sitemap.xml" | grep -q '2026-09-18'
+          test -s "$base/assets/interaction.v637.css"
+          grep -q 'prefers-reduced-motion:reduce' "$base/assets/interaction.v637.css"
+          ! grep -R -ni --exclude='CHANGELOG.md' --exclude-dir='.git' 'Carlos' "$base"
+          git diff --check
+
+      - name: Instalar Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.62.1
+          npx playwright install --with-deps chromium
+
+      - name: Servir candidata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v638-final-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl --fail --silent http://127.0.0.1:4173/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/v638-final-server.log
+          exit 1
+
+      - name: Smoke 33 rutas y contratos SEO
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { chromium }=require('playwright');
+          const routes=[
+            '/','/diagnostico-iri/','/metodo/','/presencial/','/hibrido/','/online/','/sobre-iberfit/','/contacto/','/privacidad/',
+            '/entrenador-personal-las-condes/','/entrenador-personal-vitacura/','/entrenamiento-personal-providencia/','/personal-trainer-nunoa/','/entrenador-personal-lo-barnechea/','/entrenador-personal-la-reina/','/entrenador-personal-penalolen/',
+            '/en/','/en/iri-assessment/','/en/method/','/en/in-person/','/en/hybrid/','/en/online/','/en/about/','/en/contact/','/en/privacy/',
+            '/en/personal-trainer-las-condes/','/en/personal-trainer-vitacura/','/en/personal-training-providencia/','/en/personal-trainer-nunoa/','/en/personal-trainer-lo-barnechea/','/en/personal-trainer-la-reina/','/en/personal-trainer-penalolen/'
+          ];
+          const base='http://127.0.0.1:4173';
+          const ok=(v,m)=>{if(!v) throw new Error(m)};
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1280,height:900}});
+            for(const route of routes){
+              const errors=[];
+              page.removeAllListeners('pageerror');
+              page.on('pageerror',e=>errors.push(String(e)));
+              const res=await page.goto(base+route,{waitUntil:'networkidle'});
+              ok(res&&res.ok(),route+' HTTP '+(res&&res.status()));
+              const state=await page.evaluate(()=>({
+                title:document.title.trim(),
+                canonical:document.querySelector('link[rel="canonical"]')?.href||'',
+                robots:document.querySelector('meta[name="robots"]')?.content||'',
+                css:[...document.styleSheets].some(s=>String(s.href||'').includes('interaction.v637.css')),
+                broken:[...document.images].filter(i=>i.complete&&i.naturalWidth===0).map(i=>i.currentSrc||i.src),
+                overflow:document.documentElement.scrollWidth-window.innerWidth
+              }));
+              ok(state.title,route+' empty title');
+              ok(state.canonical.startsWith('https://iberfit.cl/'),route+' bad canonical');
+              ok(state.robots.includes('index,follow'),route+' not indexable');
+              ok(state.css,route+' interaction CSS missing');
+              ok(state.broken.length===0,route+' broken images '+state.broken.join(','));
+              ok(state.overflow<=2,route+' desktop overflow '+state.overflow);
+              ok(errors.length===0,route+' JS errors '+errors.join(' | '));
+            }
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Responsive móvil tablet desktop y accesibilidad
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v638-final-evidence
+          node <<'NODE'
+          const { chromium }=require('playwright');
+          const fs=require('fs');
+          const base='http://127.0.0.1:4173';
+          const vps=[
+            {name:'mobile-360',width:360,height:800},
+            {name:'mobile-390',width:390,height:844},
+            {name:'tablet-820',width:820,height:1180},
+            {name:'laptop-1024',width:1024,height:900},
+            {name:'desktop-1440',width:1440,height:1000}
+          ];
+          const routes=['/','/entrenador-personal-las-condes/','/metodo/','/online/','/sobre-iberfit/','/contacto/','/en/','/en/online/'];
+          const ok=(v,m)=>{if(!v) throw new Error(m)};
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const report=[];
+            for(const vp of vps){
+              for(const route of routes){
+                const page=await browser.newPage({viewport:{width:vp.width,height:vp.height},deviceScaleFactor:1});
+                const errors=[]; page.on('pageerror',e=>errors.push(String(e)));
+                const res=await page.goto(base+route,{waitUntil:'networkidle'});
+                ok(res&&res.ok(),route+' '+vp.name+' failed');
+                await page.evaluate(async()=>{
+                  for(const img of document.images) img.loading='eager';
+                  window.scrollTo(0,document.body.scrollHeight);
+                  await Promise.all([...document.images].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});})));
+                  window.scrollTo(0,0);
+                });
+                const state=await page.evaluate(()=>({
+                  overflow:document.documentElement.scrollWidth-window.innerWidth,
+                  broken:[...document.images].filter(i=>!i.complete||i.naturalWidth===0).map(i=>i.currentSrc||i.src),
+                  h1:(document.querySelector('h1')?.textContent||'').trim()
+                }));
+                ok(state.overflow<=2,route+' '+vp.name+' overflow '+state.overflow);
+                ok(state.broken.length===0,route+' '+vp.name+' broken images '+state.broken.join(','));
+                ok(state.h1,route+' '+vp.name+' missing H1');
+                ok(errors.length===0,route+' '+vp.name+' JS errors '+errors.join(' | '));
+                report.push({route,viewport:vp.name,...state});
+                if(route==='/entrenador-personal-las-condes/' && ['mobile-390','tablet-820','desktop-1440'].includes(vp.name)){
+                  await page.screenshot({path:'/tmp/v638-final-evidence/'+vp.name+'-las-condes.png',fullPage:true});
+                }
+                await page.close();
+              }
+            }
+            const reduced=await browser.newPage({viewport:{width:390,height:844},reducedMotion:'reduce'});
+            await reduced.goto(base+'/',{waitUntil:'networkidle'});
+            const duration=await reduced.locator('.btn').first().evaluate(el=>getComputedStyle(el).transitionDuration);
+            const max=Math.max(...duration.split(',').map(v=>parseFloat(v)||0));
+            ok(max<=0.001,'reduced motion regression '+duration);
+            fs.writeFileSync('/tmp/v638-final-evidence/responsive.json',JSON.stringify(report,null,2));
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Subir evidencia final
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v638-final-evidence
+          path: /tmp/v638-final-evidence
+          if-no-files-found: warn
+          retention-days: 30
