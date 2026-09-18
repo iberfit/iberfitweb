@@ -1,3 +1,13 @@
+# Cambios V6.38
+
+- Release guiada por datos reales de Google Search Console, sin reescribir la Home que ya muestra señales orgánicas saludables.
+- Las Condes se refuerza como landing local prioritaria: title y metadatos alineados con la consulta real “personal trainer Las Condes”, manteniendo el cuerpo editorial en español.
+- Se añade una capa de evidencia de servicio en Las Condes: Diagnóstico IRI, plan individual, registro útil y seguimiento.
+- Structured data de Las Condes incorpora `alternateName` para conectar “personal trainer” con el servicio canónico de entrenamiento personal.
+- `llms.txt` explicita las URLs locales canónicas para mejorar descubrimiento semántico y GEO sin crear nuevas páginas.
+- Sitemap actualiza `lastmod` únicamente para Las Condes, la URL materialmente modificada.
+- Se preservan V6.37, la semántica principal de Home, Online canónico, historia institucional y toda la capa de interacción/accesibilidad certificada.
+
 # Cambios V6.37
 
 - Se introduce un quality floor de interacción inspirado en principios de UI/UX Pro Max, adaptado a la identidad IBERFIT y sin copiar ningún sistema externo.

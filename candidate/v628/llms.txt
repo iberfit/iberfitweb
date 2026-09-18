@@ -24,7 +24,15 @@ El entrenamiento presencial puede realizarse en espacios adecuados para el clien
 
 ## Zonas de servicio
 
-La web incluye información local para Las Condes, Vitacura, Providencia, Ñuñoa, Lo Barnechea, La Reina y Peñalolén.
+La web incluye información local para comunas seleccionadas de Santiago. URLs canónicas:
+
+- Las Condes — entrenamiento personal / personal trainer: https://iberfit.cl/entrenador-personal-las-condes/
+- Vitacura: https://iberfit.cl/entrenador-personal-vitacura/
+- Providencia: https://iberfit.cl/entrenamiento-personal-providencia/
+- Ñuñoa: https://iberfit.cl/personal-trainer-nunoa/
+- Lo Barnechea: https://iberfit.cl/entrenador-personal-lo-barnechea/
+- La Reina: https://iberfit.cl/entrenador-personal-la-reina/
+- Peñalolén: https://iberfit.cl/entrenador-personal-penalolen/
 
 ## Idiomas
 
