@@ -1,0 +1,145 @@
+name: Release WEB IBERFIT V6.43.1 accessibility contrast
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-1-a11y-gold-contrast
+    paths:
+      - '.github/workflows/release-web-v6431-a11y.yml'
+      - '.github/scripts/build_v6431_a11y.py'
+      - '.github/scripts/qa_v6431_a11y.cjs'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-web-v6431-a11y
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/web-v6-43-1-a11y-gold-contrast
+          fetch-depth: 0
+
+      - name: Verify exact V6.43 product baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='49bd0c7d3d1157a314d52aa19ba9a6601677b12c'
+          git cat-file -e "$BASE^{commit}"
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43'
+          test "$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          git diff --exit-code "$BASE" HEAD -- candidate/v628
+
+      - name: Build V6.43.1
+        run: python3 .github/scripts/build_v6431_a11y.py
+
+      - name: Validate scope, semantics and WCAG contrast targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='49bd0c7d3d1157a314d52aa19ba9a6601677b12c'
+          root='candidate/v628'
+          test "$(tr -d '\r\n ' < "$root/VERSION")" = '6.43.1'
+          test -s "$root/assets/a11y.v6431.css"
+          test "$(grep -R -l '/assets/a11y.v6431.css' "$root" --include='*.html' | wc -l | tr -d ' ')" = '33'
+          grep -q '^/assets/a11y.v6431.css$' "$root/_headers"
+          test "$(find "$root" -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          cmp <(git show "$BASE":candidate/v628/assets/analytics.v643.js) "$root/assets/analytics.v643.js"
+          cmp <(git show "$BASE":candidate/v628/assets/menu.v642.js) "$root/assets/menu.v642.js"
+          cmp <(git show "$BASE":candidate/v628/assets/app.v632.js) "$root/assets/app.v632.js"
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, re, subprocess, gzip
+
+          root = Path('candidate/v628')
+          base = '49bd0c7d3d1157a314d52aa19ba9a6601677b12c'
+          link = '<link href="/assets/a11y.v6431.css" rel="stylesheet"/>'
+          htmls = sorted(root.rglob('*.html'))
+          for path in htmls:
+              rel = path.relative_to(root).as_posix()
+              old = subprocess.check_output(['git','show',f'{base}:candidate/v628/{rel}']).decode('utf-8')
+              new = path.read_text(encoding='utf-8')
+              if new.count(link) != 1:
+                  raise SystemExit(f'a11y link mismatch {rel}')
+              if new.replace(link, '') != old:
+                  raise SystemExit(f'unexpected HTML delta {rel}')
+              for raw in re.findall(r'<script type="application/ld\+json">(.*?)</script>', new, re.S):
+                  json.loads(raw)
+
+          old_headers = subprocess.check_output(['git','show',f'{base}:candidate/v628/_headers']).decode('utf-8')
+          new_headers = (root/'_headers').read_text(encoding='utf-8')
+          block = '\n/assets/a11y.v6431.css\n  ! Cache-Control\n  Cache-Control: public, max-age=31536000, immutable\n  Content-Type: text/css; charset=utf-8\n'
+          if new_headers.replace(block, '') != old_headers:
+              raise SystemExit('unexpected _headers delta')
+
+          def luminance(hex_color):
+              value = hex_color.lstrip('#')
+              channels = [int(value[i:i+2],16)/255 for i in (0,2,4)]
+              channels = [c/12.92 if c <= .04045 else ((c+.055)/1.055)**2.4 for c in channels]
+              return .2126*channels[0] + .7152*channels[1] + .0722*channels[2]
+          def ratio(a,b):
+              hi,lo = sorted((luminance(a), luminance(b)), reverse=True)
+              return (hi+.05)/(lo+.05)
+
+          checks = {
+              'gold_text_on_cream': ratio('#806216','#F7F4EE'),
+              'gold_text_on_canvas': ratio('#806216','#FBF8F3'),
+              'dark_ink_on_gold': ratio('#041610','#B8973A'),
+              'dark_ink_on_gold_light': ratio('#041610','#D9B568'),
+              'gold_light_on_dark': ratio('#D9B568','#173F2C'),
+          }
+          for name,value in checks.items():
+              if value < 4.5:
+                  raise SystemExit(f'contrast fail {name}: {value:.2f}')
+          css=(root/'assets/a11y.v6431.css').read_bytes()
+          if len(gzip.compress(css,9)) > 900:
+              raise SystemExit('a11y css gzip budget exceeded')
+          print({k:round(v,2) for k,v in checks.items()})
+          print({'a11yCssBytes':len(css),'a11yCssGzip':len(gzip.compress(css,9))})
+          PY
+          changed="$(git diff --name-only "$BASE" -- candidate/v628 | sort)"
+          test "$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l | tr -d ' ')" = '37'
+          test "$(printf '%s\n' "$changed" | grep -c '\.html$')" = '33'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/CHANGELOG.md'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/VERSION'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/_headers'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/assets/a11y.v6431.css'
+          git diff --check "$BASE" -- candidate/v628
+
+      - name: Browser regression across 33 routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.58.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v6431-server.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break || true; sleep 1; done
+          curl -fsS http://127.0.0.1:4173/ >/dev/null
+          node .github/scripts/qa_v6431_a11y.cjs
+
+      - name: Commit certified V6.43.1 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add candidate/v628
+          git commit -m 'fix(web): improve gold text contrast in V6.43.1'
+          git push origin HEAD:work/web-v6-43-1-a11y-gold-contrast
+
+      - name: Save QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v6431-a11y-evidence
+          path: /tmp/v6431-server.log
+          if-no-files-found: warn
+          retention-days: 30
