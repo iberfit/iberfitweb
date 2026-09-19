@@ -5,6 +5,7 @@
 - Se conserva íntegro `app.v632.js` y `menu.v632.js`. La QA demostró que el controlador de menú de `app.v632.js` no era redundante: aporta la apertura, Escape, cierre por enlaces y tracking sobre los que `menu.v632.js` añade backdrop, `inert`, focus trap y sincronización ARIA.
 - La detección automática evitó promover una simplificación que habría degradado la navegación móvil; V6.42 mantiene por diseño las dos capas complementarias del menú.
 - Se preservan V6.41 CSP estricta, V6.40 cache policy, AEO/SEO, orientador, tracking, dock móvil, reduced motion y contenido.
+- La auditoría de teclado detectó además un defecto preexistente en el orden de foco del menú compacto: el botón está después del `<nav>` en el DOM y el trap anterior no podía garantizar Tab hacia el primer enlace. `menu.v642.js` define explícitamente el ciclo botón → primer enlace → … → último enlace → botón, y el recorrido inverso con Shift+Tab.
 - La promoción a producción queda condicionada a regresión funcional completa y comparación Lighthouse preview vs producción. No se atribuyen mejoras de Core Web Vitals de campo sin datos CrUX.
 
 # Cambios V6.41
