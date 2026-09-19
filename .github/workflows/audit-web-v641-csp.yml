@@ -1,0 +1,63 @@
+name: Audit WEB IBERFIT V6.41 CSP
+
+on:
+  push:
+    branches:
+      - work/web-v6-41-csp-hardening
+    paths:
+      - '.github/workflows/audit-web-v641-csp.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Auditar scripts inline, handlers y CSP actual
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, hashlib, base64, collections
+          root=Path('candidate/v628')
+          files=sorted(root.rglob('*.html'))
+          print('HTML',len(files))
+          executable=[]; jsonld=[]; handlers=[]; jsurls=[]; external=[]
+          for p in files:
+              t=p.read_text(encoding='utf-8')
+              for m in re.finditer(r'<script([^>]*)>(.*?)</script>',t,re.I|re.S):
+                  attrs=m.group(1); body=m.group(2)
+                  typ=re.search(r'type=["\']([^"\']+)["\']',attrs,re.I)
+                  src=re.search(r'src=["\']([^"\']+)["\']',attrs,re.I)
+                  if src:
+                      external.append((p.relative_to(root).as_posix(),src.group(1)))
+                  elif typ and typ.group(1).lower()=='application/ld+json':
+                      jsonld.append((p.relative_to(root).as_posix(),len(body)))
+                  elif body.strip():
+                      executable.append((p.relative_to(root).as_posix(),body))
+              for m in re.finditer(r'\s(on[a-z]+)\s*=\s*["\']',t,re.I): handlers.append((p.relative_to(root).as_posix(),m.group(1).lower()))
+              for m in re.finditer(r'(?:href|src)=["\']javascript:',t,re.I): jsurls.append(p.relative_to(root).as_posix())
+          print('INLINE_EXECUTABLE',len(executable))
+          variants=collections.Counter(x[1] for x in executable)
+          print('INLINE_VARIANTS',len(variants))
+          for body,count in variants.items():
+              digest=base64.b64encode(hashlib.sha256(body.encode()).digest()).decode()
+              print('VARIANT_COUNT',count)
+              print('BODY_REPR',repr(body))
+              print('CSP_HASH',"'sha256-%s'"%digest)
+          print('JSONLD',len(jsonld))
+          print('INLINE_HANDLERS',len(handlers),handlers[:20])
+          print('JAVASCRIPT_URLS',len(jsurls),jsurls[:20])
+          print('EXTERNAL_SCRIPT_TAGS',len(external))
+          print('EXTERNAL_SRCS',sorted(set(src for _,src in external)))
+          assert len(files)==33
+          assert not handlers, handlers
+          assert not jsurls, jsurls
+          PY
+          echo '--- CURRENT CSP ---'
+          grep 'Content-Security-Policy:' candidate/v628/_headers
