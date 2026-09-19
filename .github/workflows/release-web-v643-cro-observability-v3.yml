@@ -1,0 +1,128 @@
+name: Release WEB IBERFIT V6.43 CRO observability v3
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-cro-observability
+    paths:
+      - '.github/workflows/release-web-v643-cro-observability-v3.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-web-v643-cro-observability-v3
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/web-v6-43-cro-observability
+          fetch-depth: 0
+
+      - name: Verify exact V6.42 baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='05159cd7deeb0409dc570de8b4240a1d8fce2493'
+          git cat-file -e "$BASE^{commit}"
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.42'
+          test "$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          cmp <(git show "$BASE":candidate/v628/assets/analytics.v632.js) candidate/v628/assets/analytics.v632.js
+
+      - name: Build V6.43
+        run: python3 .github/scripts/build_v643_cro.py
+
+      - name: Validate scope, privacy and semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='05159cd7deeb0409dc570de8b4240a1d8fce2493'
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43'
+          node --check candidate/v628/assets/analytics.v643.js
+          test "$(grep -R -l '/assets/analytics.v643.js' candidate/v628 --include='*.html' | wc -l | tr -d ' ')" = '33'
+          ! grep -R -q '/assets/analytics.v632.js' candidate/v628 --include='*.html'
+          grep -q 'contact_intent' candidate/v628/assets/analytics.v643.js
+          grep -q 'iberfit_lead_session_v1' candidate/v628/assets/analytics.v643.js
+          grep -q 'data-track="funnel_iri_start"' candidate/v628/index.html
+          grep -q 'data-track="funnel_compare_formats"' candidate/v628/en/index.html
+          grep -q 'data-track="cta_guide_whatsapp"' candidate/v628/contacto/index.html
+          grep -q 'data-track="cta_guide_whatsapp"' candidate/v628/en/contact/index.html
+          grep -q '^/assets/analytics.v643.js$' candidate/v628/_headers
+          ! grep -nE 'message_text|phone_number|email_address|form_value' candidate/v628/assets/analytics.v643.js
+          cmp <(git show "$BASE":candidate/v628/assets/analytics.v632.js) candidate/v628/assets/analytics.v632.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess,re,json
+          root=Path('candidate/v628'); BASE='05159cd7deeb0409dc570de8b4240a1d8fce2493'
+          allowed={'index.html','en/index.html','contacto/index.html','en/contact/index.html'}
+          for p in root.rglob('*.html'):
+              rel=p.relative_to(root).as_posix(); old=subprocess.check_output(['git','show',f'{BASE}:candidate/v628/{rel}']).decode(); new=p.read_text()
+              old=old.replace('/assets/analytics.v632.js','/assets/analytics.v643.js')
+              if rel not in allowed and new!=old: raise SystemExit('unexpected HTML delta '+rel)
+              if rel in allowed:
+                  def visible(x):
+                      x=re.sub(r'<script\b.*?</script>','',x,flags=re.I|re.S); x=re.sub(r'<style\b.*?</style>','',x,flags=re.I|re.S)
+                      return re.sub(r'<[^>]+>','',x)
+                  if visible(new)!=visible(old): raise SystemExit('visible text changed '+rel)
+              for raw in re.findall(r'<script type="application/ld\+json">(.*?)</script>',new,re.S): json.loads(raw)
+          print('scope-and-jsonld-ok')
+          PY
+          git diff --check
+
+      - name: Install browser and serve candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.58.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v643-server.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break || true; sleep 1; done
+          curl -fsS http://127.0.0.1:4173/ >/dev/null
+
+      - name: Verify event taxonomy, lead dedupe and browser regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v643-evidence
+          node .github/scripts/qa_v643_cro.cjs | tee /tmp/v643-evidence/result.json
+
+      - name: Enforce analytics payload budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import gzip,json
+          old=Path('candidate/v628/assets/analytics.v632.js').read_bytes();new=Path('candidate/v628/assets/analytics.v643.js').read_bytes()
+          d={'oldBytes':len(old),'newBytes':len(new),'deltaBytes':len(new)-len(old),'oldGzip':len(gzip.compress(old,9)),'newGzip':len(gzip.compress(new,9))};d['deltaGzip']=d['newGzip']-d['oldGzip'];print(json.dumps(d))
+          if d['deltaGzip']>900: raise SystemExit('analytics gzip budget exceeded')
+          Path('/tmp/v643-evidence/payload.json').write_text(json.dumps(d,indent=2))
+          PY
+
+      - name: Commit certified candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add candidate/v628
+          git commit -m 'feat(web): add V6.43 CRO observability and lead dedupe'
+          git push origin HEAD:work/web-v6-43-cro-observability
+
+      - name: Save evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v643-cro-observability-v3-evidence
+          path: |
+            /tmp/v643-evidence
+            /tmp/v643-server.log
+          if-no-files-found: warn
+          retention-days: 30
