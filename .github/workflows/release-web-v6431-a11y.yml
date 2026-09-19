@@ -104,6 +104,7 @@ jobs:
           print({k:round(v,2) for k,v in checks.items()})
           print({'a11yCssBytes':len(css),'a11yCssGzip':len(gzip.compress(css,9))})
           PY
+          git add -N "$root/assets/a11y.v6431.css"
           changed="$(git diff --name-only "$BASE" -- candidate/v628 | sort)"
           test "$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l | tr -d ' ')" = '37'
           test "$(printf '%s\n' "$changed" | grep -c '\.html$')" = '33'
