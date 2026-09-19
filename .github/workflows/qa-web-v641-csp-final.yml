@@ -1,0 +1,147 @@
+name: QA WEB IBERFIT V6.41 CSP final
+
+on:
+  push:
+    branches:
+      - work/web-v6-41-csp-hardening
+    paths:
+      - '.github/workflows/qa-web-v641-csp-final.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verificar lineage y alcance
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='ae24ed71f732a267cdd9fe99f7fa51812b6847c7'
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.41'
+          test "$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          actual="$(git diff --name-only "$BASE" -- candidate/v628 | sort)"
+          expected=$'candidate/v628/CHANGELOG.md\ncandidate/v628/VERSION\ncandidate/v628/_headers'
+          test "$actual" = "$expected"
+          git diff --check
+
+      - name: Validar política CSP por contenido real
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, hashlib, base64, collections
+          root=Path('candidate/v628')
+          files=sorted(root.rglob('*.html'))
+          executable=[]; handlers=[]; jsurls=[]; jsonld=0
+          for p in files:
+              t=p.read_text(encoding='utf-8')
+              for m in re.finditer(r'<script([^>]*)>(.*?)</script>',t,re.I|re.S):
+                  attrs,body=m.group(1),m.group(2)
+                  src=re.search(r'src=["\']([^"\']+)["\']',attrs,re.I)
+                  typ=re.search(r'type=["\']([^"\']+)["\']',attrs,re.I)
+                  if src: continue
+                  if typ and typ.group(1).lower()=='application/ld+json': jsonld+=1; continue
+                  if body.strip(): executable.append(body)
+              handlers += re.findall(r'\s(on[a-z]+)\s*=\s*["\']',t,re.I)
+              jsurls += re.findall(r'(?:href|src)=["\']javascript:',t,re.I)
+          variants=collections.Counter(executable)
+          assert len(files)==33
+          assert len(executable)==33, len(executable)
+          assert len(variants)==1, len(variants)
+          assert not handlers, handlers
+          assert not jsurls, jsurls
+          body=next(iter(variants))
+          digest=base64.b64encode(hashlib.sha256(body.encode()).digest()).decode()
+          token="'sha256-%s'"%digest
+          assert token=="'sha256-OvlTbjy6MX3tOPtkkyczJxexU0UitjLSDdZtn3+IzfQ='", token
+          headers=(root/'_headers').read_text(encoding='utf-8')
+          csp=next(x.strip() for x in headers.splitlines() if x.strip().startswith('Content-Security-Policy:'))
+          assert "'unsafe-inline'" not in csp, csp
+          assert token in csp, csp
+          assert "script-src-attr 'none'" in csp, csp
+          assert "https://www.googletagmanager.com" in csp
+          assert "https://connect.facebook.net" in csp
+          assert "connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://www.facebook.com" in csp
+          assert jsonld==32, jsonld
+          print('inline executable',len(executable),'hash',token,'jsonld',jsonld)
+          print(csp)
+          PY
+
+      - name: Confirmar V6.40 y V6.39 preservadas
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'Cache-Control: public, max-age=31536000, immutable' candidate/v628/_headers
+          grep -q 'Cache-Control: no-store' candidate/v628/_headers
+          test "$(grep -R -l 'data-aeo-answer' candidate/v628 --include='*.html' | wc -l | tr -d ' ')" = '28'
+          grep -q '"@type":"Organization"' candidate/v628/index.html
+          grep -q '^User-agent: OAI-SearchBot$' candidate/v628/robots.txt
+          grep -q '^User-agent: ChatGPT-User$' candidate/v628/robots.txt
+          grep -q 'generate_lead' candidate/v628/assets/analytics.v632.js
+          grep -q 'format_guide_complete' candidate/v628/assets/app.v632.js
+
+      - name: Instalar Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.62.1
+          npx playwright install --with-deps chromium
+
+      - name: Servir candidata con CSP V6.41 activa
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat >/tmp/csp_server.py <<'PY'
+          from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
+          from functools import partial
+          CSP="default-src 'self'; script-src 'self' 'sha256-OvlTbjy6MX3tOPtkkyczJxexU0UitjLSDdZtn3+IzfQ=' https://www.googletagmanager.com https://connect.facebook.net; script-src-attr 'none'; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://www.facebook.com; img-src 'self' data: https://www.facebook.com; style-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
+          class H(SimpleHTTPRequestHandler):
+              def end_headers(self):
+                  self.send_header('Content-Security-Policy',CSP)
+                  self.send_header('X-Content-Type-Options','nosniff')
+                  super().end_headers()
+          ThreadingHTTPServer(('127.0.0.1',4173),partial(H,directory='candidate/v628')).serve_forever()
+          PY
+          python3 /tmp/csp_server.py >/tmp/v641-server.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ >/dev/null && exit 0; sleep 1; done
+          cat /tmp/v641-server.log; exit 1
+
+      - name: Browser real bajo CSP estricta
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v641-evidence
+          node <<'NODE'
+          const {chromium}=require('playwright'); const fs=require('fs');
+          const routes=['/','/diagnostico-iri/','/metodo/','/presencial/','/hibrido/','/online/','/sobre-iberfit/','/contacto/','/privacidad/','/entrenador-personal-las-condes/','/entrenador-personal-vitacura/','/entrenamiento-personal-providencia/','/personal-trainer-nunoa/','/entrenador-personal-lo-barnechea/','/entrenador-personal-la-reina/','/entrenador-personal-penalolen/','/en/','/en/iri-assessment/','/en/method/','/en/in-person/','/en/hybrid/','/en/online/','/en/about/','/en/contact/','/en/privacy/','/en/personal-trainer-las-condes/','/en/personal-trainer-vitacura/','/en/personal-training-providencia/','/en/personal-trainer-nunoa/','/en/personal-trainer-lo-barnechea/','/en/personal-trainer-la-reina/','/en/personal-trainer-penalolen/'];
+          (async()=>{const b=await chromium.launch({headless:true});const out=[];
+            for(const route of routes){const p=await b.newPage({viewport:{width:390,height:844}});const violations=[],errors=[];
+              p.on('console',m=>{const t=m.text();if(/content security policy|refused to (execute|load)|violates the following/i.test(t))violations.push(t);});p.on('pageerror',e=>errors.push(String(e)));
+              const res=await p.goto('http://127.0.0.1:4173'+route,{waitUntil:'networkidle'});if(!res||!res.ok())throw Error(route+' HTTP');
+              const s=await p.evaluate(()=>({js:document.documentElement.classList.contains('js-v631'),h1:!!document.querySelector('h1'),jsonld:document.querySelectorAll('script[type="application/ld+json"]').length,overflow:document.documentElement.scrollWidth-window.innerWidth}));
+              if(!s.js||!s.h1||s.overflow>2||violations.length||errors.length)throw Error(route+' '+JSON.stringify({s,violations,errors}));
+              if(route==='/'){const btn=p.locator('[data-menu-toggle]').first();if(await btn.isVisible()){await btn.click();if((await btn.getAttribute('aria-expanded'))!=='true')throw Error('mobile menu did not open');await p.keyboard.press('Escape');if((await btn.getAttribute('aria-expanded'))!=='false')throw Error('mobile menu did not close');}}
+              out.push({route,...s});await p.close();
+            }
+            fs.writeFileSync('/tmp/v641-evidence/browser.json',JSON.stringify(out,null,2));await b.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Guardar evidencia final
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v641-csp-final-evidence
+          path: /tmp/v641-evidence
+          if-no-files-found: warn
+          retention-days: 30
