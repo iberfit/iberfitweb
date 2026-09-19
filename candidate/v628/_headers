@@ -182,3 +182,9 @@
 /assets/app-hybrid-feedback.webp
   ! Cache-Control
   Cache-Control: public, max-age=31536000, immutable
+
+/assets/polish.v6433.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/app-online-plan-v6433.webp
+  Cache-Control: public, max-age=31536000, immutable

@@ -1,3 +1,10 @@
+## 6.43.3 — Aesthetic polish and CTA system
+
+- Redesigns the shared final CTA across the full site so the action is integrated with the message instead of floating in unused space; adds a subtle official IBERFIT watermark and preserves accessible contrast.
+- Replaces the visually broken Online planning crop with a fresh authenticated QA crop that shows actionable planning content instead of an empty surface.
+- Makes the Online evidence layout more robust at intermediate desktop/tablet widths to avoid cramped or clipped composition.
+- Rewrites the IBERFIT origin in ES/EN to lead with passion for training and curiosity about health, while preserving the verified Spain → Germany → Spain → Chile journey and method.
+
 ## 6.43.2 — Visual storytelling for Online + Hybrid
 
 - Rebalanced Online from explanatory blocks toward real product evidence using current IBERFIT app screens captured against synthetic QA data.
