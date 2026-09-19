@@ -1,0 +1,49 @@
+name: Fix V6.43 workflow markers
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-cro-observability
+    paths:
+      - '.github/workflows/fix-v643-workflow.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/web-v6-43-cro-observability
+          fetch-depth: 0
+      - name: Correct exact English markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('.github/workflows/release-web-v643-cro-observability.yml')
+          s=p.read_text()
+          reps={
+            "('<a class=\"intent-route\" href=\"#formats\">'":"('<a class=\"intent-route\" href=\"#formatos\">'",
+            "data-track=\"funnel_compare_formats\" href=\"#formats\"":"data-track=\"funnel_compare_formats\" href=\"#formatos\"",
+            "<a class=\"text-link\" href=\"/en/in-person/\">Explore format</a>":"<a class=\"text-link\" href=\"/en/in-person/\">Explore this format</a>",
+            "data-track=\"format_in_person_open\" href=\"/en/in-person/\">Explore format</a>":"data-track=\"format_in_person_open\" href=\"/en/in-person/\">Explore this format</a>",
+            "<a class=\"text-link\" href=\"/en/hybrid/\">Explore format</a>":"<a class=\"text-link\" href=\"/en/hybrid/\">Explore this format</a>",
+            "data-track=\"format_hybrid_open\" href=\"/en/hybrid/\">Explore format</a>":"data-track=\"format_hybrid_open\" href=\"/en/hybrid/\">Explore this format</a>",
+            "<a class=\"text-link\" href=\"/en/online/\">Explore format</a>":"<a class=\"text-link\" href=\"/en/online/\">Explore this format</a>",
+            "data-track=\"format_online_open\" href=\"/en/online/\">Explore format</a>":"data-track=\"format_online_open\" href=\"/en/online/\">Explore this format</a>"
+          }
+          for a,b in reps.items():
+              if a not in s: raise SystemExit('missing workflow marker: '+a)
+              s=s.replace(a,b,1)
+          p.write_text(s)
+          PY
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/release-web-v643-cro-observability.yml
+          git commit -m 'ci(web): fix V6.43 English instrumentation markers'
+          git push origin HEAD:work/web-v6-43-cro-observability
