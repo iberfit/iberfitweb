@@ -1,0 +1,234 @@
+name: Release WEB IBERFIT V6.43 CRO observability v2
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-cro-observability
+    paths:
+      - '.github/workflows/release-web-v643-cro-observability-v2.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-web-v643-cro-observability-v2
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/web-v6-43-cro-observability
+          fetch-depth: 0
+
+      - name: Verify exact V6.42 baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='05159cd7deeb0409dc570de8b4240a1d8fce2493'
+          git cat-file -e "$BASE^{commit}"
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.42'
+          test "$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          cmp <(git show "$BASE":candidate/v628/assets/analytics.v632.js) candidate/v628/assets/analytics.v632.js
+
+      - name: Apply V6.43 CRO observability
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path('candidate/v628')
+          old=(root/'assets/analytics.v632.js').read_text(encoding='utf-8')
+          marker='window.iberfitTrack=(e,t={})=>{const n={...k()};Object.entries(t).forEach(([r,s])=>{s!=null&&(n[r]=L(s))}),l.debug&&console.info("[IBERFIT analytics]",e,n),d()&&(window.gtag("event",e,n),(e==="whatsapp_click"||e==="contact_email_click")&&window.gtag("event","generate_lead",{...n,lead_source:e==="whatsapp_click"?"whatsapp":"email"})),i()&&window.fbq&&["whatsapp_click","contact_email_click","format_guide_whatsapp_open"].includes(e)&&window.fbq("track","Lead",{content_name:e,page_group:n.page_group})};'
+          replacement='const G="iberfit_lead_session_v1",P=()=>{try{return sessionStorage.getItem(G)==="1"}catch{return!1}},R=()=>{try{sessionStorage.setItem(G,"1")}catch{}};window.iberfitTrack=(e,t={})=>{const n={...k()};Object.entries(t).forEach(([r,s])=>{s!=null&&(n[r]=L(s))}),l.debug&&console.info("[IBERFIT analytics]",e,n),d()&&(window.gtag("event",e,n),(e==="whatsapp_click"||e==="contact_email_click")&&(()=>{const s=e==="whatsapp_click"?"whatsapp":"email";window.gtag("event","contact_intent",{...n,lead_source:s}),P()||(R(),window.gtag("event","generate_lead",{...n,lead_source:s}))})()),i()&&window.fbq&&["whatsapp_click","contact_email_click","format_guide_whatsapp_open"].includes(e)&&window.fbq("track","Lead",{content_name:e,page_group:n.page_group})};'
+          if old.count(marker)!=1: raise SystemExit('analytics marker mismatch')
+          new=old.replace(marker,replacement,1)
+          (root/'assets/analytics.v643.js').write_text(new,encoding='utf-8')
+
+          htmls=sorted(root.rglob('*.html'))
+          for p in htmls:
+              text=p.read_text(encoding='utf-8')
+              if text.count('/assets/analytics.v632.js')!=1: raise SystemExit(f'analytics ref mismatch {p}')
+              p.write_text(text.replace('/assets/analytics.v632.js','/assets/analytics.v643.js'),encoding='utf-8')
+
+          patches={
+            'index.html':[
+              ('<a class="intent-route" href="/diagnostico-iri/">','<a class="intent-route" data-cta-position="intent_router" data-track="funnel_iri_start" href="/diagnostico-iri/">'),
+              ('<a class="intent-route" href="#formatos">','<a class="intent-route" data-cta-position="intent_router" data-track="funnel_compare_formats" href="#formatos">'),
+              ('<a class="intent-route" href="/contacto/#orientador">','<a class="intent-route" data-cta-position="intent_router" data-track="funnel_guide_start" href="/contacto/#orientador">'),
+              ('<a class="text-link" href="/presencial/">Conocer modalidad</a>','<a class="text-link" data-cta-position="formats" data-track="format_in_person_open" href="/presencial/">Conocer modalidad</a>'),
+              ('<a class="text-link" href="/hibrido/">Conocer modalidad</a>','<a class="text-link" data-cta-position="formats" data-track="format_hybrid_open" href="/hibrido/">Conocer modalidad</a>'),
+              ('<a class="text-link" href="/online/">Conocer modalidad</a>','<a class="text-link" data-cta-position="formats" data-track="format_online_open" href="/online/">Conocer modalidad</a>'),
+              ('<a class="review-source-link" href="https://share.google/xZmHR5R4JZzDFQcli"','<a class="review-source-link" data-cta-position="reviews" data-track="google_reviews_section_click" href="https://share.google/xZmHR5R4JZzDFQcli"'),
+            ],
+            'en/index.html':[
+              ('<a class="intent-route" href="/en/iri-assessment/">','<a class="intent-route" data-cta-position="intent_router" data-track="funnel_iri_start" href="/en/iri-assessment/">'),
+              ('<a class="intent-route" href="#formatos">','<a class="intent-route" data-cta-position="intent_router" data-track="funnel_compare_formats" href="#formatos">'),
+              ('<a class="intent-route" href="/en/contact/#orientador">','<a class="intent-route" data-cta-position="intent_router" data-track="funnel_guide_start" href="/en/contact/#orientador">'),
+              ('<a class="text-link" href="/en/in-person/">Explore this format</a>','<a class="text-link" data-cta-position="formats" data-track="format_in_person_open" href="/en/in-person/">Explore this format</a>'),
+              ('<a class="text-link" href="/en/hybrid/">Explore this format</a>','<a class="text-link" data-cta-position="formats" data-track="format_hybrid_open" href="/en/hybrid/">Explore this format</a>'),
+              ('<a class="text-link" href="/en/online/">Explore this format</a>','<a class="text-link" data-cta-position="formats" data-track="format_online_open" href="/en/online/">Explore this format</a>'),
+              ('<a class="review-source-link" href="https://share.google/xZmHR5R4JZzDFQcli"','<a class="review-source-link" data-cta-position="reviews" data-track="google_reviews_section_click" href="https://share.google/xZmHR5R4JZzDFQcli"'),
+            ],
+            'contacto/index.html':[
+              ('<a class="btn btn-primary" data-orientador-whatsapp=""','<a class="btn btn-primary" data-cta-position="guide_result" data-track="cta_guide_whatsapp" data-orientador-whatsapp=""'),
+              ('<a class="text-link" href="https://wa.me/56944040032?text=Hola%20IBERFIT%2C%20quiero%20recibir%20orientaci%C3%B3n%20sobre%20entrenamiento','<a class="text-link" data-cta-position="guide_result" data-track="cta_guide_direct" href="https://wa.me/56944040032?text=Hola%20IBERFIT%2C%20quiero%20recibir%20orientaci%C3%B3n%20sobre%20entrenamiento'),
+              ('<a class="text-link" data-track="cta_contact_whatsapp"','<a class="text-link" data-cta-position="contact_options" data-track="cta_contact_whatsapp"'),
+            ],
+            'en/contact/index.html':[
+              ('<a class="btn btn-primary" data-orientador-whatsapp=""','<a class="btn btn-primary" data-cta-position="guide_result" data-track="cta_guide_whatsapp" data-orientador-whatsapp=""'),
+              ('<a class="text-link" href="https://wa.me/56944040032?text=Hello%20IBERFIT','<a class="text-link" data-cta-position="guide_result" data-track="cta_guide_direct" href="https://wa.me/56944040032?text=Hello%20IBERFIT'),
+              ('<a class="text-link" data-track="cta_contact_whatsapp"','<a class="text-link" data-cta-position="contact_options" data-track="cta_contact_whatsapp"'),
+            ]
+          }
+          for rel,repls in patches.items():
+              p=root/rel; text=p.read_text(encoding='utf-8')
+              for before,after in repls:
+                  if text.count(before)!=1: raise SystemExit(f'patch marker mismatch {rel}: {before[:90]} count={text.count(before)}')
+                  text=text.replace(before,after,1)
+              p.write_text(text,encoding='utf-8')
+
+          headers=root/'_headers'; ht=headers.read_text(encoding='utf-8')
+          block='\n/assets/analytics.v643.js\n  ! Cache-Control\n  Cache-Control: public, max-age=31536000, immutable\n  Content-Type: text/javascript; charset=utf-8\n'
+          if '/assets/analytics.v643.js' not in ht: ht += block
+          headers.write_text(ht,encoding='utf-8')
+          (root/'VERSION').write_text('6.43\n',encoding='utf-8')
+          cl=root/'CHANGELOG.md'; oldcl=cl.read_text(encoding='utf-8')
+          entry='''# Cambios V6.43\n\n- Se refuerza la observabilidad CRO sin modificar la experiencia visual ni el contenido visible.\n- Los clics de WhatsApp y correo generan `contact_intent`; `generate_lead` se limita a una vez por sesión para evitar inflar leads por clics repetidos.\n- Se instrumentan las rutas de decisión de Home: IRI, comparación de modalidades, orientador, cada modalidad y reseñas de Google.\n- Se instrumentan las dos salidas del resultado del orientador y se conserva la trazabilidad por posición de CTA.\n- La medición sigue condicionada al consentimiento de analítica; no se añaden datos personales ni contenido de mensajes a GA4.\n- `analytics.v632.js` permanece intacto como rollback; V6.43 usa un asset versionado nuevo y cacheable.\n\n'''
+          cl.write_text(entry+oldcl,encoding='utf-8')
+          PY
+
+      - name: Validate scope, privacy and semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='05159cd7deeb0409dc570de8b4240a1d8fce2493'
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43'
+          node --check candidate/v628/assets/analytics.v643.js
+          test "$(grep -R -l '/assets/analytics.v643.js' candidate/v628 --include='*.html' | wc -l | tr -d ' ')" = '33'
+          ! grep -R -q '/assets/analytics.v632.js' candidate/v628 --include='*.html'
+          grep -q 'contact_intent' candidate/v628/assets/analytics.v643.js
+          grep -q 'iberfit_lead_session_v1' candidate/v628/assets/analytics.v643.js
+          grep -q 'data-track="funnel_iri_start"' candidate/v628/index.html
+          grep -q 'data-track="funnel_compare_formats"' candidate/v628/en/index.html
+          grep -q 'data-track="cta_guide_whatsapp"' candidate/v628/contacto/index.html
+          grep -q 'data-track="cta_guide_whatsapp"' candidate/v628/en/contact/index.html
+          grep -q '^/assets/analytics.v643.js$' candidate/v628/_headers
+          ! grep -nE 'message_text|phone_number|email_address|form_value' candidate/v628/assets/analytics.v643.js
+          cmp <(git show "$BASE":candidate/v628/assets/analytics.v632.js) candidate/v628/assets/analytics.v632.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess,re,json
+          root=Path('candidate/v628'); BASE='05159cd7deeb0409dc570de8b4240a1d8fce2493'
+          allowed={'index.html','en/index.html','contacto/index.html','en/contact/index.html'}
+          for p in root.rglob('*.html'):
+              rel=p.relative_to(root).as_posix(); old=subprocess.check_output(['git','show',f'{BASE}:candidate/v628/{rel}']).decode(); new=p.read_text()
+              old=old.replace('/assets/analytics.v632.js','/assets/analytics.v643.js')
+              if rel not in allowed and new!=old: raise SystemExit('unexpected HTML delta '+rel)
+              if rel in allowed:
+                  def visible(x):
+                      x=re.sub(r'<script\b.*?</script>','',x,flags=re.I|re.S); x=re.sub(r'<style\b.*?</style>','',x,flags=re.I|re.S)
+                      return re.sub(r'<[^>]+>','',x)
+                  if visible(new)!=visible(old): raise SystemExit('visible text changed '+rel)
+              for raw in re.findall(r'<script type="application/ld\+json">(.*?)</script>',new,re.S): json.loads(raw)
+          print('scope-and-jsonld-ok')
+          PY
+          git diff --check
+
+      - name: Install Playwright and serve candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.58.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v643-server.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break || true; sleep 1; done
+          curl -fsS http://127.0.0.1:4173/ >/dev/null
+
+      - name: Verify event taxonomy, lead dedupe and browser regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v643-evidence
+          cat > /tmp/v643-e2e.cjs <<'JS'
+          const {chromium}=require('playwright');
+          const fs=require('fs'),path=require('path');
+          const root=path.resolve('candidate/v628'),files=[];
+          (function walk(d){for(const n of fs.readdirSync(d)){const p=path.join(d,n),s=fs.statSync(p);s.isDirectory()?walk(p):n.endsWith('.html')&&files.push(p)}})(root);
+          const routeOf=p=>{const r=path.relative(root,p).replaceAll('\\','/');return r==='index.html'?'/':r==='404.html'?'/404.html':'/'+r.replace(/index\.html$/,'')};
+          const events=async page=>page.evaluate(()=>Array.from(window.dataLayer||[],x=>Array.from(x)).filter(x=>x[0]==='event').map(x=>({name:x[1],params:x[2]||{}})));
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+            await ctx.addInitScript(()=>{
+              localStorage.setItem('iberfit_consent_v2',JSON.stringify({version:'2026-07-12-v2',analytics:true,marketing:false,updatedAt:new Date().toISOString()}));
+              document.addEventListener('click',e=>{const a=e.target.closest?.('a');if(a&&(a.href.includes('wa.me')||a.href.startsWith('mailto:')||a.closest('.intent-router')||a.classList.contains('review-source-link')))e.preventDefault()},true);
+            });
+            await ctx.route('https://www.googletagmanager.com/**',r=>r.abort());
+            const page=await ctx.newPage(); const errs=[]; page.on('pageerror',e=>errs.push(String(e)));
+            for(const f of files.sort()){
+              const route=routeOf(f),res=await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'domcontentloaded'});if(!res?.ok())throw Error('HTTP '+route);
+              await page.waitForTimeout(50);
+              const s=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,analytics:[...document.scripts].filter(x=>x.src.includes('/assets/analytics.v643.js')).length,old:[...document.scripts].filter(x=>x.src.includes('/assets/analytics.v632.js')).length}));
+              if(s.overflow>2||s.analytics!==1||s.old!==0)throw Error('BASIC '+route+' '+JSON.stringify(s));
+            }
+            if(errs.length)throw Error('PAGEERROR '+errs.join(' | '));
+
+            await page.goto('http://127.0.0.1:4173/',{waitUntil:'domcontentloaded'});await page.waitForTimeout(80);
+            for(const sel of ['[data-track="funnel_iri_start"]','[data-track="funnel_compare_formats"]','[data-track="funnel_guide_start"]','[data-track="cta_hero_secondary"]','[data-track="cta_iri_footer"]']){await page.locator(sel).click();await page.waitForTimeout(20)}
+            let ev=await events(page),names=ev.map(x=>x.name);
+            for(const n of ['funnel_iri_start','funnel_compare_formats','funnel_guide_start','cta_hero_secondary','cta_iri_footer','whatsapp_click','contact_intent','generate_lead'])if(!names.includes(n))throw Error('MISSING_EVENT '+n);
+            if(names.filter(n=>n==='generate_lead').length!==1)throw Error('LEAD_DEDUPE '+names.filter(n=>n==='generate_lead').length);
+            if(names.filter(n=>n==='contact_intent').length!==2)throw Error('CONTACT_INTENT_COUNT '+names.filter(n=>n==='contact_intent').length);
+
+            await page.goto('http://127.0.0.1:4173/contacto/',{waitUntil:'domcontentloaded'});await page.waitForTimeout(80);
+            const form=page.locator('[data-orientador-form]'),steps=page.locator('[data-step]'),count=await steps.count();
+            for(let i=0;i<count;i++){const active=page.locator('[data-step].active'),choice=active.locator('.choice-chip').first();if(await choice.count())await choice.click();if(i<count-1){const next=active.locator('[data-next-step]');if(await next.count())await next.click()}}
+            await form.locator('button[type="submit"]').first().click();await page.waitForTimeout(80);await page.locator('[data-track="cta_guide_whatsapp"]').click();await page.waitForTimeout(30);
+            ev=await events(page);const contactNames=ev.map(x=>x.name);
+            for(const n of ['format_guide_complete','cta_guide_whatsapp','format_guide_whatsapp_open','whatsapp_click','contact_intent'])if(!contactNames.includes(n))throw Error('GUIDE_EVENT '+n);
+            const lastIntent=[...ev].reverse().find(x=>x.name==='contact_intent');if(!lastIntent||lastIntent.params.cta_position!=='guide_result')throw Error('GUIDE_ATTRIBUTION '+JSON.stringify(lastIntent));
+
+            for(const [name,w,h] of [['tablet',820,1180],['desktop',1440,1000]]){const c=await browser.newContext({viewport:{width:w,height:h}}),p=await c.newPage();for(const r of ['/','/contacto/','/diagnostico-iri/','/online/']){const res=await p.goto('http://127.0.0.1:4173'+r,{waitUntil:'domcontentloaded'});if(!res?.ok())throw Error(name+' HTTP '+r);const ov=await p.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);if(ov>2)throw Error(name+' overflow '+r)}await c.close()}
+            fs.writeFileSync('/tmp/v643-evidence/events.json',JSON.stringify({home:names,contact:contactNames},null,2));
+            await ctx.close();await browser.close();console.log(JSON.stringify({routes:files.length,events:'ok',leadDedupe:'ok',privacy:'consent-gated',mobile:'ok',tablet:'ok',desktop:'ok'}));
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+          node /tmp/v643-e2e.cjs | tee /tmp/v643-evidence/result.json
+
+      - name: Enforce analytics payload budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import gzip,json
+          old=Path('candidate/v628/assets/analytics.v632.js').read_bytes();new=Path('candidate/v628/assets/analytics.v643.js').read_bytes()
+          d={'oldBytes':len(old),'newBytes':len(new),'deltaBytes':len(new)-len(old),'oldGzip':len(gzip.compress(old,9)),'newGzip':len(gzip.compress(new,9))};d['deltaGzip']=d['newGzip']-d['oldGzip'];print(json.dumps(d))
+          if d['deltaGzip']>900: raise SystemExit('analytics gzip budget exceeded')
+          Path('/tmp/v643-evidence/payload.json').write_text(json.dumps(d,indent=2))
+          PY
+
+      - name: Commit certified candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add candidate/v628
+          git commit -m 'feat(web): add V6.43 CRO observability and lead dedupe'
+          git push origin HEAD:work/web-v6-43-cro-observability
+
+      - name: Save evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v643-cro-observability-v2-evidence
+          path: /tmp/v643-evidence
+          if-no-files-found: warn
+          retention-days: 30
