@@ -68,8 +68,6 @@ async function autoScroll(page) {
           const pr = primary?.getBoundingClientRect();
           const hero = document.querySelector('.hero-text');
           const heroRect = hero?.getBoundingClientRect();
-          const answer = document.querySelector('.answer-shell');
-          const finalCta = document.querySelector('.cta-panel-inner');
           return {
             h1: h1?.textContent.trim(),
             primary: primary?.textContent.trim(),
@@ -78,10 +76,6 @@ async function autoScroll(page) {
             primaryHeight: pr?.height || 0,
             heroRight: heroRect?.right || 0,
             viewport: innerWidth,
-            hasAnswer: !!answer,
-            hasFinalCta: !!finalCta,
-            h1Expected,
-            ctaExpected,
           };
         }, {h1Expected, ctaExpected});
         assert(state.h1 === h1Expected, `${route} ${width}: hero mismatch: ${state.h1}`);
@@ -107,7 +101,13 @@ async function autoScroll(page) {
 
         if (route.endsWith('/contacto/') || route.endsWith('/contact/')) {
           const select = page.locator('[data-step="1"] select[required]');
-          await select.selectOption({ index: 1 });
+          await select.evaluate(el => {
+            el.selectedIndex = 1;
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+          });
+          const selectedValue = await select.inputValue();
+          assert(selectedValue !== '', `${route} ${width}: orientador required select did not update`);
           await page.locator('[data-step="1"] [data-next-step]').click();
           const step2 = page.locator('[data-step="2"]');
           assert(await step2.isVisible(), `${route} ${width}: orientador did not advance to step 2`);
