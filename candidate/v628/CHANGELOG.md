@@ -1,10 +1,3 @@
-## 6.43.2 — Visual storytelling for Online + Hybrid
-
-- Rebalanced Online from explanatory blocks toward real product evidence using current IBERFIT app screens captured against synthetic QA data.
-- Added a real app feedback screen to Hybrid to connect in-person work with between-session continuity.
-- Reduced visible repetition while preserving existing fit guidance, AEO answers and final conversion paths.
-- Added responsive, reduced-motion-safe visual composition with no production dependency on GitHub artifacts.
-
 # Cambios V6.43.1
 
 - Se corrige el contraste de etiquetas doradas pequeñas sobre fondos crema/papel mediante un tono bronce de texto (`#806216`) sin alterar el dorado de marca de superficies o fondos oscuros.
