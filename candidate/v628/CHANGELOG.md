@@ -1,3 +1,11 @@
+## 6.43.4 — Human-first editorial pass
+
+- Rewrites the eight core ES pages and their EN counterparts so visitor concerns come before service language or methodology.
+- Replaces generic hero and CTA wording with contextual actions that answer what a person is likely to be deciding at that point.
+- Reframes direct-answer introductions around normal pre-purchase concerns while preserving the underlying AEO questions and factual answers.
+- Humanises IRI, Method, In-person, Hybrid, Online, About and Contact without changing pricing, coverage, analytics, security, structured data or application evidence.
+- Keeps IBERFIT premium and precise while reducing institutional language where direct second-person language is clearer.
+
 ## 6.43.3 — Aesthetic polish and CTA system
 
 - Redesigns the shared final CTA across the full site so the action is integrated with the message instead of floating in unused space; adds a subtle official IBERFIT watermark and preserves accessible contrast.
