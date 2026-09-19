@@ -1,3 +1,12 @@
+# Cambios V6.40
+
+- Se corrige la política de caché de Cloudflare Pages para que los assets versionados de CSS y JavaScript no hereden el `no-cache` global de las respuestas HTML.
+- Los CSS/JS versionados usados por la candidata pasan a `public, max-age=31536000, immutable`, eliminando revalidaciones innecesarias en navegaciones repetidas.
+- `analytics-config.js` conserva `no-store` porque su configuración puede cambiar sin modificar el nombre del archivo.
+- Imágenes WebP/PNG/ICO/SVG conservan caché de 30 días sin heredar el `no-cache` global; HTML y manifest mantienen revalidación.
+- Se preservan sin cambios los headers de seguridad, la capa AEO V6.39, la semántica Organization/Service, el contenido, la navegación y la medición de conversión.
+- La mejora se valida sobre headers HTTP reales en preview y producción; no se atribuyen mejoras de Core Web Vitals de campo sin datos CrUX suficientes.
+
 # Cambios V6.39
 
 - Se integra AEO (Answer Engine Optimization) sobre contenido visible, no mediante texto oculto ni páginas duplicadas.
