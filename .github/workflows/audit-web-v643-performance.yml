@@ -1,0 +1,125 @@
+name: Audit WEB IBERFIT V6.43 performance
+
+on:
+  push:
+    branches:
+      - audit/web-v643-performance-2026-09-19
+    paths:
+      - '.github/workflows/audit-web-v643-performance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify deployed versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(curl -fsSL https://bce8848f.web-iberfit.pages.dev/VERSION | tr -d '\r\n ')" = '6.42'
+          test "$(curl -fsSL https://7f90acba.web-iberfit.pages.dev/VERSION | tr -d '\r\n ')" = '6.43'
+          test "$(curl -fsSL https://iberfit.cl/VERSION | tr -d '\r\n ')" = '6.43'
+
+      - name: Install Lighthouse
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save lighthouse@12.8.2 >/dev/null
+          google-chrome --version || chromium-browser --version || chromium --version
+
+      - name: Run paired production lab audits
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v643-lighthouse/raw
+          cat > /tmp/run-lh.sh <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          label="$1"; base="$2"; route="$3"; profile="$4"; run="$5"
+          slug="$(printf '%s' "$route" | sed 's#^/$#home#;s#^/##;s#/$##;s#/#-#g')"
+          [ -n "$slug" ] || slug=home
+          out="/tmp/v643-lighthouse/raw/${label}-${slug}-${profile}-${run}.json"
+          args=("${base}${route}" --quiet --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" --output=json --output-path="$out" --only-categories=performance,accessibility,best-practices,seo)
+          if [ "$profile" = desktop ]; then args+=(--preset=desktop); fi
+          npx lighthouse "${args[@]}"
+          SH
+          chmod +x /tmp/run-lh.sh
+          V42='https://bce8848f.web-iberfit.pages.dev'
+          V43='https://7f90acba.web-iberfit.pages.dev'
+          routes=( '/' '/diagnostico-iri/' '/online/' '/entrenador-personal-las-condes/' )
+          for profile in mobile desktop; do
+            for route in "${routes[@]}"; do
+              /tmp/run-lh.sh v642 "$V42" "$route" "$profile" 1
+              /tmp/run-lh.sh v643 "$V43" "$route" "$profile" 1
+            done
+          done
+          # Extra paired repeats for the main optimisation target: Home mobile.
+          for run in 2 3; do
+            /tmp/run-lh.sh v642 "$V42" '/' mobile "$run"
+            /tmp/run-lh.sh v643 "$V43" '/' mobile "$run"
+          done
+
+      - name: Summarize medians and detect material regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('fs'),path=require('path');
+          const dir='/tmp/v643-lighthouse/raw';
+          const files=fs.readdirSync(dir).filter(x=>x.endsWith('.json'));
+          const rows=files.map(file=>{
+            const j=JSON.parse(fs.readFileSync(path.join(dir,file),'utf8'));
+            const m=file.match(/^(v64[23])-(.+)-(mobile|desktop)-(\d+)\.json$/);
+            if(!m) throw new Error('filename '+file);
+            const a=j.audits,c=j.categories;
+            return {version:m[1],route:m[2],profile:m[3],run:+m[4],
+              performance:Math.round((c.performance?.score||0)*100),
+              accessibility:Math.round((c.accessibility?.score||0)*100),
+              bestPractices:Math.round((c['best-practices']?.score||0)*100),
+              seo:Math.round((c.seo?.score||0)*100),
+              fcp:Math.round(a['first-contentful-paint']?.numericValue||0),
+              lcp:Math.round(a['largest-contentful-paint']?.numericValue||0),
+              tbt:Math.round(a['total-blocking-time']?.numericValue||0),
+              cls:+(a['cumulative-layout-shift']?.numericValue||0).toFixed(4),
+              speedIndex:Math.round(a['speed-index']?.numericValue||0),
+              mainThread:Math.round(a['mainthread-work-breakdown']?.numericValue||0),
+              totalBytes:Math.round(a['total-byte-weight']?.numericValue||0)
+            };
+          });
+          const median=arr=>{const s=[...arr].sort((a,b)=>a-b);return s.length%2?s[(s.length-1)/2]:(s[s.length/2-1]+s[s.length/2])/2};
+          const keys=['performance','accessibility','bestPractices','seo','fcp','lcp','tbt','cls','speedIndex','mainThread','totalBytes'];
+          const grouped={};
+          for(const r of rows){const k=[r.version,r.route,r.profile].join('|');(grouped[k]??=[]).push(r)}
+          const medians=[];
+          for(const [k,list] of Object.entries(grouped)){const [version,route,profile]=k.split('|');const o={version,route,profile,runs:list.length};for(const key of keys)o[key]=median(list.map(x=>x[key]));medians.push(o)}
+          const comparisons=[];
+          for(const b of medians.filter(x=>x.version==='v642')){
+            const t=medians.find(x=>x.version==='v643'&&x.route===b.route&&x.profile===b.profile);if(!t)continue;
+            const d={route:b.route,profile:b.profile,runs42:b.runs,runs43:t.runs};for(const key of keys)d[key]={v642:b[key],v643:t[key],delta:+(t[key]-b[key]).toFixed(4)};comparisons.push(d)
+          }
+          const severe=comparisons.filter(x=>x.performance.delta<-10||x.lcp.delta>1000||x.tbt.delta>500||x.cls.delta>0.1);
+          const home=comparisons.find(x=>x.route==='home'&&x.profile==='mobile');
+          const report={generatedAt:new Date().toISOString(),note:'Lighthouse lab data; paired immutable Cloudflare deployments on the same runner. Not field CWV.',rows,medians,comparisons,severeRegressionCount:severe.length,homeMobile:home};
+          fs.writeFileSync('/tmp/v643-lighthouse/comparison.json',JSON.stringify(report,null,2));
+          let md='# IBERFIT V6.42 → V6.43 paired Lighthouse audit\n\nLab data, not field Core Web Vitals. Immutable Cloudflare deployments measured on the same GitHub runner.\n\n| Route | Profile | Perf 6.42 | Perf 6.43 | Δ | LCP Δ ms | TBT Δ ms | CLS Δ | Main-thread Δ ms | Bytes Δ |\n|---|---|---:|---:|---:|---:|---:|---:|---:|---:|\n';
+          for(const x of comparisons)md+=`| ${x.route} | ${x.profile} | ${x.performance.v642} | ${x.performance.v643} | ${x.performance.delta} | ${x.lcp.delta} | ${x.tbt.delta} | ${x.cls.delta} | ${x.mainThread.delta} | ${x.totalBytes.delta} |\n`;
+          md+=`\nSevere regression gate count: **${severe.length}**.\n`;
+          fs.writeFileSync('/tmp/v643-lighthouse/summary.md',md);
+          console.log(md);if(severe.length){console.error(JSON.stringify(severe,null,2));process.exit(2)}
+          NODE
+
+      - name: Save Lighthouse evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v643-paired-lighthouse
+          path: /tmp/v643-lighthouse
+          if-no-files-found: error
+          retention-days: 30
