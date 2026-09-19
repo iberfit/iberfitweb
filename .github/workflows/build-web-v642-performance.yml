@@ -1,0 +1,111 @@
+name: Build WEB IBERFIT V6.42 performance
+
+on:
+  push:
+    branches:
+      - work/web-v6-42-performance-budget
+    paths:
+      - '.github/workflows/build-web-v642-performance.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/web-v6-42-performance-budget
+      - name: Consolidar runtime sin perder capacidades
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root=Path('candidate/v628')
+          htmls=sorted(root.rglob('*.html'))
+          assert len(htmls)==33, len(htmls)
+
+          old_app=root/'assets/app.v632.js'
+          new_app=root/'assets/app.v642.js'
+          source=old_app.read_text(encoding='utf-8')
+
+          # app.v632 contains a basic menu controller that is superseded by
+          # menu.v632.js (focus trap, inert background, backdrop and labels).
+          # Remove only that duplicated controller, leaving every other app
+          # feature byte-for-byte identical.
+          start=',i=document.querySelector("[data-menu-toggle]")'
+          marker='const b=document.querySelector(".site-header");'
+          assert source.count(start)==1, source.count(start)
+          assert source.count(marker)==1, source.count(marker)
+          a=source.index(start)
+          b=source.index(marker)
+          assert a < b
+          removed=source[a:b]
+          assert 'mobile_menu_open' in removed and 'mobile_menu_close' in removed
+          optimized=source[:a]+';'+source[b:]
+          assert len(optimized) < len(source)
+          assert 'mobile_menu_open' not in optimized
+          assert 'mobile_menu_close' not in optimized
+          new_app.write_text(optimized,encoding='utf-8')
+
+          hardening_re=re.compile(r'\s*<script\b[^>]*\bsrc=["\']/assets/hardening\.v630\.js["\'][^>]*>\s*</script>\s*',re.I)
+          app_old='/assets/app.v632.js'
+          app_new='/assets/app.v642.js'
+          removed_hardening=0
+          replaced_app=0
+          for p in htmls:
+              s=p.read_text(encoding='utf-8')
+              assert s.count(app_old)==1, (p,s.count(app_old))
+              s,n=hardening_re.subn('\n',s)
+              assert n==1, (p,n)
+              removed_hardening += n
+              replaced_app += s.count(app_old)
+              s=s.replace(app_old,app_new)
+              assert app_old not in s
+              assert '/assets/menu.v632.js' in s, p
+              assert '/assets/hardening.v630.js' not in s, p
+              p.write_text(s,encoding='utf-8')
+          assert removed_hardening==33, removed_hardening
+          assert replaced_app==33, replaced_app
+
+          headers=root/'_headers'
+          hs=headers.read_text(encoding='utf-8')
+          app632="/assets/app.v632.js\n  ! Cache-Control\n  Cache-Control: public, max-age=31536000, immutable\n  Content-Type: text/javascript; charset=utf-8\n"
+          app642="/assets/app.v642.js\n  ! Cache-Control\n  Cache-Control: public, max-age=31536000, immutable\n  Content-Type: text/javascript; charset=utf-8\n"
+          assert app632 in hs
+          assert '/assets/app.v642.js' not in hs
+          hs=hs.replace(app632,app632+'\n'+app642)
+          headers.write_text(hs,encoding='utf-8')
+
+          version=root/'VERSION'
+          assert version.read_text().strip()=='6.41'
+          version.write_text('6.42\n',encoding='utf-8')
+
+          changelog=root/'CHANGELOG.md'
+          old=changelog.read_text(encoding='utf-8')
+          entry="""# Cambios V6.42\n\n- Se consolida el runtime del sitio a partir de evidencia Lighthouse real de producción, no de una optimización teórica.\n- Se retira `hardening.v630.js` de las páginas: su barrido de `.reveal` con `getBoundingClientRect()` duplicaba el `IntersectionObserver` ya presente en la aplicación y añadía trabajo de scripting/layout en móvil.\n- Se crea `app.v642.js`, idéntico funcionalmente a `app.v632.js` salvo por la eliminación del controlador de menú básico duplicado. El menú queda bajo `menu.v632.js`, que conserva backdrop, `inert`, focus trap, Escape y sincronización ARIA.\n- Se mantienen intactos el orientador, tracking, dock móvil, reduced motion, superficies premium, navegación por anclas y demás capacidades de `app.v632.js`.\n- La nueva variante mantiene cache immutable y V6.41 CSP estricta. La promoción a producción queda condicionada a QA funcional, accesibilidad y comparación Lighthouse preview vs producción.\n- No se atribuyen mejoras de Core Web Vitals de campo sin datos CrUX; V6.42 se evalúa primero como rendimiento de laboratorio y carga del main thread.\n\n"""
+          assert not old.startswith('# Cambios V6.42')
+          changelog.write_text(entry+old,encoding='utf-8')
+
+          # Static regression floor.
+          assert len(list(root.rglob('*.html')))==33
+          for p in htmls:
+              t=p.read_text(encoding='utf-8')
+              assert t.count(app_new)==1, p
+              assert '/assets/menu.v632.js' in t, p
+              assert '/assets/hardening.v630.js' not in t, p
+              assert "document.documentElement.classList.add('js-v631')" in t, p
+          print({'html':len(htmls),'hardening_removed':removed_hardening,'app_references':replaced_app,'old_app_bytes':len(source.encode()),'new_app_bytes':len(optimized.encode())})
+          PY
+          git diff --check
+          git status --short
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add candidate/v628
+          git commit -m 'perf(web): consolidate duplicated runtime for V6.42'
+          git push origin HEAD:work/web-v6-42-performance-budget
