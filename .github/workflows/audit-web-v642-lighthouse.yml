@@ -1,0 +1,92 @@
+name: Audit WEB IBERFIT V6.42 Lighthouse
+
+on:
+  push:
+    branches:
+      - work/web-v6-42-performance-budget
+    paths:
+      - '.github/workflows/audit-web-v642-lighthouse.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar Lighthouse
+        shell: bash
+        run: |
+          set -euo pipefail
+          google-chrome --version || chromium --version || chromium-browser --version
+          npm install --no-save lighthouse@13.0.1
+          mkdir -p /tmp/v642-lighthouse
+
+      - name: Auditar rutas clave mobile y desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          routes=(
+            'home|https://iberfit.cl/'
+            'iri|https://iberfit.cl/diagnostico-iri/'
+            'online|https://iberfit.cl/online/'
+            'las-condes|https://iberfit.cl/entrenador-personal-las-condes/'
+          )
+          for item in "${routes[@]}"; do
+            name="${item%%|*}"; url="${item#*|}"
+            npx lighthouse "$url" --output=json --output-path="/tmp/v642-lighthouse/${name}-mobile.json" --chrome-flags='--headless --no-sandbox --disable-dev-shm-usage' --quiet --only-categories=performance,accessibility,best-practices,seo
+            npx lighthouse "$url" --preset=desktop --output=json --output-path="/tmp/v642-lighthouse/${name}-desktop.json" --chrome-flags='--headless --no-sandbox --disable-dev-shm-usage' --quiet --only-categories=performance,accessibility,best-practices,seo
+          done
+
+      - name: Resumir resultados y oportunidades
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, statistics
+          root=Path('/tmp/v642-lighthouse')
+          rows=[]
+          wanted=['first-contentful-paint','largest-contentful-paint','cumulative-layout-shift','total-blocking-time','speed-index','interactive','total-byte-weight','network-requests','render-blocking-resources','unused-css-rules','unused-javascript','uses-responsive-images','modern-image-formats','uses-optimized-images','uses-text-compression','font-display','uses-rel-preconnect','third-party-summary']
+          for p in sorted(root.glob('*.json')):
+              x=json.loads(p.read_text())
+              cats=x['categories']; audits=x['audits']
+              row={
+                'file':p.name,
+                'url':x.get('finalDisplayedUrl') or x.get('finalUrl'),
+                'performance':round(cats['performance']['score']*100),
+                'accessibility':round(cats['accessibility']['score']*100),
+                'best_practices':round(cats['best-practices']['score']*100),
+                'seo':round(cats['seo']['score']*100),
+              }
+              for key in wanted:
+                  a=audits.get(key)
+                  if not a: continue
+                  row[key]={'score':a.get('score'),'numericValue':a.get('numericValue'),'displayValue':a.get('displayValue'),'title':a.get('title')}
+              rows.append(row)
+          (root/'summary.json').write_text(json.dumps(rows,indent=2,ensure_ascii=False))
+          for r in rows:
+              print('\n###',r['file'],r['url'])
+              print('scores',r['performance'],r['accessibility'],r['best_practices'],r['seo'])
+              for key in ['first-contentful-paint','largest-contentful-paint','cumulative-layout-shift','total-blocking-time','speed-index','total-byte-weight']:
+                  a=r.get(key); print(key, a.get('displayValue') if a else None, 'score',a.get('score') if a else None)
+              for key in ['render-blocking-resources','unused-css-rules','unused-javascript','uses-responsive-images','modern-image-formats','uses-optimized-images','font-display','uses-rel-preconnect','third-party-summary']:
+                  a=r.get(key)
+                  if a and a.get('score') not in (1,None): print('OPPORTUNITY',key,a.get('displayValue'),'score',a.get('score'))
+          mobile=[r['performance'] for r in rows if 'mobile' in r['file']]
+          desktop=[r['performance'] for r in rows if 'desktop' in r['file']]
+          print('\nMOBILE_AVG',round(statistics.mean(mobile),1),'MIN',min(mobile))
+          print('DESKTOP_AVG',round(statistics.mean(desktop),1),'MIN',min(desktop))
+          PY
+
+      - name: Guardar evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v642-lighthouse-baseline
+          path: /tmp/v642-lighthouse
+          if-no-files-found: warn
+          retention-days: 30
