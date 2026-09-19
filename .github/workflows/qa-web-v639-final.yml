@@ -1,0 +1,112 @@
+name: QA WEB IBERFIT V6.39 final
+
+on:
+  push:
+    branches:
+      - work/web-v6-39-aeo
+    paths:
+      - '.github/workflows/qa-web-v639-final.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verificar lineage y artefacto exacto
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='b293c1a3ecc64a14d56a5c0c45edb15636e57182'
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.39'
+          test -s candidate/v628/assets/aeo.v639.css
+          test "$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+
+      - name: Validar AEO, entidad y crawlers
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(grep -R -l 'aeo.v639.css' candidate/v628 --include='*.html' | wc -l | tr -d ' ')" = '33'
+          test "$(grep -R -l 'data-aeo-answer' candidate/v628 --include='*.html' | wc -l | tr -d ' ')" = '28'
+          grep -q '^User-agent: OAI-SearchBot$' candidate/v628/robots.txt
+          grep -q '^User-agent: ChatGPT-User$' candidate/v628/robots.txt
+          grep -q '## Respuestas directas' candidate/v628/llms.txt
+          grep -q '"@type":"Organization"' candidate/v628/index.html
+          grep -q 'dateModified":"2026-09-19"' candidate/v628/index.html
+          ! grep -R -n '"LocalBusiness"' candidate/v628 --include='*.html'
+          ! grep -R -n '"ProfessionalService"' candidate/v628 --include='*.html'
+          ! grep -R -n '#business' candidate/v628 --include='*.html'
+          ! grep -R -n '"FAQPage"' candidate/v628 --include='*.html'
+          ! grep -R -ni --exclude='CHANGELOG.md' --exclude-dir='.git' 'Carlos' candidate/v628
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,json
+          for p in Path('candidate/v628').rglob('*.html'):
+              txt=p.read_text(encoding='utf-8')
+              for raw in re.findall(r'<script type="application/ld\+json">(.*?)</script>',txt,re.S): json.loads(raw)
+          print('jsonld-ok')
+          PY
+          git diff --check
+
+      - name: Instalar Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.62.1
+          npx playwright install --with-deps chromium
+
+      - name: Servir candidata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v639-final-server.log 2>&1 &
+          for i in $(seq 1 30); do curl --fail --silent http://127.0.0.1:4173/ >/dev/null && exit 0; sleep 1; done
+          cat /tmp/v639-final-server.log; exit 1
+
+      - name: Smoke 33 rutas y contratos semánticos
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v639-final-evidence
+          node <<'NODE'
+          const {chromium}=require('playwright'); const fs=require('fs');
+          const routes=['/','/diagnostico-iri/','/metodo/','/presencial/','/hibrido/','/online/','/sobre-iberfit/','/contacto/','/privacidad/','/entrenador-personal-las-condes/','/entrenador-personal-vitacura/','/entrenamiento-personal-providencia/','/personal-trainer-nunoa/','/entrenador-personal-lo-barnechea/','/entrenador-personal-la-reina/','/entrenador-personal-penalolen/','/en/','/en/iri-assessment/','/en/method/','/en/in-person/','/en/hybrid/','/en/online/','/en/about/','/en/contact/','/en/privacy/','/en/personal-trainer-las-condes/','/en/personal-trainer-vitacura/','/en/personal-training-providencia/','/en/personal-trainer-nunoa/','/en/personal-trainer-lo-barnechea/','/en/personal-trainer-la-reina/','/en/personal-trainer-penalolen/'];
+          const noAnswers=new Set(['/contacto/','/privacidad/','/en/contact/','/en/privacy/']);
+          (async()=>{const b=await chromium.launch({headless:true}); const out=[];
+            for(const route of routes){const p=await b.newPage({viewport:{width:1280,height:900}}); const errs=[];p.on('pageerror',e=>errs.push(String(e)));const res=await p.goto('http://127.0.0.1:4173'+route,{waitUntil:'networkidle'});if(!res||!res.ok())throw Error(route+' status');const s=await p.evaluate(()=>({title:document.title.trim(),h1:(document.querySelector('h1')?.textContent||'').trim(),canonical:document.querySelector('link[rel=canonical]')?.href||'',answers:document.querySelectorAll('[data-aeo-answer]').length,overflow:document.documentElement.scrollWidth-window.innerWidth,css:[...document.styleSheets].some(x=>String(x.href||'').includes('aeo.v639.css')),org:[...document.querySelectorAll('script[type="application/ld+json"]')].some(x=>x.textContent.includes('"Organization"'))}));if(!s.title||!s.h1||!s.canonical||!s.css||!s.org||s.overflow>2||errs.length)throw Error(route+' '+JSON.stringify({s,errs}));if(!noAnswers.has(route)&&s.answers<2)throw Error(route+' answers');out.push({route,...s});await p.close();}
+            fs.writeFileSync('/tmp/v639-final-evidence/smoke.json',JSON.stringify(out,null,2));await b.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Responsive, foco y crawler user agents
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const {chromium}=require('playwright');
+          (async()=>{const b=await chromium.launch({headless:true});
+            for(const v of [{w:360,h:800},{w:390,h:844},{w:820,h:1180},{w:1024,h:900},{w:1440,h:1000}]){for(const r of ['/','/diagnostico-iri/','/online/','/entrenador-personal-las-condes/','/en/']){const p=await b.newPage({viewport:{width:v.w,height:v.h}});await p.goto('http://127.0.0.1:4173'+r,{waitUntil:'networkidle'});const o=await p.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);if(o>2)throw Error(r+' overflow '+v.w+':'+o);await p.close();}}
+            const p=await b.newPage({viewport:{width:1440,height:1000}});await p.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});await p.keyboard.press('Tab');const f=await p.evaluate(()=>({tag:document.activeElement?.tagName,outline:getComputedStyle(document.activeElement).outlineStyle,width:parseFloat(getComputedStyle(document.activeElement).outlineWidth)||0}));if(f.tag!=='A'||f.outline==='none'||f.width<2)throw Error('focus '+JSON.stringify(f));await b.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+          test "$(curl -s -o /tmp/oai -w '%{http_code}' -A 'OAI-SearchBot' http://127.0.0.1:4173/)" = '200'
+          test "$(curl -s -o /tmp/chatgpt -w '%{http_code}' -A 'ChatGPT-User' http://127.0.0.1:4173/)" = '200'
+          grep -q 'data-aeo-answer' /tmp/oai
+          grep -q 'data-aeo-answer' /tmp/chatgpt
+
+      - name: Subir evidencia final
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v639-final-evidence
+          path: /tmp/v639-final-evidence
+          if-no-files-found: warn
+          retention-days: 30
