@@ -1,3 +1,12 @@
+# Cambios V6.43
+
+- Se refuerza la observabilidad CRO sin modificar la experiencia visual ni el contenido visible.
+- Los clics de WhatsApp y correo generan `contact_intent`; `generate_lead` se limita a una vez por sesión para evitar inflar leads por clics repetidos.
+- Se instrumentan las rutas de decisión de Home: IRI, comparación de modalidades, orientador, cada modalidad y reseñas de Google.
+- Se instrumentan las dos salidas del resultado del orientador y se conserva la trazabilidad por posición de CTA.
+- La medición sigue condicionada al consentimiento de analítica; no se añaden datos personales ni contenido de mensajes a GA4.
+- `analytics.v632.js` permanece intacto como rollback; V6.43 usa un asset versionado nuevo y cacheable.
+
 # Cambios V6.42
 
 - Se optimiza el runtime a partir de una línea base Lighthouse tomada contra producción real.
