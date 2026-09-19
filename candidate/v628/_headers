@@ -162,3 +162,23 @@
   ! Cache-Control
   Cache-Control: public, max-age=31536000, immutable
   Content-Type: text/css; charset=utf-8
+
+/assets/visual.v6432.css
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/app-online-plan.webp
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/app-online-session.webp
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/app-online-progress.webp
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/app-hybrid-feedback.webp
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
