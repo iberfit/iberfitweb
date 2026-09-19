@@ -78,7 +78,7 @@ replace_exact(
 )
 replace_exact(
     about_en,
-    '<strong>It grows from university training in Spain and a European journey through Spanish and German contexts before taking shape in Chile.</strong> That journey is reflected in method, precision, process and adaptation.',
+    '<strong>It grows from university education in Spain and a European path shaped by Spanish and German contexts before consolidating in Chile.</strong> That journey informs method, precision, process and adaptation.',
     '<strong>It grew from a passion for training and a lasting curiosity about health, supported by specialised university education in Spain and enriched by a European journey through Spanish and German contexts before taking shape in Chile.</strong> That combination is reflected in method, precision, process and adaptation.',
     'English origin AEO answer',
 )
