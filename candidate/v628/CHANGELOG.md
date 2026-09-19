@@ -1,3 +1,12 @@
+# Cambios V6.41
+
+- Se endurece la Content Security Policy eliminando `unsafe-inline` de `script-src`.
+- El único script ejecutable inline presente en las 33 rutas se autoriza mediante un hash SHA-256 exacto, manteniendo su ejecución sin ampliar permisos a cualquier script inline.
+- Se añade `script-src-attr 'none'` porque la auditoría confirma ausencia de manejadores JavaScript inline y URLs `javascript:`.
+- Se preservan los orígenes estrictamente necesarios para Google Tag Manager/Google Analytics y Meta Pixel, además de los scripts locales versionados.
+- JSON-LD, AEO, SEO, CRO, navegación y analítica permanecen sin cambios funcionales.
+- El cambio se certifica con navegador real bajo CSP activa para detectar bloqueos, errores de consola o regresiones de interacción antes de producción.
+
 # Cambios V6.40
 
 - Se corrige la política de caché de Cloudflare Pages para que los assets versionados de CSS y JavaScript no hereden el `no-cache` global de las respuestas HTML.
