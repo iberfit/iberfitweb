@@ -20,4 +20,5 @@
 
 @media(max-width:1160px){.app-story{grid-template-columns:1fr!important}.app-story-copy{max-width:720px!important}.app-story-stage{max-width:760px;margin-inline:auto}.app-story-copy h2{max-width:18ch!important}}
 @media(max-width:760px){.cta-panel-inner{padding:2rem 1.35rem!important;border-radius:22px!important}.cta-panel-inner:after{right:-1.75rem;top:40%;width:180px;opacity:.035}.cta-panel-inner>div{max-width:100%}.cta-panel-inner h2{max-width:20ch!important;font-size:clamp(2rem,9vw,2.8rem)!important}.cta-panel-inner>.btn{width:100%;justify-self:stretch!important;margin-top:1.4rem}.app-story-stage{min-height:0!important}}
+@media(max-width:640px){.app-story-stage{align-items:start!important}.app-story-stage .app-screen{align-self:start!important;height:auto!important}}
 @media(prefers-reduced-motion:reduce){.cta-panel-inner>.btn{transition:none!important}}
