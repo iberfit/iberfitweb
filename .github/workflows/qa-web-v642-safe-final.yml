@@ -104,6 +104,7 @@ jobs:
             if(errors.length)throw new Error('PAGEERROR '+errors.join(' | '));
             await page.goto('http://127.0.0.1:4173/',{waitUntil:'domcontentloaded'});
             const toggle=page.locator('[data-menu-toggle]');await toggle.click();
+            await page.waitForTimeout(120);
             if(await toggle.getAttribute('aria-expanded')!=='true')throw new Error('MENU_OPEN');
             if(!await page.locator('[data-navlinks]').evaluate(el=>el.classList.contains('open')))throw new Error('MENU_CLASS');
             if(!await page.locator('.nav-panel-backdrop').evaluate(el=>el.classList.contains('is-visible')))throw new Error('MENU_BACKDROP');
