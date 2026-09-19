@@ -1,0 +1,118 @@
+name: QA WEB IBERFIT V6.40 final
+
+on:
+  push:
+    branches:
+      - work/web-v6-40-delivery-performance
+    paths:
+      - '.github/workflows/qa-web-v640-final.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Certificar alcance exacto
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='0120a67e8002ecf9f8cdae3295a194b9d1cf6241'
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.40'
+          test "$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          actual="$(git diff --name-only "$BASE" -- candidate/v628 | sort)"
+          expected=$'candidate/v628/CHANGELOG.md\ncandidate/v628/VERSION\ncandidate/v628/_headers'
+          test "$actual" = "$expected"
+          git diff --check
+
+      - name: Validar cache policy y seguridad
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess
+          raw=Path('candidate/v628/_headers').read_text(encoding='utf-8')
+          old=subprocess.check_output(['git','show','0120a67e8002ecf9f8cdae3295a194b9d1cf6241:candidate/v628/_headers'],text=True)
+          def parse(s):
+              out={}; key=None
+              for line in s.splitlines():
+                  if line and not line[0].isspace(): key=line.strip(); out[key]=[]
+                  elif key and line.strip(): out[key].append(line.strip())
+              return out
+          cur,base=parse(raw),parse(old)
+          assert cur['/*']==base['/*']
+          sec='\n'.join(cur['/*'])
+          for h in ['Cache-Control: no-cache, max-age=0, must-revalidate','X-Frame-Options: DENY','X-Content-Type-Options: nosniff','Referrer-Policy: strict-origin-when-cross-origin','Permissions-Policy:','Strict-Transport-Security: max-age=31536000; includeSubDomains','Content-Security-Policy:']:
+              assert h in sec, h
+          html='\n'.join(p.read_text(encoding='utf-8') for p in Path('candidate/v628').rglob('*.html'))
+          used=sorted(set(re.findall(r'(?:href|src)="(/assets/[^"?]+\.(?:css|js))',html)))
+          assert used
+          for path in used:
+              assert path in cur, path
+              assert '! Cache-Control' in cur[path], path
+              if path=='/assets/analytics-config.js':
+                  assert 'Cache-Control: no-store' in cur[path]
+                  assert not any('immutable' in x for x in cur[path])
+              else:
+                  assert 'Cache-Control: public, max-age=31536000, immutable' in cur[path], path
+          for pat in ['/assets/*.webp','/assets/*.png','/assets/*.ico','/assets/*.svg']:
+              assert '! Cache-Control' in cur[pat]
+              assert 'Cache-Control: public, max-age=2592000' in cur[pat]
+          assert '! Cache-Control' in cur['/manifest.webmanifest']
+          assert 'Cache-Control: public, max-age=0, must-revalidate' in cur['/manifest.webmanifest']
+          print('\n'.join(used))
+          PY
+
+      - name: Preservar V6.39 funcional y semántica
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(grep -R -l 'data-aeo-answer' candidate/v628 --include='*.html' | wc -l | tr -d ' ')" = '28'
+          grep -q '"@type":"Organization"' candidate/v628/index.html
+          grep -q '^User-agent: OAI-SearchBot$' candidate/v628/robots.txt
+          grep -q '^User-agent: ChatGPT-User$' candidate/v628/robots.txt
+          grep -q '## Respuestas directas' candidate/v628/llms.txt
+          grep -q 'generate_lead' candidate/v628/assets/analytics.v632.js
+          grep -q 'format_guide_complete' candidate/v628/assets/app.v632.js
+          grep -q 'ga4MeasurementId: "G-JXD1JSN7K3"' candidate/v628/assets/analytics-config.js
+          ! grep -R -n '"LocalBusiness"' candidate/v628 --include='*.html'
+
+      - name: Smoke 33 documentos
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v640.log 2>&1 &
+          pid=$!; trap 'kill $pid 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break; sleep 1; done
+          python3 - <<'PY'
+          from pathlib import Path
+          import urllib.request
+          root=Path('candidate/v628'); docs=sorted(root.rglob('*.html')); assert len(docs)==33
+          checked=0
+          for p in docs:
+              rel=p.relative_to(root).as_posix()
+              url='/404.html' if rel=='404.html' else ('/' if rel=='index.html' else '/'+rel[:-10])
+              with urllib.request.urlopen('http://127.0.0.1:4173'+url,timeout=5) as r:
+                  body=r.read().decode('utf-8'); assert r.status==200; assert '<h1' in body
+              checked+=1
+          print('checked',checked)
+          PY
+
+      - name: Evidencia final
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v640-final-evidence
+          path: |
+            candidate/v628/_headers
+            candidate/v628/VERSION
+          retention-days: 30
