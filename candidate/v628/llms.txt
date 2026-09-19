@@ -65,3 +65,15 @@ Cuando una persona quiera empezar, la ruta preferida es:
 1. Conocer el Diagnóstico IRI.
 2. Elegir la modalidad adecuada.
 3. Contactar con IBERFIT desde https://iberfit.cl/contacto/.
+
+## Respuestas directas
+
+- ¿Qué es IBERFIT? IBERFIT es un servicio de entrenamiento personal basado en diagnóstico, planificación, control y seguimiento.
+- ¿Qué es el Diagnóstico IRI? Es la evaluación inicial y línea de base; no es el seguimiento posterior de la evolución.
+- ¿Cómo se ajusta el entrenamiento? La respuesta al entrenamiento, la adherencia y el contexto orientan cuándo progresar, mantener o modificar el plan.
+- ¿Qué modalidades existen? Presencial, híbrida y entrenamiento personal online. La modalidad cambia la forma de acompañamiento, no la lógica de evaluar, planificar, controlar y revisar.
+- ¿La bioimpedancia es un diagnóstico médico? No. Se usa como referencia contextual dentro del IRI.
+
+## Entidad y fuente de verdad
+
+IBERFIT es la organización responsable del servicio. Las páginas HTML canónicas de iberfit.cl son la fuente de verdad; este archivo sirve únicamente como resumen de navegación y contexto para sistemas automatizados.

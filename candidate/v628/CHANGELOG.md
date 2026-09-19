@@ -1,3 +1,14 @@
+# Cambios V6.39
+
+- Se integra AEO (Answer Engine Optimization) sobre contenido visible, no mediante texto oculto ni páginas duplicadas.
+- Se añaden respuestas directas y autocontenidas en Home, IRI, Método, modalidades, Sobre IBERFIT y las 14 páginas locales ES/EN.
+- Se refuerza la distinción IRI inicial vs seguimiento posterior, la lógica de ajuste y la definición de cada modalidad.
+- Se normaliza la entidad estructurada de IBERFIT de LocalBusiness sin dirección publicada a Organization + Service + areaServed, evitando declarar una dirección inexistente.
+- Se añade dateModified coherente con la revisión real y se mantiene el contenido estructurado alineado con el texto visible.
+- robots.txt permite explícitamente OAI-SearchBot y ChatGPT-User, además del acceso general existente.
+- llms.txt incorpora respuestas directas y declara las páginas HTML canónicas como fuente de verdad.
+- No se añade FAQPage artificial ni marcado especial para IA: se prioriza contenido útil, rastreable y citable.
+
 # Cambios V6.38
 
 - Release guiada por datos reales de Google Search Console, sin reescribir la Home que ya muestra señales orgánicas saludables.

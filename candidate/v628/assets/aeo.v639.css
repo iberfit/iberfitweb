@@ -1,0 +1,12 @@
+/* IBERFIT V6.39 — Answer Engine Optimization */
+.answer-section{background:var(--cream,#f4efe4)}
+.answer-shell{max-width:1120px}
+.answer-intro{max-width:760px;margin-bottom:clamp(28px,4vw,46px)}
+.answer-list{border-top:1px solid rgba(31,61,43,.22)}
+.answer-item{display:grid;grid-template-columns:minmax(220px,.85fr) minmax(0,1.35fr);gap:clamp(24px,4vw,64px);padding:clamp(24px,3.5vw,38px) 0;border-bottom:1px solid rgba(31,61,43,.18);align-items:start}
+.answer-item h3{margin:0;font-size:clamp(1.05rem,1.5vw,1.28rem);line-height:1.3;color:var(--green,#1f3d2b)}
+.answer-item p{margin:0;max-width:760px;line-height:1.72}
+.answer-item p strong{font-weight:700;color:var(--green,#1f3d2b)}
+.answer-source-note{margin-top:22px;font-size:.92rem;opacity:.78;max-width:760px}
+@media(max-width:720px){.answer-item{grid-template-columns:1fr;gap:10px;padding:22px 0}.answer-intro{margin-bottom:24px}}
+@media(prefers-reduced-motion:reduce){.answer-section *{scroll-behavior:auto!important}}
