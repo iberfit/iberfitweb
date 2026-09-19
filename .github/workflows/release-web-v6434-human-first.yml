@@ -1,0 +1,160 @@
+name: Release WEB IBERFIT V6.43.4 human-first
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-4-human-first
+    paths:
+      - '.github/workflows/release-web-v6434-human-first.yml'
+      - '.github/scripts/build_v6434_human_first.py'
+      - '.github/scripts/qa_v6434_human_first.cjs'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-web-v6434-human-first
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/web-v6-43-4-human-first
+          fetch-depth: 0
+
+      - name: Verify exact V6.43.3 production baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='9d47955038d16a09e1e5ad9fcd7697580da30036'
+          git cat-file -e "$BASE^{commit}"
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.3'
+          test "$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          git diff --exit-code "$BASE" HEAD -- candidate/v628
+
+      - name: Build V6.43.4 human-first copy
+        run: python3 .github/scripts/build_v6434_human_first.py
+
+      - name: Validate scope and preserved product contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='9d47955038d16a09e1e5ad9fcd7697580da30036'
+          root='candidate/v628'
+          test "$(tr -d '\r\n ' < "$root/VERSION")" = '6.43.4'
+          test "$(find "$root" -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          changed="$(git diff --name-only "$BASE" -- "$root" | sort)"
+          test "$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l | tr -d ' ')" = '18'
+          test "$(printf '%s\n' "$changed" | grep -c '\.html$')" = '16'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/CHANGELOG.md'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/VERSION'
+          for f in \
+            candidate/v628/index.html \
+            candidate/v628/diagnostico-iri/index.html \
+            candidate/v628/metodo/index.html \
+            candidate/v628/presencial/index.html \
+            candidate/v628/hibrido/index.html \
+            candidate/v628/online/index.html \
+            candidate/v628/sobre-iberfit/index.html \
+            candidate/v628/contacto/index.html \
+            candidate/v628/en/index.html \
+            candidate/v628/en/iri-assessment/index.html \
+            candidate/v628/en/method/index.html \
+            candidate/v628/en/in-person/index.html \
+            candidate/v628/en/hybrid/index.html \
+            candidate/v628/en/online/index.html \
+            candidate/v628/en/about/index.html \
+            candidate/v628/en/contact/index.html; do
+            printf '%s\n' "$changed" | grep -qx "$f"
+          done
+          ! printf '%s\n' "$changed" | grep -Eq '\.(js|css|webp|png|svg)$'
+          cmp <(git show "$BASE":candidate/v628/assets/analytics.v643.js) "$root/assets/analytics.v643.js"
+          cmp <(git show "$BASE":candidate/v628/assets/menu.v642.js) "$root/assets/menu.v642.js"
+          cmp <(git show "$BASE":candidate/v628/assets/app.v632.js) "$root/assets/app.v632.js"
+          cmp <(git show "$BASE":candidate/v628/assets/polish.v6433.css) "$root/assets/polish.v6433.css"
+          cmp <(git show "$BASE":candidate/v628/assets/visual.v6432.css) "$root/assets/visual.v6432.css"
+          grep -q 'Entrenamiento personal con criterio.' "$root/index.html"
+          grep -q 'No vienes a demostrar nada. Venimos a entender qué necesitas.' "$root/diagnostico-iri/index.html"
+          grep -q 'Tu plan puede cambiar. El criterio no.' "$root/metodo/index.html"
+          grep -q 'Quiero saber si hay cobertura para mí' "$root/presencial/index.html"
+          grep -q 'No tienes que elegir entre acompañamiento y flexibilidad.' "$root/hibrido/index.html"
+          grep -q 'Entrenar a distancia no debería sentirse como entrenar solo.' "$root/online/index.html"
+          grep -q 'Detrás de IBERFIT hay método, pero también una forma muy humana de acompañarte.' "$root/sobre-iberfit/index.html"
+          grep -q 'Cuéntanos qué buscas. No hace falta que sepas qué modalidad necesitas.' "$root/contacto/index.html"
+          grep -q 'Training remotely should not feel like training alone.' "$root/en/online/index.html"
+          grep -q 'Tell us what you are looking for. You do not need to know which format you need.' "$root/en/contact/index.html"
+          grep -q '\$30.000' "$root/diagnostico-iri/index.html"
+          grep -q 'Comunas seleccionadas de Santiago' "$root/presencial/index.html"
+          grep -q '/assets/analytics.v643.js' "$root/index.html"
+          grep -q '/assets/menu.v642.js' "$root/index.html"
+          grep -q '/assets/polish.v6433.css' "$root/index.html"
+          ! grep -R -q '/assets/hardening.v630.js' "$root" --include='*.html'
+          git diff --check "$BASE" -- "$root"
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, re, subprocess
+          root=Path('candidate/v628')
+          base='9d47955038d16a09e1e5ad9fcd7697580da30036'
+          changed=[
+            'index.html','diagnostico-iri/index.html','metodo/index.html','presencial/index.html','hibrido/index.html','online/index.html','sobre-iberfit/index.html','contacto/index.html',
+            'en/index.html','en/iri-assessment/index.html','en/method/index.html','en/in-person/index.html','en/hybrid/index.html','en/online/index.html','en/about/index.html','en/contact/index.html'
+          ]
+          for rel in changed:
+              now=(root/rel).read_text(encoding='utf-8')
+              old=subprocess.check_output(['git','show',f'{base}:candidate/v628/{rel}'],text=True)
+              old_head=old.split('</head>',1)[0]
+              now_head=now.split('</head>',1)[0]
+              if old_head != now_head:
+                  raise SystemExit(f'HEAD_CHANGED:{rel}')
+              def contracts(text):
+                  return re.findall(r'<a\b[^>]*?(?:data-track="[^"]*"[^>]*)?href="[^"]*"[^>]*>', text)
+              if contracts(old) != contracts(now):
+                  raise SystemExit(f'ANCHOR_CONTRACT_CHANGED:{rel}')
+              old_answers=re.findall(r'<article class="answer-item" data-aeo-answer>.*?</article>', old, re.S)
+              now_answers=re.findall(r'<article class="answer-item" data-aeo-answer>.*?</article>', now, re.S)
+              if old_answers != now_answers:
+                  raise SystemExit(f'AEO_ANSWER_CHANGED:{rel}')
+          for path in root.rglob('*.html'):
+              text=path.read_text(encoding='utf-8')
+              for raw in re.findall(r'<script type="application/ld\+json">(.*?)</script>', text, re.S):
+                  json.loads(raw)
+          print({'changedCorePages':len(changed),'headPreserved':True,'anchorContractsPreserved':True,'aeoAnswersPreserved':True})
+          PY
+
+      - name: Browser regression on human-first ES and EN core routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.58.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v6434-server.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break || true; sleep 1; done
+          curl -fsS http://127.0.0.1:4173/ >/dev/null
+          node .github/scripts/qa_v6434_human_first.cjs
+
+      - name: Commit certified V6.43.4 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add candidate/v628
+          git commit -m 'feat(web): humanise core journey in V6.43.4'
+          git push origin HEAD:work/web-v6-43-4-human-first
+
+      - name: Save human-first QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v6434-human-first-evidence
+          path: |
+            /tmp/v6434-server.log
+            /tmp/v6434-evidence
+          if-no-files-found: warn
+          retention-days: 30
