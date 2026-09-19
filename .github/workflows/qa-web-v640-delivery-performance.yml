@@ -1,0 +1,136 @@
+name: QA WEB IBERFIT V6.40 delivery performance
+
+on:
+  push:
+    branches:
+      - work/web-v6-40-delivery-performance
+    paths:
+      - '.github/workflows/qa-web-v640-delivery-performance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verificar lineage y alcance exacto
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='0120a67e8002ecf9f8cdae3295a194b9d1cf6241'
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.40'
+          test "$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          mapfile -t changed < <(git diff --name-only "$BASE" -- candidate/v628 | sort)
+          printf '%s\n' "${changed[@]}"
+          expected=$'candidate/v628/CHANGELOG.md\ncandidate/v628/VERSION\ncandidate/v628/_headers'
+          actual="$(printf '%s\n' "${changed[@]}")"
+          test "$actual" = "$expected"
+          ! git diff "$BASE" -- candidate/v628 -- '*.html' 'candidate/v628/assets/**' candidate/v628/robots.txt candidate/v628/llms.txt candidate/v628/sitemap.xml | grep .
+
+      - name: Validar política de caché y seguridad
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess
+          p=Path('candidate/v628/_headers')
+          text=p.read_text(encoding='utf-8')
+          base=subprocess.check_output(['git','show','0120a67e8002ecf9f8cdae3295a194b9d1cf6241:candidate/v628/_headers'],text=True)
+          def blocks(raw):
+              out={}; current=None
+              for line in raw.splitlines():
+                  if line and not line[0].isspace():
+                      current=line.strip(); out[current]=[]
+                  elif current and line.strip(): out[current].append(line.strip())
+              return out
+          cur=blocks(text); old=blocks(base)
+          assert cur['/*']==old['/*'], 'global security/HTML headers changed'
+          global_headers='\n'.join(cur['/*'])
+          for required in ['X-Frame-Options: DENY','X-Content-Type-Options: nosniff','Referrer-Policy: strict-origin-when-cross-origin','Strict-Transport-Security: max-age=31536000; includeSubDomains','Content-Security-Policy:']:
+              assert required in global_headers, required
+          html='\n'.join(x.read_text(encoding='utf-8') for x in Path('candidate/v628').rglob('*.html'))
+          used=sorted(set(re.findall(r'(?:href|src)="(/assets/[^"?]+\.(?:css|js))',html)))
+          assert used, 'no CSS/JS discovered'
+          for path in used:
+              assert path in cur, f'missing exact cache rule: {path}'
+              values=cur[path]
+              assert '! Cache-Control' in values, f'global cache not detached: {path}'
+              joined=' | '.join(values)
+              if path=='/assets/analytics-config.js':
+                  assert 'Cache-Control: no-store' in values and 'immutable' not in joined
+              else:
+                  assert 'Cache-Control: public, max-age=31536000, immutable' in values, f'not immutable: {path}'
+          for pattern,ctype in [('/assets/*.webp','image/webp'),('/assets/*.png','image/png'),('/assets/*.ico','image/x-icon'),('/assets/*.svg','image/svg+xml')]:
+              assert pattern in cur
+              assert '! Cache-Control' in cur[pattern]
+              assert 'Cache-Control: public, max-age=2592000' in cur[pattern]
+              assert f'Content-Type: {ctype}' in cur[pattern]
+          assert '/manifest.webmanifest' in cur
+          assert '! Cache-Control' in cur['/manifest.webmanifest']
+          assert 'Cache-Control: public, max-age=0, must-revalidate' in cur['/manifest.webmanifest']
+          assert 'Cache-Control: no-cache, max-age=0, must-revalidate' in cur['/*']
+          print('used assets:',*used,sep='\n- ')
+          PY
+          git diff --check
+
+      - name: Confirmar preservación AEO, SEO y conversión
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(grep -R -l 'data-aeo-answer' candidate/v628 --include='*.html' | wc -l | tr -d ' ')" = '28'
+          grep -q '"@type":"Organization"' candidate/v628/index.html
+          grep -q '^User-agent: OAI-SearchBot$' candidate/v628/robots.txt
+          grep -q '^User-agent: ChatGPT-User$' candidate/v628/robots.txt
+          grep -q '## Respuestas directas' candidate/v628/llms.txt
+          grep -q 'whatsapp_click' candidate/v628/assets/analytics.v632.js
+          grep -q 'generate_lead' candidate/v628/assets/analytics.v632.js
+          grep -q 'format_guide_complete' candidate/v628/assets/app.v632.js
+          grep -q 'ga4MeasurementId: "G-JXD1JSN7K3"' candidate/v628/assets/analytics-config.js
+
+      - name: Smoke de las 33 rutas
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v640-server.log 2>&1 &
+          pid=$!
+          trap 'kill $pid 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do curl --fail --silent http://127.0.0.1:4173/ >/dev/null && break; sleep 1; done
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, urllib.request
+          root=Path('candidate/v628')
+          routes=[]
+          for p in sorted(root.rglob('*.html')):
+              rel=p.relative_to(root).as_posix()
+              if rel=='404.html': continue
+              route='/' if rel=='index.html' else '/'+rel[:-10]
+              routes.append(route)
+          assert len(routes)==32, len(routes)
+          for r in routes:
+              with urllib.request.urlopen('http://127.0.0.1:4173'+r,timeout=5) as resp:
+                  body=resp.read().decode('utf-8')
+                  assert resp.status==200, (r,resp.status)
+                  assert '<h1' in body and 'canonical' in body, r
+          with urllib.request.urlopen('http://127.0.0.1:4173/404.html',timeout=5) as resp:
+              assert resp.status==200
+          print('smoke routes:',len(routes)+1)
+          PY
+
+      - name: Subir evidencia QA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v640-delivery-performance-evidence
+          path: |
+            candidate/v628/_headers
+            candidate/v628/VERSION
+          retention-days: 30
