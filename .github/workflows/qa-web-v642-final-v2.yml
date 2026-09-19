@@ -1,0 +1,164 @@
+name: QA WEB IBERFIT V6.42 final v2
+
+on:
+  push:
+    branches:
+      - work/web-v6-42-performance-budget
+    paths:
+      - '.github/workflows/qa-web-v642-final-v2.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate exact candidate scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_SHA='f0efe2f95e6e973f82f6666b0e8f15fc6e0df3ee'
+          base='candidate/v628'
+          test "$(tr -d '\r\n ' < "$base/VERSION")" = '6.42'
+          test "$(find "$base" -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          node --check "$base/assets/app.v632.js"
+          node --check "$base/assets/menu.v642.js"
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess,re,json
+          BASE='f0efe2f95e6e973f82f6666b0e8f15fc6e0df3ee'
+          root=Path('candidate/v628')
+          htmls=sorted(root.rglob('*.html'))
+          def old(rel):
+              return subprocess.check_output(['git','show',f'{BASE}:candidate/v628/{rel}']).decode('utf-8')
+          hard=re.compile(r'\s*<script\b[^>]*\bsrc=["\']/assets/hardening\.v630\.js["\'][^>]*>\s*</script>\s*',re.I)
+          for p in htmls:
+              rel=p.relative_to(root).as_posix(); before=old(rel); now=p.read_text(encoding='utf-8')
+              expected,n=hard.subn('\n',before); assert n==1,(rel,n)
+              expected=expected.replace('/assets/menu.v632.js','/assets/menu.v642.js')
+              assert now==expected, f'unexpected HTML delta: {rel}'
+              assert '/assets/hardening.v630.js' not in now
+              assert now.count('/assets/app.v632.js')==1
+              assert now.count('/assets/menu.v642.js')==1
+              assert '/assets/menu.v632.js' not in now
+              for m in re.finditer(r'<script\s+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',now,re.I|re.S): json.loads(m.group(1))
+          for rel in ['assets/app.v632.js','assets/menu.v632.js','assets/hardening.v630.js','assets/analytics.v632.js','assets/experience.v632.js']:
+              assert (root/rel).read_text(encoding='utf-8')==old(rel), rel
+          old_menu=old('assets/menu.v632.js'); new_menu=(root/'assets/menu.v642.js').read_text(encoding='utf-8')
+          trap=re.compile(r"    document\.addEventListener\('keydown', event => \{.*?    \}\);\n(?=    new MutationObserver)",re.S)
+          om,nm=trap.search(old_menu),trap.search(new_menu); assert om and nm
+          assert old_menu[:om.start()]==new_menu[:nm.start()]
+          assert old_menu[om.end():]==new_menu[nm.end():]
+          for sig in ['active === toggle','active === firstNav','active === lastNav','event.shiftKey ? lastNav : firstNav']:
+              assert sig in nm.group(0),sig
+          old_headers=old('_headers'); headers=(root/'_headers').read_text(encoding='utf-8')
+          block='\n/assets/menu.v642.js\n  ! Cache-Control\n  Cache-Control: public, max-age=31536000, immutable\n  Content-Type: text/javascript; charset=utf-8\n'
+          assert headers.replace(block,'')==old_headers
+          assert "script-src-attr 'none'" in headers and "'unsafe-inline'" not in headers
+          changelog=(root/'CHANGELOG.md').read_text(encoding='utf-8')
+          assert changelog.startswith('# Cambios V6.42') and '\n# Cambios V6.41' in changelog
+          assert '# Cambios V6.41'+changelog.split('\n# Cambios V6.41',1)[1]==old('CHANGELOG.md')
+          home=(root/'index.html').read_text(encoding='utf-8')
+          assert 'data-aeo-answer' in home and '"@type":"Organization"' in home
+          print({'html':len(htmls),'scope':'verified','menu_fix':'isolated'})
+          PY
+          git diff --check "$BASE_SHA" HEAD
+          changed="$(git diff --name-only "$BASE_SHA" HEAD -- candidate/v628 | sort)"
+          test "$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l | tr -d ' ')" = '37'
+          test "$(printf '%s\n' "$changed" | grep -c '\.html$')" = '33'
+          test "$(printf '%s\n' "$changed" | grep '^candidate/v628/assets/' | wc -l | tr -d ' ')" = '1'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/assets/menu.v642.js'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/_headers'
+
+      - name: Install browser
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.58.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v642-server.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break || true; sleep 1; done
+          curl -fsS http://127.0.0.1:4173/ >/dev/null
+
+      - name: Run complete browser regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > v642-browser.cjs <<'JS'
+          const { chromium }=require('playwright');
+          const fs=require('fs'),path=require('path');
+          const root=path.resolve('candidate/v628'),files=[];
+          (function walk(d){for(const n of fs.readdirSync(d)){const p=path.join(d,n),s=fs.statSync(p);s.isDirectory()?walk(p):n.endsWith('.html')&&files.push(p)}})(root);
+          const routeOf=p=>{const r=path.relative(root,p).replaceAll('\\','/');return r==='index.html'?'/':r==='404.html'?'/404.html':'/'+r.replace(/index\.html$/,'')};
+          const critical=['/','/diagnostico-iri/','/online/','/entrenador-personal-las-condes/','/contacto/'];
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const mobile=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1,isMobile:true,hasTouch:true});
+            const page=await mobile.newPage(); const errors=[]; page.on('pageerror',e=>errors.push(String(e)));
+            for(const f of files.sort()){
+              const route=routeOf(f),res=await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'domcontentloaded'}); if(!res?.ok())throw new Error(`HTTP ${route}:${res?.status()}`);
+              await page.waitForTimeout(60);
+              const s=await page.evaluate(()=>({text:(document.body.innerText||'').trim().length,overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,app:[...document.scripts].filter(x=>x.src.includes('/assets/app.v632.js')).length,hard:[...document.scripts].filter(x=>x.src.includes('/assets/hardening.v630.js')).length,m642:[...document.scripts].filter(x=>x.src.includes('/assets/menu.v642.js')).length,m632:[...document.scripts].filter(x=>x.src.includes('/assets/menu.v632.js')).length,hardResource:performance.getEntriesByType('resource').some(x=>x.name.includes('/assets/hardening.v630.js'))}));
+              if(s.text<20||s.overflow>2||s.app!==1||s.hard!==0||s.m642!==1||s.m632!==0||s.hardResource)throw new Error(`BASIC ${route} ${JSON.stringify(s)}`);
+              const reveals=page.locator('.reveal');
+              for(let i=0;i<await reveals.count();i++){const el=reveals.nth(i);if(!await el.isVisible())continue;await el.scrollIntoViewIfNeeded();await page.waitForTimeout(35);if(!await el.evaluate(n=>n.classList.contains('visible')))throw new Error(`REVEAL ${route} #${i}`)}
+            }
+            if(errors.length)throw new Error('PAGEERROR '+errors.join(' | '));
+
+            await page.goto('http://127.0.0.1:4173/',{waitUntil:'domcontentloaded'});
+            const toggle=page.locator('[data-menu-toggle]'),nav=page.locator('[data-navlinks]');
+            await toggle.click(); await page.waitForTimeout(80);
+            if(await toggle.getAttribute('aria-expanded')!=='true')throw new Error('MENU_OPEN');
+            if(!await nav.evaluate(el=>el.classList.contains('open')))throw new Error('MENU_CLASS');
+            if(await nav.getAttribute('aria-hidden')!=='false')throw new Error('MENU_ARIA');
+            const backdrop=page.locator('.nav-panel-backdrop'); if(!await backdrop.evaluate(el=>el.classList.contains('is-visible')))throw new Error('MENU_BACKDROP');
+            await toggle.focus(); await page.keyboard.press('Tab'); await page.waitForTimeout(30);
+            if(!await page.evaluate(()=>document.activeElement===document.querySelector('[data-navlinks] a[href]')))throw new Error('MENU_TAB_FIRST');
+            const first=page.locator('[data-navlinks] a[href]').first(),last=page.locator('[data-navlinks] a[href]').last();
+            await first.focus(); await page.keyboard.press('Shift+Tab'); await page.waitForTimeout(30);
+            if(!await page.evaluate(()=>document.activeElement===document.querySelector('[data-menu-toggle]')))throw new Error('MENU_SHIFT_TAB_TOGGLE');
+            await last.focus(); await page.keyboard.press('Tab'); await page.waitForTimeout(30);
+            if(!await page.evaluate(()=>document.activeElement===document.querySelector('[data-menu-toggle]')))throw new Error('MENU_LAST_TAB_TOGGLE');
+            await page.keyboard.press('Escape'); await page.waitForTimeout(60); if(await toggle.getAttribute('aria-expanded')!=='false')throw new Error('MENU_ESCAPE');
+            await toggle.click(); await page.waitForTimeout(60);
+            const point=await page.evaluate(()=>{const b=document.querySelector('.nav-panel-backdrop').getBoundingClientRect(),h=document.querySelector('.site-header').getBoundingClientRect();const ys=[Math.max(b.top+12,h.bottom+20),b.top+b.height/2,b.bottom-16],xs=[b.left+12,b.left+b.width/2,b.right-16];for(const y of ys)for(const x of xs){const e=document.elementFromPoint(x,y);if(e?.closest?.('.nav-panel-backdrop'))return{x,y}}return null});
+            if(!point)throw new Error('MENU_BACKDROP_NO_CLICKABLE_POINT');
+            await page.mouse.click(point.x,point.y); await page.waitForTimeout(60); if(await toggle.getAttribute('aria-expanded')!=='false')throw new Error('MENU_BACKDROP_CLOSE');
+
+            await page.goto('http://127.0.0.1:4173/contacto/',{waitUntil:'domcontentloaded'});
+            const form=page.locator('[data-orientador-form]'); if(await form.count()!==1)throw new Error('GUIDE_MISSING');
+            const steps=page.locator('[data-step]'),count=await steps.count(); if(count<2)throw new Error('GUIDE_STEPS');
+            for(let i=0;i<count;i++){const active=page.locator('[data-step].active'),choice=active.locator('.choice-chip').first();if(await choice.count())await choice.click();if(i<count-1){const next=active.locator('[data-next-step]');if(await next.count())await next.click()}}
+            const submit=form.locator('button[type="submit"],input[type="submit"]').first(); if(await submit.count())await submit.click();else await form.evaluate(el=>el.requestSubmit());
+            await page.waitForTimeout(100); if(await page.locator('[data-orientador-result]').isHidden())throw new Error('GUIDE_RESULT');
+            const wa=page.locator('[data-orientador-whatsapp]'); if(!(await wa.getAttribute('href')||'').includes('wa.me/56944040032'))throw new Error('GUIDE_WA');
+            const edit=page.locator('.orientador-edit'); if(await edit.count()!==1)throw new Error('GUIDE_EDIT'); await edit.click(); if(await page.locator('[data-step].active').count()!==1)throw new Error('GUIDE_EDIT_RESTORE');
+            await mobile.close();
+
+            for(const [name,width,height] of [['tablet',820,1180],['desktop',1440,1000]]){
+              const ctx=await browser.newContext({viewport:{width,height}}),p=await ctx.newPage(),errs=[];p.on('pageerror',e=>errs.push(String(e)));
+              for(const route of critical){const r=await p.goto('http://127.0.0.1:4173'+route,{waitUntil:'domcontentloaded'});if(!r?.ok())throw new Error(`${name.toUpperCase()}_HTTP ${route}`);await p.waitForTimeout(40);const ov=await p.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);if(ov>2)throw new Error(`${name.toUpperCase()}_OVERFLOW ${route}:${ov}`)}
+              if(errs.length)throw new Error(`${name.toUpperCase()}_PAGEERROR `+errs.join(' | ')); await ctx.close();
+            }
+            await browser.close(); console.log(JSON.stringify({mobileRoutes:files.length,tabletRoutes:critical.length,desktopRoutes:critical.length,pageErrors:0,reveal:'ok',menuKeyboard:'ok',menuBackdrop:'ok',guide:'ok',hardeningResource:'removed'}));
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+          node v642-browser.cjs | tee /tmp/v642-browser-result.json
+
+      - name: Save evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v642-final-v2-evidence
+          path: |
+            /tmp/v642-server.log
+            /tmp/v642-browser-result.json
+          if-no-files-found: warn
+          retention-days: 30
