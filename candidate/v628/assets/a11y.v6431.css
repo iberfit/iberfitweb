@@ -1,0 +1,26 @@
+/* IBERFIT WEB V6.43.1 — WCAG-safe gold text on light surfaces. */
+:root{--gold-text:#806216}
+
+/* Small gold labels on cream/paper need a darker bronze tone for AA contrast. */
+.kicker,
+.eyebrow,
+.price-name,
+.iri-phase-label,
+.card-index{color:var(--gold-text)}
+
+/* Gold-filled controls keep the brand surface but use dark ink for contrast. */
+.btn-gold,
+.price-badge{color:var(--green-dark)}
+
+/* Dark surfaces retain the lighter brand gold, where contrast is already strong. */
+.section-dark .kicker,
+.section-dark .eyebrow,
+.evidence-process-section .kicker,
+.evidence-process-section .eyebrow,
+.card-dark .kicker,
+.card-dark .eyebrow,
+.cta-band .kicker,
+.cta-band .eyebrow,
+.price-card.featured .price-name{color:var(--gold-light)}
+
+.price-card.featured .price-badge{color:#fff}

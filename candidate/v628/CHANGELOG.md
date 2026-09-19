@@ -1,3 +1,10 @@
+# Cambios V6.43.1
+
+- Se corrige el contraste de etiquetas doradas pequeñas sobre fondos crema/papel mediante un tono bronce de texto (`#806216`) sin alterar el dorado de marca de superficies o fondos oscuros.
+- Botones y badges con relleno dorado pasan a tinta verde oscura para conservar legibilidad AA; las variantes sobre fondos oscuros mantienen el tratamiento claro.
+- No cambia el contenido visible, la jerarquía, el layout, SEO/AEO, JSON-LD, analítica ni JavaScript.
+- Se añade un asset CSS versionado e inmutable (`a11y.v6431.css`) para no mutar assets ya cacheados de V6.43.
+
 # Cambios V6.43
 
 - Se refuerza la observabilidad CRO sin modificar la experiencia visual ni el contenido visible.

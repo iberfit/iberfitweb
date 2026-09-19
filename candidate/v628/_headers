@@ -157,3 +157,8 @@
   ! Cache-Control
   Cache-Control: public, max-age=31536000, immutable
   Content-Type: text/javascript; charset=utf-8
+
+/assets/a11y.v6431.css
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: text/css; charset=utf-8
