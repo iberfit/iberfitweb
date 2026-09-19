@@ -1,0 +1,339 @@
+name: QA WEB IBERFIT V6.42 final
+
+on:
+  push:
+    branches:
+      - work/web-v6-42-performance-budget
+    paths:
+      - '.github/workflows/qa-web-v642-final.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate exact candidate scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_SHA='f0efe2f95e6e973f82f6666b0e8f15fc6e0df3ee'
+          base='candidate/v628'
+          test "$(tr -d '\r\n ' < "$base/VERSION")" = '6.42'
+          test "$(find "$base" -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          node --check "$base/assets/app.v632.js"
+          node --check "$base/assets/menu.v642.js"
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess, re, json
+
+          BASE = 'f0efe2f95e6e973f82f6666b0e8f15fc6e0df3ee'
+          root = Path('candidate/v628')
+          htmls = sorted(root.rglob('*.html'))
+
+          def previous(rel):
+              return subprocess.check_output(
+                  ['git', 'show', f'{BASE}:candidate/v628/{rel}']
+              ).decode('utf-8')
+
+          hardening = re.compile(
+              r'\s*<script\b[^>]*\bsrc=["\']/assets/hardening\.v630\.js["\'][^>]*>\s*</script>\s*',
+              re.I,
+          )
+
+          for path in htmls:
+              rel = path.relative_to(root).as_posix()
+              before = previous(rel)
+              expected, count = hardening.subn('\n', before)
+              assert count == 1, (rel, count)
+              expected = expected.replace('/assets/menu.v632.js', '/assets/menu.v642.js')
+              current = path.read_text(encoding='utf-8')
+              assert current == expected, f'unexpected HTML delta: {rel}'
+              assert '/assets/hardening.v630.js' not in current
+              assert current.count('/assets/app.v632.js') == 1
+              assert current.count('/assets/menu.v642.js') == 1
+              assert '/assets/menu.v632.js' not in current
+              assert "document.documentElement.classList.add('js-v631')" in current
+              for match in re.finditer(
+                  r'<script\s+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
+                  current,
+                  re.I | re.S,
+              ):
+                  json.loads(match.group(1))
+
+          unchanged = [
+              'assets/app.v632.js',
+              'assets/menu.v632.js',
+              'assets/hardening.v630.js',
+              'assets/analytics.v632.js',
+              'assets/experience.v632.js',
+          ]
+          for rel in unchanged:
+              assert (root / rel).read_text(encoding='utf-8') == previous(rel), rel
+
+          old_menu = previous('assets/menu.v632.js')
+          new_menu = (root / 'assets/menu.v642.js').read_text(encoding='utf-8')
+          trap = re.compile(
+              r"    document\.addEventListener\('keydown', event => \{.*?    \}\);\n(?=    new MutationObserver)",
+              re.S,
+          )
+          old_match = trap.search(old_menu)
+          new_match = trap.search(new_menu)
+          assert old_match and new_match
+          assert old_menu[:old_match.start()] == new_menu[:new_match.start()]
+          assert old_menu[old_match.end():] == new_menu[new_match.end():]
+          new_block = new_match.group(0)
+          for signature in (
+              'active === toggle',
+              'active === firstNav',
+              'active === lastNav',
+              'event.shiftKey ? lastNav : firstNav',
+          ):
+              assert signature in new_block, signature
+
+          old_headers = previous('_headers')
+          current_headers = (root / '_headers').read_text(encoding='utf-8')
+          cache_block = (
+              '\n/assets/menu.v642.js\n'
+              '  ! Cache-Control\n'
+              '  Cache-Control: public, max-age=31536000, immutable\n'
+              '  Content-Type: text/javascript; charset=utf-8\n'
+          )
+          assert current_headers.replace(cache_block, '') == old_headers
+          assert "script-src-attr 'none'" in current_headers
+          assert "'unsafe-inline'" not in current_headers
+          assert "'sha256-OvlTbjy6MX3tOPtkkyczJxexU0UitjLSDdZtn3+IzfQ='" in current_headers
+
+          changelog = (root / 'CHANGELOG.md').read_text(encoding='utf-8')
+          assert changelog.startswith('# Cambios V6.42')
+          assert '\n# Cambios V6.41' in changelog
+          assert '# Cambios V6.41' + changelog.split('\n# Cambios V6.41', 1)[1] == previous('CHANGELOG.md')
+
+          home = (root / 'index.html').read_text(encoding='utf-8')
+          assert 'data-aeo-answer' in home
+          assert '"@type":"Organization"' in home
+          print({'html': len(htmls), 'scope': 'verified', 'menu_focus_fix': 'verified'})
+          PY
+          git diff --check "$BASE_SHA" HEAD
+          changed="$(git diff --name-only "$BASE_SHA" HEAD -- candidate/v628 | sort)"
+          test "$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l | tr -d ' ')" = '37'
+          test "$(printf '%s\n' "$changed" | grep -c '\.html$')" = '33'
+          test "$(printf '%s\n' "$changed" | grep '^candidate/v628/assets/' | wc -l | tr -d ' ')" = '1'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/assets/menu.v642.js'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/_headers'
+
+      - name: Install browser
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.58.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v642-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4173/ >/dev/null
+
+      - name: Run browser regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > v642-browser.cjs <<'JS'
+          const { chromium } = require('playwright');
+          const fs = require('fs');
+          const path = require('path');
+
+          const root = path.resolve('candidate/v628');
+          const files = [];
+          function walk(dir) {
+            for (const name of fs.readdirSync(dir)) {
+              const full = path.join(dir, name);
+              const stat = fs.statSync(full);
+              if (stat.isDirectory()) walk(full);
+              else if (name.endsWith('.html')) files.push(full);
+            }
+          }
+          walk(root);
+
+          function routeOf(file) {
+            const rel = path.relative(root, file).replaceAll('\\', '/');
+            if (rel === 'index.html') return '/';
+            if (rel === '404.html') return '/404.html';
+            return '/' + rel.replace(/index\.html$/, '');
+          }
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const mobile = await browser.newContext({
+              viewport: { width: 390, height: 844 },
+              deviceScaleFactor: 1,
+              isMobile: true,
+              hasTouch: true
+            });
+            const page = await mobile.newPage();
+            const pageErrors = [];
+            page.on('pageerror', error => pageErrors.push(String(error)));
+
+            for (const file of files.sort()) {
+              const route = routeOf(file);
+              const response = await page.goto('http://127.0.0.1:4173' + route, {
+                waitUntil: 'domcontentloaded'
+              });
+              if (!response?.ok()) throw new Error(`HTTP ${route}: ${response?.status()}`);
+              await page.waitForTimeout(60);
+
+              const state = await page.evaluate(() => ({
+                text: (document.body.innerText || '').trim().length,
+                overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+                app: [...document.scripts].filter(s => s.src.includes('/assets/app.v632.js')).length,
+                hardening: [...document.scripts].filter(s => s.src.includes('/assets/hardening.v630.js')).length,
+                menu642: [...document.scripts].filter(s => s.src.includes('/assets/menu.v642.js')).length,
+                menu632: [...document.scripts].filter(s => s.src.includes('/assets/menu.v632.js')).length
+              }));
+              if (
+                state.text < 20 ||
+                state.overflow > 2 ||
+                state.app !== 1 ||
+                state.hardening !== 0 ||
+                state.menu642 !== 1 ||
+                state.menu632 !== 0
+              ) {
+                throw new Error(`BASIC ${route} ${JSON.stringify(state)}`);
+              }
+
+              const reveals = page.locator('.reveal');
+              for (let i = 0; i < await reveals.count(); i++) {
+                const element = reveals.nth(i);
+                if (!await element.isVisible()) continue;
+                await element.scrollIntoViewIfNeeded();
+                await page.waitForTimeout(35);
+                if (!await element.evaluate(node => node.classList.contains('visible'))) {
+                  throw new Error(`REVEAL ${route} #${i}`);
+                }
+              }
+            }
+            if (pageErrors.length) throw new Error('PAGEERROR ' + pageErrors.join(' | '));
+
+            await page.goto('http://127.0.0.1:4173/', { waitUntil: 'domcontentloaded' });
+            const toggle = page.locator('[data-menu-toggle]');
+            const nav = page.locator('[data-navlinks]');
+            await toggle.click();
+            await page.waitForTimeout(80);
+            if (await toggle.getAttribute('aria-expanded') !== 'true') throw new Error('MENU_OPEN');
+            if (!await nav.evaluate(el => el.classList.contains('open'))) throw new Error('MENU_CLASS');
+            if (!await page.locator('.nav-panel-backdrop').evaluate(el => el.classList.contains('is-visible'))) {
+              throw new Error('MENU_BACKDROP');
+            }
+            if (await nav.getAttribute('aria-hidden') !== 'false') throw new Error('MENU_ARIA');
+
+            await toggle.focus();
+            await page.keyboard.press('Tab');
+            await page.waitForTimeout(30);
+            if (!await page.evaluate(() =>
+              document.activeElement === document.querySelector('[data-navlinks] a[href]')
+            )) throw new Error('MENU_TAB_FIRST');
+
+            const firstLink = page.locator('[data-navlinks] a[href]').first();
+            const lastLink = page.locator('[data-navlinks] a[href]').last();
+            await firstLink.focus();
+            await page.keyboard.press('Shift+Tab');
+            await page.waitForTimeout(30);
+            if (!await page.evaluate(() =>
+              document.activeElement === document.querySelector('[data-menu-toggle]')
+            )) throw new Error('MENU_SHIFT_TAB_TOGGLE');
+
+            await lastLink.focus();
+            await page.keyboard.press('Tab');
+            await page.waitForTimeout(30);
+            if (!await page.evaluate(() =>
+              document.activeElement === document.querySelector('[data-menu-toggle]')
+            )) throw new Error('MENU_LAST_TAB_TOGGLE');
+
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(60);
+            if (await toggle.getAttribute('aria-expanded') !== 'false') throw new Error('MENU_ESCAPE');
+
+            await toggle.click();
+            await page.waitForTimeout(40);
+            await page.locator('.nav-panel-backdrop').click({ position: { x: 5, y: 5 } });
+            await page.waitForTimeout(60);
+            if (await toggle.getAttribute('aria-expanded') !== 'false') throw new Error('MENU_BACKDROP_CLOSE');
+
+            await page.goto('http://127.0.0.1:4173/contacto/', { waitUntil: 'domcontentloaded' });
+            const form = page.locator('[data-orientador-form]');
+            if (await form.count() !== 1) throw new Error('GUIDE_MISSING');
+            const steps = page.locator('[data-step]');
+            const stepCount = await steps.count();
+            if (stepCount < 2) throw new Error('GUIDE_STEPS');
+
+            for (let i = 0; i < stepCount; i++) {
+              const active = page.locator('[data-step].active');
+              const firstChoice = active.locator('.choice-chip').first();
+              if (await firstChoice.count()) await firstChoice.click();
+              if (i < stepCount - 1) {
+                const next = active.locator('[data-next-step]');
+                if (await next.count()) await next.click();
+              }
+            }
+            const submit = form.locator('button[type="submit"],input[type="submit"]').first();
+            if (await submit.count()) await submit.click();
+            else await form.evaluate(el => el.requestSubmit());
+            await page.waitForTimeout(100);
+
+            const result = page.locator('[data-orientador-result]');
+            if (await result.isHidden()) throw new Error('GUIDE_RESULT');
+            const whatsapp = page.locator('[data-orientador-whatsapp]');
+            if (!(await whatsapp.getAttribute('href') || '').includes('wa.me/56944040032')) {
+              throw new Error('GUIDE_WHATSAPP');
+            }
+            const edit = page.locator('.orientador-edit');
+            if (await edit.count() !== 1) throw new Error('GUIDE_EDIT');
+            await edit.click();
+            if (await page.locator('[data-step].active').count() !== 1) throw new Error('GUIDE_EDIT_RESTORE');
+
+            const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+            const desktopPage = await desktop.newPage();
+            for (const route of ['/', '/diagnostico-iri/', '/online/', '/entrenador-personal-las-condes/']) {
+              const response = await desktopPage.goto('http://127.0.0.1:4173' + route, {
+                waitUntil: 'domcontentloaded'
+              });
+              if (!response?.ok()) throw new Error('DESKTOP_HTTP ' + route);
+              const overflow = await desktopPage.evaluate(() =>
+                document.documentElement.scrollWidth - document.documentElement.clientWidth
+              );
+              if (overflow > 2) throw new Error(`DESKTOP_OVERFLOW ${route}: ${overflow}`);
+            }
+            await desktop.close();
+            await browser.close();
+            console.log(JSON.stringify({
+              mobileRoutes: files.length,
+              desktopRoutes: 4,
+              pageErrors: 0,
+              reveal: 'ok',
+              menuKeyboardCycle: 'ok',
+              menuBackdrop: 'ok',
+              guide: 'ok'
+            }));
+          })().catch(error => {
+            console.error(error);
+            process.exit(1);
+          });
+          JS
+          node v642-browser.cjs
+
+      - name: Save evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v642-final-evidence
+          path: /tmp/v642-server.log
+          if-no-files-found: warn
+          retention-days: 30
