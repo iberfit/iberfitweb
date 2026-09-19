@@ -8,34 +8,102 @@
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://connect.facebook.net; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://www.facebook.com; img-src 'self' data: https://www.facebook.com; style-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'
 
 /assets/analytics-config.js
+  ! Cache-Control
   Cache-Control: no-store
   Content-Type: text/javascript; charset=utf-8
 
 /assets/styles.v628.css
+  ! Cache-Control
   Cache-Control: public, max-age=31536000, immutable
   Content-Type: text/css; charset=utf-8
 
-/assets/app.v628.js
-  Cache-Control: no-cache, max-age=0, must-revalidate
+/assets/experience.v629.css
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: text/css; charset=utf-8
+
+/assets/hardening.v630.css
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: text/css; charset=utf-8
+
+/assets/noscript.v630.css
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: text/css; charset=utf-8
+
+/assets/polish.v631.css
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: text/css; charset=utf-8
+
+/assets/quality.v632.css
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: text/css; charset=utf-8
+
+/assets/quality.v636.css
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: text/css; charset=utf-8
+
+/assets/interaction.v637.css
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: text/css; charset=utf-8
+
+/assets/aeo.v639.css
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: text/css; charset=utf-8
+
+/assets/analytics.v632.js
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
   Content-Type: text/javascript; charset=utf-8
 
-/assets/analytics.v628.js
+/assets/app.v632.js
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: text/javascript; charset=utf-8
+
+/assets/experience.v632.js
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: text/javascript; charset=utf-8
+
+/assets/hardening.v630.js
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: text/javascript; charset=utf-8
+
+/assets/menu.v632.js
+  ! Cache-Control
   Cache-Control: public, max-age=31536000, immutable
   Content-Type: text/javascript; charset=utf-8
 
 /assets/*.webp
+  ! Cache-Control
   Cache-Control: public, max-age=2592000
   Content-Type: image/webp
 
 /assets/*.png
+  ! Cache-Control
   Cache-Control: public, max-age=2592000
   Content-Type: image/png
 
 /assets/*.ico
+  ! Cache-Control
   Cache-Control: public, max-age=2592000
   Content-Type: image/x-icon
 
+/assets/*.svg
+  ! Cache-Control
+  Cache-Control: public, max-age=2592000
+  Content-Type: image/svg+xml
+
 /manifest.webmanifest
+  ! Cache-Control
   Cache-Control: public, max-age=0, must-revalidate
   Content-Type: application/manifest+json; charset=utf-8
 
