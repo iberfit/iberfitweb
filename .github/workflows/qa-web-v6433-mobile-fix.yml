@@ -1,0 +1,76 @@
+name: QA WEB IBERFIT V6.43.3 mobile evidence fix
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-3-aesthetic-polish
+    paths:
+      - '.github/workflows/qa-web-v6433-mobile-fix.yml'
+      - '.github/scripts/qa_v6433_mobile_fix.cjs'
+      - 'candidate/v628/assets/polish.v6433.css'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-web-v6433-mobile-fix
+  cancel-in-progress: false
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/web-v6-43-3-aesthetic-polish
+          fetch-depth: 0
+
+      - name: Verify certified V6.43.3 baseline and narrow patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          CERTIFIED='0319c07e8921d79dd6648c14c1df06fdc90fb41f'
+          git cat-file -e "$CERTIFIED^{commit}"
+          git merge-base --is-ancestor "$CERTIFIED" HEAD
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.3'
+          test "$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          changed="$(git diff --name-only "$CERTIFIED" HEAD -- candidate/v628 | sort)"
+          test "$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l | tr -d ' ')" = '1'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/assets/polish.v6433.css'
+          grep -q '@media(max-width:640px){.app-story-stage{align-items:start!important}' candidate/v628/assets/polish.v6433.css
+          git diff --check "$CERTIFIED" -- candidate/v628
+
+      - name: Validate preserved product contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          root='candidate/v628'
+          test "$(grep -R -l '/assets/polish.v6433.css' "$root" --include='*.html' | wc -l | tr -d ' ')" = '33'
+          test -s "$root/assets/app-online-plan-v6433.webp"
+          grep -q 'pasión por el entrenamiento' "$root/sobre-iberfit/index.html"
+          grep -q 'passion for training' "$root/en/about/index.html"
+          ! grep -R -n -E 'Cliente QA|Cliente Prueba IBERFIT|Coach QA' "$root" --include='*.html'
+
+      - name: Browser regression including mobile card height
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.58.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v6433-mobile-server.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break || true; sleep 1; done
+          node .github/scripts/qa_v6433_aesthetic.cjs
+          node .github/scripts/qa_v6433_mobile_fix.cjs
+
+      - name: Save evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v6433-mobile-fix-evidence
+          path: |
+            /tmp/v6433-mobile-server.log
+            /tmp/v6433-evidence
+          if-no-files-found: warn
+          retention-days: 30
