@@ -1,0 +1,119 @@
+name: QA WEB IBERFIT V6.42 runtime final v3
+
+on:
+  push:
+    branches:
+      - work/web-v6-42-performance-budget
+    paths:
+      - '.github/workflows/qa-web-v642-runtime-final-v3.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar candidata exacta
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=candidate/v628
+          test "$(tr -d '\r\n ' < "$base/VERSION")" = '6.42'
+          test "$(find "$base" -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          node --check "$base/assets/app.v642.js"
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,json
+          root=Path('candidate/v628'); htmls=sorted(root.rglob('*.html'))
+          old=(root/'assets/app.v632.js').read_text(); new=(root/'assets/app.v642.js').read_text()
+          start=',i=document.querySelector("[data-menu-toggle]")'; marker='const b=document.querySelector(".site-header");'
+          assert new==old[:old.index(start)]+';'+old[old.index(marker):]
+          assert len(old.encode())-len(new.encode())==726
+          for p in htmls:
+              t=p.read_text(); rel=p.relative_to(root).as_posix()
+              assert t.count('/assets/app.v642.js')==1, rel
+              assert '/assets/app.v632.js' not in t and '/assets/hardening.v630.js' not in t, rel
+              assert t.count('/assets/menu.v632.js')==1, rel
+              for m in re.finditer(r'<script\s+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',t,re.I|re.S): json.loads(m.group(1))
+          h=(root/'_headers').read_text()
+          assert "script-src-attr 'none'" in h and "'unsafe-inline'" not in h and "'sha256-OvlTbjy6MX3tOPtkkyczJxexU0UitjLSDdZtn3+IzfQ='" in h
+          assert '/assets/app.v642.js\n  ! Cache-Control\n  Cache-Control: public, max-age=31536000, immutable' in h
+          home=(root/'index.html').read_text(); assert 'data-aeo-answer' in home and '"@type":"Organization"' in home
+          print({'html':len(htmls),'saved_bytes':726})
+          PY
+          git diff --check
+
+      - name: Preparar Playwright y servidor
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.58.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v642-server.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break; sleep 1; done
+          curl -fsS http://127.0.0.1:4173/ >/dev/null
+
+      - name: Probar 33 rutas, reveal, menú y orientador
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > v642-browser.cjs <<'JS'
+          const { chromium }=require('playwright'); const fs=require('fs'),path=require('path');
+          const root=path.resolve('candidate/v628'),files=[];
+          (function walk(d){for(const n of fs.readdirSync(d)){const p=path.join(d,n),s=fs.statSync(p);s.isDirectory()?walk(p):n.endsWith('.html')&&files.push(p)}})(root);
+          const routeOf=p=>{const r=path.relative(root,p).replaceAll('\\','/');return r==='index.html'?'/':r==='404.html'?'/404.html':'/'+r.replace(/index\.html$/,'')};
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1,isMobile:true,hasTouch:true});
+            const page=await context.newPage(); const errors=[]; page.on('pageerror',e=>errors.push(String(e)));
+            for(const f of files.sort()){
+              const route=routeOf(f),res=await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'domcontentloaded'}); if(!res?.ok())throw new Error(`HTTP ${route}:${res?.status()}`);
+              await page.waitForTimeout(70);
+              const b=await page.evaluate(()=>({text:(document.body.innerText||'').trim().length,overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,app:[...document.scripts].filter(s=>s.src.includes('/assets/app.v642.js')).length,hard:[...document.scripts].filter(s=>s.src.includes('/assets/hardening.v630.js')).length,menu:[...document.scripts].filter(s=>s.src.includes('/assets/menu.v632.js')).length}));
+              if(b.text<20||b.overflow>2||b.app!==1||b.hard!==0||b.menu!==1)throw new Error(`BASIC ${route} ${JSON.stringify(b)}`);
+              const reveals=page.locator('.reveal');
+              for(let i=0;i<await reveals.count();i++){
+                const el=reveals.nth(i); if(!await el.isVisible())continue;
+                await el.scrollIntoViewIfNeeded(); await page.waitForTimeout(35);
+                if(!await el.evaluate(n=>n.classList.contains('visible')))throw new Error(`REVEAL ${route} #${i}`);
+              }
+            }
+            if(errors.length)throw new Error('PAGEERROR '+errors.join(' | '));
+
+            await page.goto('http://127.0.0.1:4173/',{waitUntil:'domcontentloaded'});
+            const toggle=page.locator('[data-menu-toggle]'); await toggle.click();
+            if(await toggle.getAttribute('aria-expanded')!=='true')throw new Error('MENU_OPEN');
+            if(!await page.locator('[data-navlinks]').evaluate(el=>el.classList.contains('open')))throw new Error('MENU_CLASS');
+            if(!await page.locator('.nav-panel-backdrop').evaluate(el=>el.classList.contains('is-visible')))throw new Error('MENU_BACKDROP');
+            if(!await page.evaluate(()=>document.querySelector('[data-navlinks]').contains(document.activeElement)))throw new Error('MENU_FOCUS');
+            await page.keyboard.press('Escape'); await page.waitForTimeout(60); if(await toggle.getAttribute('aria-expanded')!=='false')throw new Error('MENU_ESCAPE');
+
+            await page.goto('http://127.0.0.1:4173/contacto/',{waitUntil:'domcontentloaded'});
+            const form=page.locator('[data-orientador-form]'); if(await form.count()!==1)throw new Error('GUIDE_MISSING');
+            const steps=page.locator('[data-step]'),count=await steps.count(); if(count<2)throw new Error('GUIDE_STEPS');
+            for(let i=0;i<count;i++){
+              const active=page.locator('[data-step].active'),first=active.locator('.choice-chip').first(); if(await first.count())await first.click();
+              if(i<count-1){const next=active.locator('[data-next-step]');if(await next.count())await next.click();}
+            }
+            const submit=form.locator('button[type="submit"],input[type="submit"]').first(); if(await submit.count())await submit.click();else await form.evaluate(el=>el.requestSubmit());
+            await page.waitForTimeout(100); const result=page.locator('[data-orientador-result]'); if(await result.isHidden())throw new Error('GUIDE_RESULT');
+            const wa=page.locator('[data-orientador-whatsapp]'); if(!(await wa.getAttribute('href')||'').includes('wa.me/56944040032'))throw new Error('GUIDE_WA');
+            const edit=page.locator('.orientador-edit'); if(await edit.count()!==1)throw new Error('GUIDE_EDIT'); await edit.click(); if(await page.locator('[data-step].active').count()!==1)throw new Error('GUIDE_EDIT_RESTORE');
+            await browser.close(); console.log(JSON.stringify({routes:files.length,pageErrors:0,reveal:'ok',menu:'ok',guide:'ok'}));
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+          node v642-browser.cjs
+
+      - name: Evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v642-runtime-final-v3-evidence
+          path: /tmp/v642-server.log
+          if-no-files-found: warn
+          retention-days: 30
