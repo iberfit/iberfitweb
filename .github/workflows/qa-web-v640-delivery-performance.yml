@@ -33,7 +33,6 @@ jobs:
           expected=$'candidate/v628/CHANGELOG.md\ncandidate/v628/VERSION\ncandidate/v628/_headers'
           actual="$(printf '%s\n' "${changed[@]}")"
           test "$actual" = "$expected"
-          ! git diff "$BASE" -- candidate/v628 -- '*.html' 'candidate/v628/assets/**' candidate/v628/robots.txt candidate/v628/llms.txt candidate/v628/sitemap.xml | grep .
 
       - name: Validar política de caché y seguridad
         shell: bash
@@ -106,7 +105,7 @@ jobs:
           for i in $(seq 1 20); do curl --fail --silent http://127.0.0.1:4173/ >/dev/null && break; sleep 1; done
           python3 - <<'PY'
           from pathlib import Path
-          import re, urllib.request
+          import urllib.request
           root=Path('candidate/v628')
           routes=[]
           for p in sorted(root.rglob('*.html')):
