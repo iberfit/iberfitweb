@@ -1,11 +1,11 @@
 # Cambios V6.42
 
-- Se consolida el runtime del sitio a partir de evidencia Lighthouse real de producción, no de una optimización teórica.
-- Se retira `hardening.v630.js` de las páginas: su barrido de `.reveal` con `getBoundingClientRect()` duplicaba el `IntersectionObserver` ya presente en la aplicación y añadía trabajo de scripting/layout en móvil.
-- Se crea `app.v642.js`, idéntico funcionalmente a `app.v632.js` salvo por la eliminación del controlador de menú básico duplicado. El menú queda bajo `menu.v632.js`, que conserva backdrop, `inert`, focus trap, Escape y sincronización ARIA.
-- Se mantienen intactos el orientador, tracking, dock móvil, reduced motion, superficies premium, navegación por anclas y demás capacidades de `app.v632.js`.
-- La nueva variante mantiene cache immutable y V6.41 CSP estricta. La promoción a producción queda condicionada a QA funcional, accesibilidad y comparación Lighthouse preview vs producción.
-- No se atribuyen mejoras de Core Web Vitals de campo sin datos CrUX; V6.42 se evalúa primero como rendimiento de laboratorio y carga del main thread.
+- Se optimiza el runtime a partir de una línea base Lighthouse tomada contra producción real.
+- Se retira `hardening.v630.js` de las 33 páginas: ese script recorría elementos `.reveal` con `getBoundingClientRect()` aunque `app.v632.js` ya gestiona la misma aparición con `IntersectionObserver`, añadiendo trabajo redundante de scripting y layout en móvil.
+- Se conserva íntegro `app.v632.js` y `menu.v632.js`. La QA demostró que el controlador de menú de `app.v632.js` no era redundante: aporta la apertura, Escape, cierre por enlaces y tracking sobre los que `menu.v632.js` añade backdrop, `inert`, focus trap y sincronización ARIA.
+- La detección automática evitó promover una simplificación que habría degradado la navegación móvil; V6.42 mantiene por diseño las dos capas complementarias del menú.
+- Se preservan V6.41 CSP estricta, V6.40 cache policy, AEO/SEO, orientador, tracking, dock móvil, reduced motion y contenido.
+- La promoción a producción queda condicionada a regresión funcional completa y comparación Lighthouse preview vs producción. No se atribuyen mejoras de Core Web Vitals de campo sin datos CrUX.
 
 # Cambios V6.41
 

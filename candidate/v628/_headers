@@ -92,11 +92,6 @@
   Cache-Control: public, max-age=31536000, immutable
   Content-Type: text/javascript; charset=utf-8
 
-/assets/app.v642.js
-  ! Cache-Control
-  Cache-Control: public, max-age=31536000, immutable
-  Content-Type: text/javascript; charset=utf-8
-
 /assets/experience.v629.js
   ! Cache-Control
   Cache-Control: public, max-age=31536000, immutable
