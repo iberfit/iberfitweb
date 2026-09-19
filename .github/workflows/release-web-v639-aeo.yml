@@ -1,0 +1,335 @@
+name: Release WEB IBERFIT V6.39 AEO
+
+on:
+  push:
+    branches:
+      - work/web-v6-39-aeo
+    paths:
+      - '.github/workflows/release-web-v639-aeo.yml'
+      - 'candidate/v628/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-web-v639-aeo
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/web-v6-39-aeo
+          fetch-depth: 0
+
+      - name: Verificar baseline V6.38 exacta
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='b293c1a3ecc64a14d56a5c0c45edb15636e57182'
+          git cat-file -e "$BASE^{commit}"
+          git merge-base --is-ancestor "$BASE" HEAD
+          test -d candidate/v628
+          current="$(tr -d '\r\n ' < candidate/v628/VERSION)"
+          test "$current" = '6.38' || test "$current" = '6.39'
+
+      - name: Aplicar AEO V6.39
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, re
+
+          root=Path('candidate/v628')
+          css_link='<link href="/assets/aeo.v639.css" rel="stylesheet"/>'
+          today='2026-09-19'
+
+          css=r'''/* IBERFIT V6.39 — Answer Engine Optimization */
+          .answer-section{background:var(--cream,#f4efe4)}
+          .answer-shell{max-width:1120px}
+          .answer-intro{max-width:760px;margin-bottom:clamp(28px,4vw,46px)}
+          .answer-list{border-top:1px solid rgba(31,61,43,.22)}
+          .answer-item{display:grid;grid-template-columns:minmax(220px,.85fr) minmax(0,1.35fr);gap:clamp(24px,4vw,64px);padding:clamp(24px,3.5vw,38px) 0;border-bottom:1px solid rgba(31,61,43,.18);align-items:start}
+          .answer-item h3{margin:0;font-size:clamp(1.05rem,1.5vw,1.28rem);line-height:1.3;color:var(--green,#1f3d2b)}
+          .answer-item p{margin:0;max-width:760px;line-height:1.72}
+          .answer-item p strong{font-weight:700;color:var(--green,#1f3d2b)}
+          .answer-source-note{margin-top:22px;font-size:.92rem;opacity:.78;max-width:760px}
+          @media(max-width:720px){.answer-item{grid-template-columns:1fr;gap:10px;padding:22px 0}.answer-intro{margin-bottom:24px}}
+          @media(prefers-reduced-motion:reduce){.answer-section *{scroll-behavior:auto!important}}
+          '''
+          (root/'assets/aeo.v639.css').write_text(css,encoding='utf-8')
+
+          def section(lang, title, intro, qa):
+              kicker='Respuestas directas' if lang=='es' else 'Direct answers'
+              note=('Estas respuestas resumen el servicio visible en esta página. El detalle operativo y la recomendación final dependen del contexto de cada persona.' if lang=='es' else 'These answers summarise the service described on this page. Operational detail and the final recommendation depend on each person’s context.')
+              items=''.join(f'<article class="answer-item" data-aeo-answer><h3>{q}</h3><p>{a}</p></article>' for q,a in qa)
+              return f'<section class="section answer-section" id="respuestas-rapidas"><div class="container answer-shell"><div class="section-intro answer-intro reveal"><div class="kicker">{kicker}</div><h2>{title}</h2><p class="lead">{intro}</p></div><div class="answer-list reveal">{items}</div><p class="answer-source-note">{note}</p></div></section>'
+
+          answers={
+          'index.html': section('es','IBERFIT, explicado de forma directa.','Las preguntas esenciales sobre el servicio, con respuestas breves antes de entrar en el detalle.',[
+              ('¿Qué es IBERFIT?','<strong>IBERFIT es un servicio de entrenamiento personal basado en diagnóstico, planificación, control y seguimiento.</strong> El objetivo es que cada decisión del plan tenga una razón comprensible y pueda ajustarse con la evolución.'),
+              ('¿Qué es el Diagnóstico IRI?','<strong>Es la evaluación inicial y la línea de base del proceso IBERFIT.</strong> Ordena contexto, capacidades y prioridades antes de planificar; no sustituye el seguimiento posterior de la evolución.'),
+              ('¿Cómo se adapta el plan?','<strong>El plan se revisa con la respuesta al entrenamiento, la adherencia y el contexto.</strong> Se modifica cuando esa información justifica un cambio, no por aplicar una rutina fija.'),
+              ('¿Qué diferencia hay entre presencial, híbrido y online?','<strong>La modalidad cambia el modo de acompañamiento, no el criterio.</strong> Presencial prioriza supervisión directa; híbrido combina supervisión y autonomía; online mantiene planificación, feedback y revisión sin depender de una ubicación concreta.')]),
+          'diagnostico-iri/index.html': section('es','Preguntas clave sobre el Diagnóstico IRI.','El IRI debe entenderse como punto de partida, no como una puntuación definitiva ni como el seguimiento completo.',[
+              ('¿Qué es exactamente el Diagnóstico IRI?','<strong>Es una evaluación inicial estructurada para entender desde dónde empiezas y qué conviene priorizar.</strong> Reúne contexto, medidas y capacidades físicas y termina en una orientación práctica.'),
+              ('¿Qué evalúa el IRI?','<strong>Evalúa contexto, composición corporal, movilidad, fuerza y acondicionamiento según el caso.</strong> No se acumulan pruebas por acumular: se recoge información que pueda ayudar a decidir.'),
+              ('¿Qué recibo al terminar?','<strong>Recibes una lectura comprensible del punto de partida, prioridades iniciales y una recomendación de modalidad y acompañamiento.</strong> Esa línea de base sirve para comparar revisiones futuras cuando los protocolos sean compatibles.'),
+              ('¿El IRI es lo mismo que el seguimiento?','<strong>No.</strong> El IRI es la evaluación inicial y la bienvenida al proceso; el seguimiento ocurre después, durante el entrenamiento, para revisar evolución y ajustar el plan.'),
+              ('¿La bioimpedancia es un diagnóstico médico?','<strong>No.</strong> En IBERFIT la bioimpedancia se interpreta como una referencia contextual y nunca como diagnóstico médico ni como una conclusión aislada.')]),
+          'metodo/index.html': section('es','Cómo funciona el Método IBERFIT.','La lógica del método puede resumirse en preguntas concretas que conectan evaluación, entrenamiento y ajuste.',[
+              ('¿Cómo funciona el Método IBERFIT?','<strong>Evalúa, planifica, ejecuta, controla, revisa y ajusta.</strong> Cada fase aporta información para decidir el siguiente paso y evita que el entrenamiento dependa de una plantilla fija.'),
+              ('¿Cuándo cambia el plan?','<strong>Cuando la respuesta, la adherencia o el contexto muestran una razón para cambiarlo.</strong> Una buena tolerancia puede permitir progresar; una limitación, dolor o semana inviable puede exigir adaptar.'),
+              ('¿Qué pasa si aparece dolor o una limitación?','<strong>La prioridad es detener, adaptar o cambiar aquello que ya no refleja lo planificado.</strong> La decisión se explica y queda integrada en el seguimiento.'),
+              ('¿Qué datos utiliza IBERFIT?','<strong>Solo información que ayude a comprender la respuesta o a tomar una decisión.</strong> Registrar más datos no es un objetivo por sí mismo.'),
+              ('¿El método cambia según la modalidad?','<strong>No cambia la lógica de trabajo.</strong> Presencial, híbrido y online usan el mismo principio de evaluar, planificar, controlar y revisar; cambia la forma de supervisar y comunicarse.')]),
+          'presencial/index.html': section('es','Entrenamiento presencial: respuestas rápidas.','La supervisión directa tiene valor cuando encaja con el objetivo, el espacio y una frecuencia que pueda sostenerse.',[
+              ('¿Qué incluye el entrenamiento presencial?','<strong>Incluye supervisión directa durante la sesión dentro de un plan individual.</strong> La sesión no queda aislada: lo observado y registrado sirve para orientar las siguientes decisiones.'),
+              ('¿Dónde puede realizarse?','<strong>Puede realizarse en un espacio acordado y adecuado, según cobertura.</strong> Puede ser domicilio, gimnasio de edificio o un entorno exterior cuando las condiciones permiten trabajar con calidad.'),
+              ('¿Para quién suele tener más sentido?','<strong>Para quien valora corrección inmediata, acompañamiento en el mismo espacio o necesita más supervisión directa.</strong> La recomendación final depende del punto de partida y del contexto.'),
+              ('¿Hay seguimiento fuera de la sesión?','<strong>Sí: la sesión forma parte del mismo proceso de planificación y seguimiento.</strong> La información útil de cada entrenamiento se utiliza para revisar progresión y ajustes.')]),
+          'hibrido/index.html': section('es','Modalidad híbrida: qué combina y por qué.','La modalidad híbrida busca mantener continuidad sin obligar a que todo el proceso dependa de una sesión presencial.',[
+              ('¿Qué es el entrenamiento híbrido?','<strong>Combina momentos de supervisión presencial con trabajo guiado a distancia dentro del mismo plan.</strong> No son dos programas separados.'),
+              ('¿Cuándo puede ser útil?','<strong>Cuando la supervisión directa aporta valor pero la agenda, los desplazamientos o la autonomía hacen más sostenible combinar formatos.</strong>'),
+              ('¿Cómo se mantiene la continuidad?','<strong>La planificación, el registro y la revisión conectan las sesiones presenciales y el trabajo autónomo.</strong> Así una semana distinta no obliga a empezar de cero.'),
+              ('¿El trabajo a distancia recibe seguimiento?','<strong>Sí.</strong> El trabajo guiado fuera de la sesión presencial conserva instrucciones, feedback y revisión dentro del mismo proceso.')]),
+          'online/index.html': section('es','Entrenamiento online: qué significa en IBERFIT.','Online no significa recibir una rutina genérica: mantiene planificación individual, instrucciones, feedback y revisión.',[
+              ('¿Qué es el entrenamiento personal online de IBERFIT?','<strong>Es un servicio de planificación y seguimiento individual que no depende de una ubicación concreta.</strong> El plan se construye desde tu contexto y se revisa con tu respuesta y adherencia.'),
+              ('¿Cómo se supervisa si no estamos en el mismo lugar?','<strong>Mediante instrucciones claras, registro, feedback y revisiones del proceso.</strong> La intensidad de la supervisión se adapta a la autonomía y necesidades de cada persona.'),
+              ('¿Necesito material específico?','<strong>No existe un material único obligatorio para todos.</strong> El plan se diseña con los recursos y el entorno disponibles, siempre que permitan trabajar el objetivo con seguridad y calidad.'),
+              ('¿El plan online también se ajusta?','<strong>Sí.</strong> La respuesta al entrenamiento, la adherencia y los cambios de contexto orientan cuándo progresar, mantener, simplificar o modificar el plan.')]),
+          'sobre-iberfit/index.html': section('es','Qué es IBERFIT y de dónde viene.','La marca se entiende mejor por su forma de trabajar que por una biografía personal.',[
+              ('¿Qué es IBERFIT?','<strong>IBERFIT es una marca de entrenamiento personal que convierte evaluación y seguimiento en decisiones prácticas de entrenamiento.</strong>'),
+              ('¿Cuál es su origen?','<strong>Nace de formación universitaria en España y de un recorrido europeo con exposición a los contextos español y alemán antes de consolidarse en Chile.</strong> Ese recorrido se traduce en método, precisión, proceso y adaptación.'),
+              ('¿Qué diferencia a IBERFIT de una rutina estándar?','<strong>El plan no empieza por una plantilla, sino por el punto de partida y el contexto de la persona.</strong> Después se revisa y ajusta con información útil del proceso.'),
+              ('¿Qué papel tiene la tecnología?','<strong>La tecnología organiza información y facilita el seguimiento; no sustituye la decisión profesional.</strong> La observación, la explicación y el ajuste siguen siendo humanos.')]),
+          'en/index.html': section('en','IBERFIT, explained directly.','Essential questions about the service, answered briefly before the deeper detail.',[
+              ('What is IBERFIT?','<strong>IBERFIT is a personal training service built around assessment, planning, monitoring and ongoing review.</strong> The aim is for each training decision to have a clear reason and to adapt as the person progresses.'),
+              ('What is the IRI Assessment?','<strong>It is IBERFIT’s initial assessment and baseline.</strong> It organises context, current capacity and priorities before planning; it is separate from the ongoing follow-up that happens during training.'),
+              ('How is the plan adapted?','<strong>The plan is reviewed using training response, adherence and context.</strong> It changes when that information supports an adjustment, rather than following a fixed routine.'),
+              ('What is the difference between in-person, hybrid and online?','<strong>The format changes how support is delivered, not the working logic.</strong> In-person prioritises direct supervision; hybrid combines supervision and autonomy; online keeps planning, feedback and review without relying on one location.')]),
+          'en/iri-assessment/index.html': section('en','Key questions about the IRI Assessment.','The IRI is a starting point, not a final score and not the whole follow-up process.',[
+              ('What exactly is the IRI Assessment?','<strong>It is a structured initial assessment designed to understand your starting point and what should be prioritised.</strong> It brings together context, measurements and physical capacities and ends with practical guidance.'),
+              ('What does the IRI assess?','<strong>It considers context, body composition, mobility, strength and conditioning when relevant.</strong> Tests are only included when the information can support a useful decision.'),
+              ('What do I receive afterwards?','<strong>You receive a clear reading of your baseline, initial priorities and a recommendation on training format and level of support.</strong> That baseline can support later comparisons when protocols are compatible.'),
+              ('Is the IRI the same as ongoing review?','<strong>No.</strong> The IRI is the initial assessment and entry point; ongoing review happens during training to evaluate progress and adjust the plan.'),
+              ('Is bioimpedance a medical diagnosis?','<strong>No.</strong> IBERFIT uses bioimpedance as a contextual reference, never as a medical diagnosis or an isolated conclusion.')]),
+          'en/method/index.html': section('en','How the IBERFIT Method works.','The method can be summarised through concrete questions that connect assessment, training and adjustment.',[
+              ('How does the IBERFIT Method work?','<strong>Assess, plan, execute, monitor, review and adjust.</strong> Each phase contributes information for the next decision so training does not depend on a fixed template.'),
+              ('When does the plan change?','<strong>When response, adherence or context provide a reason to change it.</strong> Good tolerance may support progression; pain, limitation or an unworkable week may require adaptation.'),
+              ('What happens if pain or a limitation appears?','<strong>The priority is to stop, adapt or replace what no longer reflects the plan.</strong> The reason for the decision becomes part of the follow-up.'),
+              ('What data does IBERFIT use?','<strong>Only information that helps understand the response or make a decision.</strong> Collecting more data is not an objective in itself.'),
+              ('Does the method change by training format?','<strong>The working logic stays the same.</strong> In-person, hybrid and online all use assessment, planning, monitoring and review; the supervision and communication format changes.')]),
+          'en/in-person/index.html': section('en','In-person training: direct answers.','Direct supervision is useful when it fits the goal, the environment and a sustainable training frequency.',[
+              ('What does in-person training include?','<strong>It includes direct supervision during the session within an individual plan.</strong> What is observed and recorded in the session informs later decisions.'),
+              ('Where can sessions take place?','<strong>In an agreed suitable environment, subject to coverage.</strong> This may be at home, in a building gym or outdoors when the conditions support a good-quality session.'),
+              ('Who is it usually best suited to?','<strong>People who value immediate correction, shared-space support or need more direct supervision.</strong> The final recommendation depends on the starting point and context.'),
+              ('Is there follow-up beyond the session?','<strong>Yes.</strong> Each session sits inside the same planning and review process, so useful information carries into progression and later adjustments.')]),
+          'en/hybrid/index.html': section('en','Hybrid training: what it combines and why.','Hybrid training is designed to protect continuity without making the whole process depend on an in-person session.',[
+              ('What is hybrid personal training?','<strong>It combines selected in-person supervision with guided remote work inside one plan.</strong> They are not two separate programmes.'),
+              ('When can hybrid training be useful?','<strong>When direct supervision adds value but schedule, travel or autonomy make a mixed format more sustainable.</strong>'),
+              ('How is continuity maintained?','<strong>Planning, records and review connect in-person sessions with independent work.</strong> A different week does not mean restarting from zero.'),
+              ('Is remote work still reviewed?','<strong>Yes.</strong> Work completed away from the in-person session still has instructions, feedback and review within the same process.')]),
+          'en/online/index.html': section('en','Online personal training at IBERFIT.','Online does not mean receiving a generic routine: it keeps individual planning, instructions, feedback and review.',[
+              ('What is IBERFIT online personal training?','<strong>It is an individual planning and follow-up service that does not depend on one location.</strong> The plan starts from your context and is reviewed using your response and adherence.'),
+              ('How is training supervised remotely?','<strong>Through clear instructions, records, feedback and process reviews.</strong> The level of supervision adapts to each person’s autonomy and needs.'),
+              ('Do I need specific equipment?','<strong>There is no single piece of equipment required for everyone.</strong> The plan is designed around the resources and environment available when they can support the goal safely and effectively.'),
+              ('Is an online plan adjusted over time?','<strong>Yes.</strong> Training response, adherence and changes in context guide when to progress, maintain, simplify or modify the plan.')]),
+          'en/about/index.html': section('en','What IBERFIT is and where it comes from.','The brand is best understood through its working principles rather than a personal biography.',[
+              ('What is IBERFIT?','<strong>IBERFIT is a personal training brand that turns assessment and follow-up into practical training decisions.</strong>'),
+              ('Where does IBERFIT come from?','<strong>It grows from university education in Spain and a European path shaped by Spanish and German contexts before consolidating in Chile.</strong> That journey informs method, precision, process and adaptation.'),
+              ('What makes IBERFIT different from a standard routine?','<strong>The plan starts with the person’s baseline and context rather than a template.</strong> It is then reviewed and adjusted using useful information from the process.'),
+              ('What role does technology play?','<strong>Technology organises information and supports follow-up; it does not replace professional decision-making.</strong> Observation, explanation and adjustment remain human.')])
+          }
+
+          local_es={
+            'entrenador-personal-las-condes/index.html':'Las Condes',
+            'entrenador-personal-vitacura/index.html':'Vitacura',
+            'entrenamiento-personal-providencia/index.html':'Providencia',
+            'personal-trainer-nunoa/index.html':'Ñuñoa',
+            'entrenador-personal-lo-barnechea/index.html':'Lo Barnechea',
+            'entrenador-personal-la-reina/index.html':'La Reina',
+            'entrenador-personal-penalolen/index.html':'Peñalolén',
+          }
+          local_en={
+            'en/personal-trainer-las-condes/index.html':'Las Condes',
+            'en/personal-trainer-vitacura/index.html':'Vitacura',
+            'en/personal-training-providencia/index.html':'Providencia',
+            'en/personal-trainer-nunoa/index.html':'Ñuñoa',
+            'en/personal-trainer-lo-barnechea/index.html':'Lo Barnechea',
+            'en/personal-trainer-la-reina/index.html':'La Reina',
+            'en/personal-trainer-penalolen/index.html':'Peñalolén',
+          }
+          for path,place in local_es.items():
+              answers[path]=section('es',f'Entrenamiento personal en {place}: respuesta directa.','La cobertura local se confirma según sector, espacio y horario; el criterio de planificación y seguimiento es el mismo de IBERFIT.',[
+                  (f'¿IBERFIT ofrece entrenamiento personal en {place}?',f'<strong>Sí, IBERFIT contempla entrenamiento presencial en {place} según sector, espacio disponible y horario.</strong> Antes de confirmar se revisa que la frecuencia sea viable y que el entorno permita trabajar con calidad.'),
+                  (f'¿Puedo combinar presencial y online en {place}?','<strong>Sí, cuando la combinación mejora la continuidad.</strong> La modalidad híbrida conecta supervisión presencial y trabajo guiado dentro del mismo plan, en lugar de tratarlos como servicios separados.')])
+          for path,place in local_en.items():
+              answers[path]=section('en',f'Personal training in {place}: direct answer.','Local coverage is confirmed by area, training space and schedule; the planning and review principles remain the same across IBERFIT.',[
+                  (f'Does IBERFIT offer personal training in {place}?',f'<strong>Yes. IBERFIT provides in-person personal training in {place} subject to area, available training space and schedule.</strong> Coverage is confirmed only when the frequency and environment are workable.'),
+                  (f'Can I combine in-person and online training in {place}?','<strong>Yes, when that combination improves continuity.</strong> Hybrid training connects direct supervision and guided remote work inside one plan rather than treating them as separate services.')])
+
+          def normalize_jsonld(text):
+              pat=re.compile(r'<script type="application/ld\+json">(.*?)</script>',re.S)
+              def repl(m):
+                  data=json.loads(m.group(1))
+                  def walk(x):
+                      if isinstance(x,dict):
+                          if x.get('@id')=='https://iberfit.cl/#business': x['@id']='https://iberfit.cl/#organization'
+                          t=x.get('@type')
+                          if t==['LocalBusiness','ProfessionalService'] or t==['ProfessionalService','LocalBusiness']:
+                              x['@type']='Organization'; x.pop('priceRange',None); x.setdefault('slogan','Entrenamiento personal con criterio')
+                          if t=='WebPage': x['dateModified']=today
+                          for v in list(x.values()): walk(v)
+                      elif isinstance(x,list):
+                          for v in x: walk(v)
+                  walk(data)
+                  raw=json.dumps(data,ensure_ascii=False,separators=(',',':')).replace('https://iberfit.cl/#business','https://iberfit.cl/#organization')
+                  return '<script type="application/ld+json">'+raw+'</script>'
+              return pat.sub(repl,text)
+
+          html_files=sorted(root.rglob('*.html'))
+          if len(html_files)!=33: raise SystemExit(f'Expected 33 HTML files, found {len(html_files)}')
+          for p in html_files:
+              rel=p.relative_to(root).as_posix(); text=p.read_text(encoding='utf-8'); text=normalize_jsonld(text)
+              if css_link not in text: text=text.replace('</head>',css_link+'</head>',1)
+              if rel in answers and 'data-aeo-answer' not in text:
+                  idx=text.rfind('<section class="section cta-panel">')
+                  if idx<0: idx=text.rfind('</main>')
+                  if idx<0: raise SystemExit('No insertion point '+rel)
+                  text=text[:idx]+answers[rel]+text[idx:]
+              p.write_text(text,encoding='utf-8')
+
+          (root/'robots.txt').write_text('User-agent: OAI-SearchBot\nAllow: /\n\nUser-agent: ChatGPT-User\nAllow: /\n\nUser-agent: *\nAllow: /\n\nSitemap: https://iberfit.cl/sitemap.xml\n',encoding='utf-8')
+
+          llms=root/'llms.txt'; ll=llms.read_text(encoding='utf-8')
+          if '## Respuestas directas' not in ll:
+              ll += '''\n## Respuestas directas\n\n- ¿Qué es IBERFIT? IBERFIT es un servicio de entrenamiento personal basado en diagnóstico, planificación, control y seguimiento.\n- ¿Qué es el Diagnóstico IRI? Es la evaluación inicial y línea de base; no es el seguimiento posterior de la evolución.\n- ¿Cómo se ajusta el entrenamiento? La respuesta al entrenamiento, la adherencia y el contexto orientan cuándo progresar, mantener o modificar el plan.\n- ¿Qué modalidades existen? Presencial, híbrida y entrenamiento personal online. La modalidad cambia la forma de acompañamiento, no la lógica de evaluar, planificar, controlar y revisar.\n- ¿La bioimpedancia es un diagnóstico médico? No. Se usa como referencia contextual dentro del IRI.\n\n## Entidad y fuente de verdad\n\nIBERFIT es la organización responsable del servicio. Las páginas HTML canónicas de iberfit.cl son la fuente de verdad; este archivo sirve únicamente como resumen de navegación y contexto para sistemas automatizados.\n'''
+          llms.write_text(ll,encoding='utf-8')
+
+          sm=root/'sitemap.xml'; s=sm.read_text(encoding='utf-8'); s=re.sub(r'<lastmod>2026-09-(?:12|16|18)</lastmod>',f'<lastmod>{today}</lastmod>',s); sm.write_text(s,encoding='utf-8')
+          (root/'VERSION').write_text('6.39\n',encoding='utf-8')
+          cl=root/'CHANGELOG.md'; c=cl.read_text(encoding='utf-8')
+          if not c.startswith('# Cambios V6.39'):
+              entry='''# Cambios V6.39\n\n- Se integra AEO (Answer Engine Optimization) sobre contenido visible, no mediante texto oculto ni páginas duplicadas.\n- Se añaden respuestas directas y autocontenidas en Home, IRI, Método, modalidades, Sobre IBERFIT y las 14 páginas locales ES/EN.\n- Se refuerza la distinción IRI inicial vs seguimiento posterior, la lógica de ajuste y la definición de cada modalidad.\n- Se normaliza la entidad estructurada de IBERFIT de LocalBusiness sin dirección publicada a Organization + Service + areaServed, evitando declarar una dirección inexistente.\n- Se añade dateModified coherente con la revisión real y se mantiene el contenido estructurado alineado con el texto visible.\n- robots.txt permite explícitamente OAI-SearchBot y ChatGPT-User, además del acceso general existente.\n- llms.txt incorpora respuestas directas y declara las páginas HTML canónicas como fuente de verdad.\n- No se añade FAQPage artificial ni marcado especial para IA: se prioriza contenido útil, rastreable y citable.\n\n'''
+              cl.write_text(entry+c,encoding='utf-8')
+          PY
+
+      - name: Validar contratos AEO y semántica
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat candidate/v628/VERSION)" = '6.39'
+          test -s candidate/v628/assets/aeo.v639.css
+          test "$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          test "$(grep -R -l 'aeo.v639.css' candidate/v628 --include='*.html' | wc -l | tr -d ' ')" = '33'
+          test "$(grep -R -l 'data-aeo-answer' candidate/v628 --include='*.html' | wc -l | tr -d ' ')" = '28'
+          grep -q '^User-agent: OAI-SearchBot$' candidate/v628/robots.txt
+          grep -q '^User-agent: ChatGPT-User$' candidate/v628/robots.txt
+          grep -q '## Respuestas directas' candidate/v628/llms.txt
+          grep -q 'fuente de verdad' candidate/v628/llms.txt
+          grep -q 'dateModified":"2026-09-19"' candidate/v628/index.html
+          grep -q '"@type":"Organization"' candidate/v628/index.html
+          grep -q '#organization' candidate/v628/index.html
+          ! grep -R -n '"LocalBusiness"' candidate/v628 --include='*.html'
+          ! grep -R -n '"ProfessionalService"' candidate/v628 --include='*.html'
+          ! grep -R -n '#business' candidate/v628 --include='*.html'
+          ! grep -R -n '"FAQPage"' candidate/v628 --include='*.html'
+          grep -q '¿El IRI es lo mismo que el seguimiento?' candidate/v628/diagnostico-iri/index.html
+          grep -q 'What is the IRI Assessment?' candidate/v628/en/index.html
+          grep -q '¿IBERFIT ofrece entrenamiento personal en Las Condes?' candidate/v628/entrenador-personal-las-condes/index.html
+          grep -q 'Does IBERFIT offer personal training in Las Condes?' candidate/v628/en/personal-trainer-las-condes/index.html
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,json
+          files=list(Path('candidate/v628').rglob('*.html'))
+          for p in files:
+              text=p.read_text(encoding='utf-8')
+              for raw in re.findall(r'<script type="application/ld\+json">(.*?)</script>',text,re.S): json.loads(raw)
+          print('JSON-LD OK',len(files))
+          PY
+          git diff --check
+
+      - name: Verificar alcance y no regresión
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='b293c1a3ecc64a14d56a5c0c45edb15636e57182'
+          changed="$(git diff --name-only "$BASE")"
+          echo "$changed"
+          if echo "$changed" | grep -E '^candidate/v628/assets/.*\.(js|webp|png|jpg|jpeg|svg)$'; then echo 'UNEXPECTED_LOGIC_OR_MEDIA_CHANGE'; exit 1; fi
+          ! git diff "$BASE" -- candidate/v628/assets/app.v632.js candidate/v628/assets/analytics.v632.js candidate/v628/assets/experience.v632.js candidate/v628/assets/menu.v632.js | grep .
+
+      - name: Instalar Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.62.1
+          npx playwright install --with-deps chromium
+
+      - name: Servir candidata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v639-server.log 2>&1 &
+          for i in $(seq 1 30); do curl --fail --silent http://127.0.0.1:4173/ >/dev/null && exit 0; sleep 1; done
+          cat /tmp/v639-server.log; exit 1
+
+      - name: Smoke 33 rutas, AEO y accesibilidad
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v639-evidence
+          node <<'NODE'
+          const {chromium}=require('playwright'); const fs=require('fs');
+          const routes=['/','/diagnostico-iri/','/metodo/','/presencial/','/hibrido/','/online/','/sobre-iberfit/','/contacto/','/privacidad/','/entrenador-personal-las-condes/','/entrenador-personal-vitacura/','/entrenamiento-personal-providencia/','/personal-trainer-nunoa/','/entrenador-personal-lo-barnechea/','/entrenador-personal-la-reina/','/entrenador-personal-penalolen/','/en/','/en/iri-assessment/','/en/method/','/en/in-person/','/en/hybrid/','/en/online/','/en/about/','/en/contact/','/en/privacy/','/en/personal-trainer-las-condes/','/en/personal-trainer-vitacura/','/en/personal-training-providencia/','/en/personal-trainer-nunoa/','/en/personal-trainer-lo-barnechea/','/en/personal-trainer-la-reina/','/en/personal-trainer-penalolen/'];
+          const aeo=new Set(routes.filter(r=>!['/contacto/','/privacidad/','/en/contact/','/en/privacy/'].includes(r)));
+          (async()=>{const b=await chromium.launch({headless:true}); const report=[];
+            for(const vp of [{n:'mobile',w:390,h:844},{n:'tablet',w:820,h:1180},{n:'desktop',w:1440,h:1000}]){
+              for(const route of routes){const p=await b.newPage({viewport:{width:vp.w,height:vp.h}}); const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
+                const res=await p.goto('http://127.0.0.1:4173'+route,{waitUntil:'networkidle'}); if(!res||!res.ok()) throw Error(route+' HTTP');
+                const st=await p.evaluate(()=>({overflow:document.documentElement.scrollWidth-window.innerWidth,h1:(document.querySelector('h1')?.textContent||'').trim(),css:[...document.styleSheets].some(s=>String(s.href||'').includes('aeo.v639.css')),answers:document.querySelectorAll('[data-aeo-answer]').length,org:[...document.querySelectorAll('script[type="application/ld+json"]')].some(s=>s.textContent.includes('"Organization"')),local:[...document.querySelectorAll('script[type="application/ld+json"]')].some(s=>s.textContent.includes('LocalBusiness'))}));
+                if(st.overflow>2||!st.h1||!st.css||!st.org||st.local||errs.length) throw Error(route+' '+vp.n+' '+JSON.stringify({st,errs}));
+                if(aeo.has(route)&&st.answers<2) throw Error(route+' missing AEO answers');
+                report.push({route,viewport:vp.n,...st});
+                if(vp.n==='mobile' && ['/','/diagnostico-iri/','/online/','/entrenador-personal-las-condes/'].includes(route)) await p.screenshot({path:'/tmp/v639-evidence/'+route.replaceAll('/','-').replace(/^-|-$/g,'')+'-mobile.png',fullPage:true});
+                await p.close();
+              }
+            }
+            fs.writeFileSync('/tmp/v639-evidence/report.json',JSON.stringify(report,null,2)); await b.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Validar crawler access local
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(curl -s -o /tmp/oai-home -w '%{http_code}' -A 'OAI-SearchBot' http://127.0.0.1:4173/)" = '200'
+          test "$(curl -s -o /tmp/chatgpt-home -w '%{http_code}' -A 'ChatGPT-User' http://127.0.0.1:4173/)" = '200'
+          grep -q 'IBERFIT es un servicio de entrenamiento personal' /tmp/oai-home
+          grep -q 'IBERFIT es un servicio de entrenamiento personal' /tmp/chatgpt-home
+
+      - name: Guardar evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v639-aeo-evidence
+          path: /tmp/v639-evidence
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Commit V6.39 certificada
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then echo 'Exact V6.39 already committed'; exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add candidate/v628
+          git commit -m 'feat(web): integrate V6.39 answer engine optimization'
+          git push origin HEAD:work/web-v6-39-aeo
