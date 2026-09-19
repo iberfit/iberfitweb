@@ -1,0 +1,128 @@
+name: Release WEB IBERFIT V6.43.3 aesthetic polish
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-3-aesthetic-polish
+    paths:
+      - '.github/workflows/release-web-v6433-aesthetic.yml'
+      - '.github/scripts/build_v6433_aesthetic.py'
+      - '.github/scripts/qa_v6433_aesthetic.cjs'
+      - '.github/assets/v6433/**'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-web-v6433-aesthetic
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/web-v6-43-3-aesthetic-polish
+          fetch-depth: 0
+
+      - name: Verify exact certified V6.43.2 baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='eb9c42b69088230c0c395f1b39bd0677012355c5'
+          git cat-file -e "$BASE^{commit}"
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.2'
+          test "$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          git diff --exit-code "$BASE" HEAD -- candidate/v628
+
+      - name: Build V6.43.3
+        run: python3 .github/scripts/build_v6433_aesthetic.py
+
+      - name: Validate scope and preserved contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='eb9c42b69088230c0c395f1b39bd0677012355c5'
+          root='candidate/v628'
+          test "$(tr -d '\r\n ' < "$root/VERSION")" = '6.43.3'
+          test "$(find "$root" -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          test -s "$root/assets/polish.v6433.css"
+          test -s "$root/assets/app-online-plan-v6433.webp"
+          test "$(grep -R -l '/assets/polish.v6433.css' "$root" --include='*.html' | wc -l | tr -d ' ')" = '33'
+          test "$(grep -R -o '/assets/polish.v6433.css' "$root" --include='*.html' | wc -l | tr -d ' ')" = '33'
+          grep -q '/assets/app-online-plan-v6433.webp' "$root/online/index.html"
+          grep -q '/assets/app-online-plan-v6433.webp' "$root/en/online/index.html"
+          grep -q 'pasión por el entrenamiento' "$root/sobre-iberfit/index.html"
+          grep -q 'inquietud constante por la salud' "$root/sobre-iberfit/index.html"
+          grep -q 'passion for training' "$root/en/about/index.html"
+          grep -q 'curiosity about health' "$root/en/about/index.html"
+          ! grep -R -n -E 'Cliente QA|Cliente Prueba IBERFIT|Coach QA' "$root" --include='*.html'
+          cmp <(git show "$BASE":candidate/v628/assets/analytics.v643.js) "$root/assets/analytics.v643.js"
+          cmp <(git show "$BASE":candidate/v628/assets/menu.v642.js) "$root/assets/menu.v642.js"
+          cmp <(git show "$BASE":candidate/v628/assets/app.v632.js) "$root/assets/app.v632.js"
+          cmp <(git show "$BASE":candidate/v628/assets/a11y.v6431.css) "$root/assets/a11y.v6431.css"
+          cmp <(git show "$BASE":candidate/v628/assets/visual.v6432.css) "$root/assets/visual.v6432.css"
+          python3 - <<'PY'
+          from pathlib import Path
+          import gzip, json, re
+          root=Path('candidate/v628')
+          for path in root.rglob('*.html'):
+              text=path.read_text(encoding='utf-8')
+              for raw in re.findall(r'<script type="application/ld\+json">(.*?)</script>', text, re.S):
+                  json.loads(raw)
+          img=(root/'assets/app-online-plan-v6433.webp').read_bytes()
+          if not (img.startswith(b'RIFF') and img[8:12] == b'WEBP'):
+              raise SystemExit('corrected Online plan asset is not WebP')
+          if len(img) > 20000:
+              raise SystemExit(f'corrected Online plan exceeds budget: {len(img)}')
+          css=(root/'assets/polish.v6433.css').read_bytes()
+          if len(gzip.compress(css,9)) > 5000:
+              raise SystemExit('V6.43.3 CSS gzip budget exceeded')
+          print({'planBytes':len(img),'cssBytes':len(css),'cssGzip':len(gzip.compress(css,9))})
+          PY
+          git add -N "$root/assets/polish.v6433.css" "$root/assets/app-online-plan-v6433.webp"
+          changed="$(git diff --name-only "$BASE" -- candidate/v628 | sort)"
+          test "$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l | tr -d ' ')" = '38'
+          test "$(printf '%s\n' "$changed" | grep -c '\.html$')" = '33'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/CHANGELOG.md'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/VERSION'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/_headers'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/assets/polish.v6433.css'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/assets/app-online-plan-v6433.webp'
+          git diff --check "$BASE" -- candidate/v628
+
+      - name: Browser regression across shared CTAs and visual fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.58.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v6433-server.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break || true; sleep 1; done
+          curl -fsS http://127.0.0.1:4173/ >/dev/null
+          node .github/scripts/qa_v6433_aesthetic.cjs
+
+      - name: Commit certified V6.43.3 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add candidate/v628
+          git commit -m 'fix(web): polish shared CTAs and visual storytelling in V6.43.3'
+          git push origin HEAD:work/web-v6-43-3-aesthetic-polish
+
+      - name: Save QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v6433-aesthetic-evidence
+          path: |
+            /tmp/v6433-server.log
+            /tmp/v6433-evidence
+          if-no-files-found: warn
+          retention-days: 30
