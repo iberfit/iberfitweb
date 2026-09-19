@@ -1,0 +1,126 @@
+name: QA WEB IBERFIT V6.43 CRO final v2
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-cro-observability
+    paths:
+      - '.github/workflows/qa-web-v643-final-v2.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact immutable candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='05159cd7deeb0409dc570de8b4240a1d8fce2493'
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43'
+          test "$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          changed="$(git diff --name-only "$BASE" HEAD -- candidate/v628 | sort)"
+          test "$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l | tr -d ' ')" = '37'
+          test "$(printf '%s\n' "$changed" | grep -c '\.html$')" = '33'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/assets/analytics.v643.js'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/_headers'
+          node --check candidate/v628/assets/analytics.v643.js
+          cmp <(git show "$BASE":candidate/v628/assets/analytics.v632.js) candidate/v628/assets/analytics.v632.js
+          cmp <(git show "$BASE":candidate/v628/assets/app.v632.js) candidate/v628/assets/app.v632.js
+          cmp <(git show "$BASE":candidate/v628/assets/menu.v642.js) candidate/v628/assets/menu.v642.js
+          cmp <(git show "$BASE":candidate/v628/assets/experience.v632.js) candidate/v628/assets/experience.v632.js
+
+      - name: Verify CRO semantics, privacy and no visible regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='05159cd7deeb0409dc570de8b4240a1d8fce2493'
+          test "$(grep -R -l '/assets/analytics.v643.js' candidate/v628 --include='*.html' | wc -l | tr -d ' ')" = '33'
+          ! grep -R -q '/assets/analytics.v632.js' candidate/v628 --include='*.html'
+          grep -q 'contact_intent' candidate/v628/assets/analytics.v643.js
+          grep -q 'iberfit_lead_session_v1' candidate/v628/assets/analytics.v643.js
+          grep -q '^/assets/analytics.v643.js$' candidate/v628/_headers
+          ! grep -nE 'message_text|phone_number|email_address|form_value|whatsapp_message' candidate/v628/assets/analytics.v643.js
+          for file in candidate/v628/index.html candidate/v628/en/index.html; do
+            grep -q 'data-track="funnel_iri_start"' "$file"
+            grep -q 'data-track="funnel_compare_formats"' "$file"
+            grep -q 'data-track="funnel_guide_start"' "$file"
+            grep -q 'data-track="format_in_person_open"' "$file"
+            grep -q 'data-track="format_hybrid_open"' "$file"
+            grep -q 'data-track="format_online_open"' "$file"
+          done
+          for file in candidate/v628/contacto/index.html candidate/v628/en/contact/index.html; do
+            grep -q 'data-track="cta_guide_whatsapp"' "$file"
+            grep -q 'data-track="cta_guide_direct"' "$file"
+            grep -q 'data-cta-position="guide_result"' "$file"
+            grep -q 'data-cta-position="contact_options"' "$file"
+          done
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess,re,json,gzip
+          root=Path('candidate/v628');BASE='05159cd7deeb0409dc570de8b4240a1d8fce2493';allowed={'index.html','en/index.html','contacto/index.html','en/contact/index.html'}
+          def visible(x):
+              x=re.sub(r'<script\b.*?</script>','',x,flags=re.I|re.S);x=re.sub(r'<style\b.*?</style>','',x,flags=re.I|re.S);return re.sub(r'<[^>]+>','',x)
+          for p in root.rglob('*.html'):
+              rel=p.relative_to(root).as_posix();old=subprocess.check_output(['git','show',f'{BASE}:candidate/v628/{rel}']).decode();new=p.read_text();expected=old.replace('/assets/analytics.v632.js','/assets/analytics.v643.js')
+              if rel not in allowed and new!=expected: raise SystemExit('unexpected HTML delta '+rel)
+              if rel in allowed and visible(new)!=visible(expected): raise SystemExit('visible copy changed '+rel)
+              if [json.loads(x) for x in re.findall(r'<script type="application/ld\+json">(.*?)</script>',old,re.S)] != [json.loads(x) for x in re.findall(r'<script type="application/ld\+json">(.*?)</script>',new,re.S)]: raise SystemExit('JSON-LD changed '+rel)
+          old=(root/'assets/analytics.v632.js').read_bytes();new=(root/'assets/analytics.v643.js').read_bytes();delta=len(gzip.compress(new,9))-len(gzip.compress(old,9));print({'analyticsGzipDelta':delta});assert delta<=900
+          PY
+          git diff --check
+
+      - name: Install browser and serve candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v643-final-v2-evidence
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.58.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v643-final-v2-server.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break || true; sleep 1; done
+          curl -fsS http://127.0.0.1:4173/ >/dev/null
+
+      - name: Run 33-route CRO browser regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/scripts/qa_v643_cro.cjs | tee /tmp/v643-final-v2-evidence/browser.json
+
+      - name: Verify analytics denied by default
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'JS' | tee /tmp/v643-final-v2-evidence/privacy.json
+          const {chromium}=require('playwright');
+          (async()=>{const b=await chromium.launch({headless:true});const c=await b.newContext({viewport:{width:390,height:844}});let gtm=0;await c.route('https://www.googletagmanager.com/**',r=>{gtm++;r.abort()});const p=await c.newPage();await p.goto('http://127.0.0.1:4173/',{waitUntil:'domcontentloaded'});await p.waitForTimeout(120);await p.evaluate(()=>document.querySelectorAll('a[href*="wa.me"]').forEach(a=>a.addEventListener('click',e=>e.preventDefault(),true)));await p.locator('[data-track="cta_hero_secondary"]').click();await p.waitForTimeout(60);const s=await p.evaluate(()=>({events:Array.from(window.dataLayer||[],x=>Array.from(x)).filter(x=>x[0]==='event').map(x=>x[1]),gtagScript:[...document.scripts].some(x=>x.src.includes('googletagmanager.com/gtag/js'))}));if(s.events.includes('contact_intent')||s.events.includes('generate_lead')||s.gtagScript||gtm)throw Error(JSON.stringify(s));console.log(JSON.stringify({consentDenied:'ok',gtmRequests:0,gaLeadEvents:0}));await c.close();await b.close()})().catch(e=>{console.error(e);process.exit(1)});
+          JS
+
+      - name: Verify V6.42 menu accessibility remains intact
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'JS' | tee /tmp/v643-final-v2-evidence/ux.json
+          const {chromium}=require('playwright');
+          (async()=>{const b=await chromium.launch({headless:true});const c=await b.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const p=await c.newPage();await p.goto('http://127.0.0.1:4173/',{waitUntil:'domcontentloaded'});const t=p.locator('[data-menu-toggle]'),n=p.locator('[data-navlinks]');await t.click();await p.waitForTimeout(100);if(await t.getAttribute('aria-expanded')!=='true'||await n.getAttribute('aria-hidden')!=='false')throw Error('menu open');await t.focus();await p.waitForTimeout(20);await p.keyboard.press('Tab');await p.waitForTimeout(40);if(!await p.evaluate(()=>document.activeElement===document.querySelector('[data-navlinks] a[href]')))throw Error('focus first');await p.keyboard.press('Escape');await p.waitForTimeout(80);if(await t.getAttribute('aria-expanded')!=='false')throw Error('escape');await p.goto('http://127.0.0.1:4173/contacto/',{waitUntil:'domcontentloaded'});if(await p.locator('[data-orientador-form]').count()!==1)throw Error('orientador');console.log(JSON.stringify({menu:'ok',keyboard:'ok',escape:'ok',orientador:'present'}));await c.close();await b.close()})().catch(e=>{console.error(e);process.exit(1)});
+          JS
+
+      - name: Save final evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v643-final-v2-evidence
+          path: |
+            /tmp/v643-final-v2-evidence
+            /tmp/v643-final-v2-server.log
+          if-no-files-found: warn
+          retention-days: 30
