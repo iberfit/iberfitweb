@@ -29,8 +29,16 @@ function toRel(url) {
   assert(u.pathname.endsWith('/'), `non-directory canonical URL: ${url}`);
   return u.pathname.replace(/^\//,'') + 'index.html';
 }
-function curl(url) {
-  return execFileSync('curl', ['-fsSL','--retry','4','--retry-all-errors', url], {encoding:'utf8'});
+function fetchExact(url) {
+  const marker='\n__IBERFIT_STATUS__';
+  const out=execFileSync('curl', ['-sS','--retry','4','--retry-all-errors','-o','-','-w',`${marker}%{http_code}__IBERFIT_URL__%{url_effective}`,url], {encoding:'utf8'});
+  const idx=out.lastIndexOf(marker);
+  assert(idx>=0,`unable to parse HTTP status for ${url}`);
+  const body=out.slice(0,idx);
+  const meta=out.slice(idx+marker.length);
+  const m=meta.match(/^(\d{3})__IBERFIT_URL__(.*)$/s);
+  assert(m,`invalid HTTP metadata for ${url}: ${meta}`);
+  return {body,status:Number(m[1]),effective:m[2].trim()};
 }
 
 const sitemap = read('sitemap.xml');
@@ -77,19 +85,28 @@ assert(/Sitemap:\s*https:\/\/iberfit\.cl\/sitemap\.xml/i.test(robots), 'robots.t
 
 if (process.env.CHECK_LIVE === '1') {
   for (const url of locs) {
-    const body = curl(`${url}?matrix=${process.env.GITHUB_RUN_ID || Date.now()}`);
-    const can = canonical(body);
-    const es = getTag(body, 'es');
-    const en = getTag(body, 'en');
+    const requested=`${url}?matrix=${process.env.GITHUB_RUN_ID || Date.now()}`;
+    const live=fetchExact(requested);
+    assert(live.status===200,`LIVE status not 200 ${url}: ${live.status}`);
+    assert(live.effective===requested,`LIVE redirect detected ${url}: ${live.effective}`);
+    const can = canonical(live.body);
+    const es = getTag(live.body, 'es');
+    const en = getTag(live.body, 'en');
     assert(can === pages.get(url).canonical, `LIVE canonical mismatch ${url}: ${can}`);
     assert(es === pages.get(url).es, `LIVE hreflang es mismatch ${url}: ${es}`);
     assert(en === pages.get(url).en, `LIVE hreflang en mismatch ${url}: ${en}`);
   }
-  const liveSitemap = curl(`${SITE}/sitemap.xml?matrix=${process.env.GITHUB_RUN_ID || Date.now()}`);
-  const liveLocs = [...liveSitemap.matchAll(/<loc>(https:\/\/iberfit\.cl\/[^<]*)<\/loc>/g)].map(m=>m[1]);
+  const sitemapReq=`${SITE}/sitemap.xml?matrix=${process.env.GITHUB_RUN_ID || Date.now()}`;
+  const liveSitemap=fetchExact(sitemapReq);
+  assert(liveSitemap.status===200,`LIVE sitemap status ${liveSitemap.status}`);
+  assert(liveSitemap.effective===sitemapReq,`LIVE sitemap redirect ${liveSitemap.effective}`);
+  const liveLocs = [...liveSitemap.body.matchAll(/<loc>(https:\/\/iberfit\.cl\/[^<]*)<\/loc>/g)].map(m=>m[1]);
   assert(JSON.stringify(liveLocs.sort()) === JSON.stringify([...locs].sort()), 'LIVE sitemap differs from certified candidate');
-  const liveRobots = curl(`${SITE}/robots.txt?matrix=${process.env.GITHUB_RUN_ID || Date.now()}`);
-  assert(/Sitemap:\s*https:\/\/iberfit\.cl\/sitemap\.xml/i.test(liveRobots), 'LIVE robots.txt missing sitemap declaration');
+  const robotsReq=`${SITE}/robots.txt?matrix=${process.env.GITHUB_RUN_ID || Date.now()}`;
+  const liveRobots=fetchExact(robotsReq);
+  assert(liveRobots.status===200,`LIVE robots status ${liveRobots.status}`);
+  assert(liveRobots.effective===robotsReq,`LIVE robots redirect ${liveRobots.effective}`);
+  assert(/Sitemap:\s*https:\/\/iberfit\.cl\/sitemap\.xml/i.test(liveRobots.body), 'LIVE robots.txt missing sitemap declaration');
 }
 
 console.log(JSON.stringify({
@@ -98,6 +115,8 @@ console.log(JSON.stringify({
   canonicals: '32/32',
   hreflangReciprocal: '16/16',
   sitemapCoverage: '32/32',
+  exactHttp200: process.env.CHECK_LIVE === '1' ? '32/32' : 'not-run',
+  redirects: process.env.CHECK_LIVE === '1' ? '0/32' : 'not-run',
   canonicalOnlineEn: `${SITE}/en/online/`,
   guessedOnlineTrainingDeclared: false,
   liveChecked: process.env.CHECK_LIVE === '1'
