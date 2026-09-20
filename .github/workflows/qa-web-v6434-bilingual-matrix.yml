@@ -1,0 +1,71 @@
+name: QA WEB IBERFIT V6.43.4 bilingual matrix
+
+on:
+  push:
+    branches:
+      - audit/web-v6434-bilingual-matrix-2026-09-20
+    paths:
+      - '.github/scripts/qa_v6434_bilingual_matrix.cjs'
+      - '.github/workflows/qa-web-v6434-bilingual-matrix.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-web-v6434-bilingual-matrix
+  cancel-in-progress: false
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout exact audit branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact V6.43.4 production candidate baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='5dd5baeddbf5d6dab9d7f6523945482ddce35b9b'
+          git cat-file -e "$BASE^{commit}"
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.4'
+          git diff --exit-code "$BASE" HEAD -- candidate/v628
+          test "$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+
+      - name: Certify source bilingual matrix
+        shell: bash
+        run: node .github/scripts/qa_v6434_bilingual_matrix.cjs
+
+      - name: Certify live production bilingual matrix
+        env:
+          CHECK_LIVE: '1'
+        shell: bash
+        run: node .github/scripts/qa_v6434_bilingual_matrix.cjs
+
+      - name: Record evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/evidence
+          {
+            echo "production_sha=5dd5baeddbf5d6dab9d7f6523945482ddce35b9b"
+            echo "version=6.43.4"
+            echo "expected_urls=32"
+            echo "expected_pairs=16"
+            echo "canonical_en_online=https://iberfit.cl/en/online/"
+            echo "guessed_en_online_training_is_not_declared=true"
+            echo "run_id=${GITHUB_RUN_ID}"
+          } > /tmp/evidence/BILINGUAL_MATRIX_EVIDENCE.txt
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v6434-bilingual-matrix-evidence
+          path: /tmp/evidence
+          retention-days: 30
