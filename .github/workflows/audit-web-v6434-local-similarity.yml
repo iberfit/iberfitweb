@@ -1,0 +1,45 @@
+name: Audit WEB IBERFIT V6.43.4 local similarity
+
+on:
+  push:
+    branches:
+      - audit/web-v6434-bilingual-matrix-2026-09-20
+    paths:
+      - '.github/scripts/audit_v6434_local_similarity.cjs'
+      - '.github/workflows/audit-web-v6434-local-similarity.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify production candidate untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='5dd5baeddbf5d6dab9d7f6523945482ddce35b9b'
+          git cat-file -e "$BASE^{commit}"
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.4'
+          git diff --exit-code "$BASE" HEAD -- candidate/v628
+      - name: Measure local-page similarity
+        shell: bash
+        run: |
+          set +e
+          node .github/scripts/audit_v6434_local_similarity.cjs | tee /tmp/local-similarity.json
+          code=${PIPESTATUS[0]}
+          echo "audit_exit=$code" >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/local-similarity.json >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v6434-local-similarity-evidence
+          path: /tmp/local-similarity.json
+          retention-days: 30
