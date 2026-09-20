@@ -1,0 +1,30 @@
+name: QA bilingual architecture
+
+on:
+  push:
+    paths:
+      - 'candidate/v628/**/*.html'
+      - 'candidate/v628/sitemap.xml'
+      - 'candidate/v628/robots.txt'
+      - '.github/scripts/qa_bilingual_architecture.cjs'
+      - '.github/workflows/qa-bilingual-architecture.yml'
+  pull_request:
+    paths:
+      - 'candidate/v628/**/*.html'
+      - 'candidate/v628/sitemap.xml'
+      - 'candidate/v628/robots.txt'
+      - '.github/scripts/qa_bilingual_architecture.cjs'
+      - '.github/workflows/qa-bilingual-architecture.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bilingual-architecture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify ES-EN canonical, hreflang, sitemap and robots contracts
+        run: node .github/scripts/qa_bilingual_architecture.cjs
