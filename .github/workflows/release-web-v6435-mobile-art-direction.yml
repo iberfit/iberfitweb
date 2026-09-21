@@ -1,0 +1,133 @@
+name: Release WEB IBERFIT V6.43.5 mobile art direction
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-5-mobile-art-direction
+    paths:
+      - '.github/workflows/release-web-v6435-mobile-art-direction.yml'
+      - '.github/scripts/build_v6435_mobile_art_direction.py'
+      - '.github/scripts/qa_v6435_mobile_art_direction.cjs'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-web-v6435-mobile-art-direction
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/web-v6-43-5-mobile-art-direction
+          fetch-depth: 0
+
+      - name: Verify exact V6.43.4 runtime baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='5dd5baeddbf5d6dab9d7f6523945482ddce35b9b'
+          git cat-file -e "$BASE^{commit}"
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.4'
+          test "$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          git diff --exit-code "$BASE" HEAD -- candidate/v628
+
+      - name: Build V6.43.5 mobile art direction
+        run: python3 .github/scripts/build_v6435_mobile_art_direction.py
+
+      - name: Validate scope and preserved product contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='5dd5baeddbf5d6dab9d7f6523945482ddce35b9b'
+          root='candidate/v628'
+          test "$(tr -d '\r\n ' < "$root/VERSION")" = '6.43.5'
+          test "$(find "$root" -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          test -s "$root/assets/mobile.v6435.css"
+          changed="$(git diff --name-only "$BASE" -- "$root" | sort)"
+          test "$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l | tr -d ' ')" = '36'
+          test "$(printf '%s\n' "$changed" | grep -c '\.html$')" = '33'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/assets/mobile.v6435.css'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/CHANGELOG.md'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/VERSION'
+          test "$(grep -R -l '/assets/mobile.v6435.css' "$root" --include='*.html' | wc -l | tr -d ' ')" = '33'
+          test "$(grep -R -o '/assets/mobile.v6435.css' "$root" --include='*.html' | wc -l | tr -d ' ')" = '33'
+          grep -q 'Lo que hacemos hoy tiene que servir para decidir mejor mañana.' "$root/index.html"
+          grep -q 'What we do today should help us decide better with you tomorrow.' "$root/en/index.html"
+          grep -q '/assets/photo-initial-eval-1448.webp' "$root/index.html"
+          grep -q '/assets/photo-trainer-session-1448.webp' "$root/index.html"
+          grep -q '/assets/app-online-progress.webp' "$root/index.html"
+          ! grep -q 'evidence-process-steps' "$root/index.html"
+          ! grep -q 'evidence-process-steps' "$root/en/index.html"
+          grep -q '<h1>Entrenamiento personal con criterio.</h1>' "$root/index.html"
+          grep -q '<h1>Personal training. With purpose.</h1>' "$root/en/index.html"
+          grep -q '/assets/analytics.v643.js' "$root/index.html"
+          grep -q '/assets/menu.v642.js' "$root/index.html"
+          ! grep -R -q '/assets/hardening.v630.js' "$root" --include='*.html'
+          git diff --check "$BASE" -- "$root"
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, re, subprocess
+          root=Path('candidate/v628')
+          base='5dd5baeddbf5d6dab9d7f6523945482ddce35b9b'
+          link='<link href="/assets/mobile.v6435.css" rel="stylesheet"/>'
+          homes={'index.html','en/index.html'}
+          htmls=sorted(p.relative_to(root).as_posix() for p in root.rglob('*.html'))
+          if len(htmls)!=33: raise SystemExit('HTML_COUNT')
+          for rel in htmls:
+              now=(root/rel).read_text(encoding='utf-8')
+              old=subprocess.check_output(['git','show',f'{base}:candidate/v628/{rel}'],text=True)
+              if now.count(link)!=1: raise SystemExit(f'CSS_LINK_COUNT:{rel}')
+              clean=now.replace(link,'')
+              if rel not in homes and clean != old:
+                  raise SystemExit(f'UNEXPECTED_BODY_CHANGE:{rel}')
+              old_head=old.split('</head>',1)[0]
+              new_head=clean.split('</head>',1)[0]
+              if old_head != new_head: raise SystemExit(f'HEAD_DRIFT:{rel}')
+              for raw in re.findall(r'<script type="application/ld\+json">(.*?)</script>', now, re.S): json.loads(raw)
+              if rel in homes:
+                  def anchors(t): return re.findall(r'<a\b[^>]*href="[^"]+"[^>]*>',t)
+                  if anchors(old)!=anchors(now): raise SystemExit(f'ANCHOR_DRIFT:{rel}')
+                  old_answers=re.findall(r'<article class="answer-item" data-aeo-answer>.*?</article>',old,re.S)
+                  new_answers=re.findall(r'<article class="answer-item" data-aeo-answer>.*?</article>',now,re.S)
+                  if old_answers!=new_answers: raise SystemExit(f'AEO_DRIFT:{rel}')
+          print({'html':len(htmls),'headPreservedExceptNewCss':True,'nonHomeBodiesPreserved':31,'homeAnchorContractsPreserved':True,'aeoPreserved':True})
+          PY
+
+      - name: Browser regression and mobile interaction QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.58.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v6435-server.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break || true; sleep 1; done
+          curl -fsS http://127.0.0.1:4173/ >/dev/null
+          node .github/scripts/qa_v6435_mobile_art_direction.cjs
+
+      - name: Commit certified V6.43.5 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add candidate/v628
+          git commit -m 'feat(web): make mobile journey more visual in V6.43.5'
+          git push origin HEAD:work/web-v6-43-5-mobile-art-direction
+
+      - name: Save V6.43.5 visual QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v6435-mobile-art-direction-evidence
+          path: |
+            /tmp/v6435-server.log
+            /tmp/v6435-evidence
+          if-no-files-found: warn
+          retention-days: 30
