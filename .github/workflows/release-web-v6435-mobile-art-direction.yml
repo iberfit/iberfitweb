@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/release-web-v6435-mobile-art-direction.yml'
       - '.github/scripts/build_v6435_mobile_art_direction.py'
+      - '.github/scripts/qa_v6435_static.py'
       - '.github/scripts/qa_v6435_mobile_art_direction.cjs'
 
 permissions:
@@ -70,34 +71,7 @@ jobs:
           grep -q '/assets/menu.v642.js' "$root/index.html"
           ! grep -R -q '/assets/hardening.v630.js' "$root" --include='*.html'
           git diff --check "$BASE" -- "$root"
-          python3 - <<'PY'
-          from pathlib import Path
-          import json, re, subprocess
-          root=Path('candidate/v628')
-          base='5dd5baeddbf5d6dab9d7f6523945482ddce35b9b'
-          link='<link href="/assets/mobile.v6435.css" rel="stylesheet"/>'
-          homes={'index.html','en/index.html'}
-          htmls=sorted(p.relative_to(root).as_posix() for p in root.rglob('*.html'))
-          if len(htmls)!=33: raise SystemExit('HTML_COUNT')
-          for rel in htmls:
-              now=(root/rel).read_text(encoding='utf-8')
-              old=subprocess.check_output(['git','show',f'{base}:candidate/v628/{rel}'],text=True)
-              if now.count(link)!=1: raise SystemExit(f'CSS_LINK_COUNT:{rel}')
-              clean=now.replace(link,'')
-              if rel not in homes and clean != old:
-                  raise SystemExit(f'UNEXPECTED_BODY_CHANGE:{rel}')
-              old_head=old.split('</head>',1)[0]
-              new_head=clean.split('</head>',1)[0]
-              if old_head != new_head: raise SystemExit(f'HEAD_DRIFT:{rel}')
-              for raw in re.findall(r'<script type="application/ld\+json">(.*?)</script>', now, re.S): json.loads(raw)
-              if rel in homes:
-                  def anchors(t): return re.findall(r'<a\b[^>]*href="[^"]+"[^>]*>',t)
-                  if anchors(old)!=anchors(now): raise SystemExit(f'ANCHOR_DRIFT:{rel}')
-                  old_answers=re.findall(r'<article class="answer-item" data-aeo-answer>.*?</article>',old,re.S)
-                  new_answers=re.findall(r'<article class="answer-item" data-aeo-answer>.*?</article>',now,re.S)
-                  if old_answers!=new_answers: raise SystemExit(f'AEO_DRIFT:{rel}')
-          print({'html':len(htmls),'headPreservedExceptNewCss':True,'nonHomeBodiesPreserved':31,'homeAnchorContractsPreserved':True,'aeoPreserved':True})
-          PY
+          python3 .github/scripts/qa_v6435_static.py
 
       - name: Browser regression and mobile interaction QA
         shell: bash
