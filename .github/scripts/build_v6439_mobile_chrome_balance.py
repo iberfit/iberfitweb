@@ -25,9 +25,9 @@ css = r'''/* IBERFIT WEB V6.43.9 — mobile chrome balance */
 
 js = r'''(()=>{
   'use strict';
-  const init=()=>{
-    const dock=document.querySelector('.device-dock');
-    if(!dock)return;
+  const setup=dock=>{
+    if(!dock||dock.dataset.chromeV6439==='1')return;
+    dock.dataset.chromeV6439='1';
     const mobile=matchMedia('(max-width:720px)');
     let ctaVisible=false,footerVisible=false;
     const isEditable=el=>{
@@ -81,6 +81,15 @@ js = r'''(()=>{
     window.visualViewport?.addEventListener('resize',sync,{passive:true});
     sync();
   };
+  const init=()=>{
+    const dock=document.querySelector('.device-dock');
+    if(dock){setup(dock);return;}
+    const observer=new MutationObserver(()=>{
+      const created=document.querySelector('.device-dock');
+      if(created){observer.disconnect();setup(created)}
+    });
+    observer.observe(document.body,{childList:true,subtree:true});
+  };
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init,{once:true}):init();
 })();
 '''
@@ -96,7 +105,7 @@ for path in htmls:
 CSS.write_text(css, encoding='utf-8')
 JS.write_text(js, encoding='utf-8')
 VERSION.write_text('6.43.9\n', encoding='utf-8')
-entry = '''## V6.43.9 — Mobile chrome balance\n\n- Keeps the mobile navigation dock available during exploration but suppresses it whenever a higher-priority surface is active.\n- The dock now yields to consent/privacy, the open navigation panel, editable controls, the final CTA and the footer, then returns automatically.\n- Destinations, analytics, navigation semantics and desktop behaviour remain unchanged.\n\n'''
+entry = '''## V6.43.9 — Mobile chrome balance\n\n- Keeps the mobile navigation dock available during exploration but suppresses it whenever a higher-priority surface is active.\n- The dock now yields to consent/privacy, the open navigation panel, editable controls, the final CTA and the footer, then returns automatically.\n- Handles the dock safely whether it already exists or is created later by the base application script.\n- Destinations, analytics, navigation semantics and desktop behaviour remain unchanged.\n\n'''
 old = CHANGELOG.read_text(encoding='utf-8')
 if not old.startswith('## V6.43.9'):
     CHANGELOG.write_text(entry + old, encoding='utf-8')
