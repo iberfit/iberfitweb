@@ -1,0 +1,82 @@
+name: QA WEB IBERFIT V6.43.5 mobile polish
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-5-mobile-art-direction
+    paths:
+      - 'candidate/v628/assets/mobile.v6435.css'
+      - '.github/scripts/qa_v6435_mobile_polish.cjs'
+      - '.github/workflows/qa-web-v6435-mobile-polish.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-web-v6435-mobile-polish
+  cancel-in-progress: false
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/web-v6-43-5-mobile-art-direction
+          fetch-depth: 0
+
+      - name: Verify exact certified V6.43.5 candidate scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='5dd5baeddbf5d6dab9d7f6523945482ddce35b9b'
+          root='candidate/v628'
+          git cat-file -e "$BASE^{commit}"
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(tr -d '\r\n ' < "$root/VERSION")" = '6.43.5'
+          test "$(find "$root" -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          test -s "$root/assets/mobile.v6435.css"
+          changed="$(git diff --name-only "$BASE" -- "$root" | sort)"
+          test "$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l | tr -d ' ')" = '36'
+          test "$(printf '%s\n' "$changed" | grep -c '\.html$')" = '33'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/assets/mobile.v6435.css'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/CHANGELOG.md'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/VERSION'
+          test "$(grep -R -l '/assets/mobile.v6435.css' "$root" --include='*.html' | wc -l | tr -d ' ')" = '33'
+          test "$(grep -R -o '/assets/mobile.v6435.css' "$root" --include='*.html' | wc -l | tr -d ' ')" = '33'
+          grep -q '<h1>Entrenamiento personal con criterio.</h1>' "$root/index.html"
+          grep -q '<h1>Personal training. With purpose.</h1>' "$root/en/index.html"
+          grep -q '/assets/analytics.v643.js' "$root/index.html"
+          grep -q '/assets/menu.v642.js' "$root/index.html"
+          grep -q 'data-consent-audience' "$root/assets/analytics.v643.js"
+          grep -q 'data-consent-necessary' "$root/assets/analytics.v643.js"
+          grep -q 'data-consent-settings' "$root/assets/analytics.v643.js"
+          git diff --check "$BASE" -- "$root"
+
+      - name: Validate bilingual source architecture
+        run: node .github/scripts/qa_bilingual_architecture.cjs
+
+      - name: Browser regression, mobile rails and consent QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.58.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v6435-polish-server.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break || true; sleep 1; done
+          curl -fsS http://127.0.0.1:4173/ >/dev/null
+          node .github/scripts/qa_v6435_mobile_polish.cjs
+
+      - name: Upload final visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v6435-mobile-polish-evidence
+          path: |
+            /tmp/v6435-polish-server.log
+            /tmp/v6435-polish-evidence
+          if-no-files-found: warn
+          retention-days: 30
