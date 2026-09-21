@@ -178,6 +178,63 @@
   }
 }
 
+/* Mobile consent: retain every choice and explanation without occupying most of the first viewport. */
+@media(max-width:560px){
+  .consent-banner{
+    left:.7rem;
+    right:.7rem;
+    bottom:calc(.7rem + env(safe-area-inset-bottom,0px));
+    gap:.65rem;
+    padding:.82rem;
+    border-radius:20px;
+    box-shadow:0 18px 54px rgba(0,0,0,.36);
+  }
+  .consent-banner>div:first-child{width:100%}
+  .consent-banner strong{
+    display:block;
+    font-size:1rem;
+    line-height:1.15;
+  }
+  .consent-banner p{
+    margin:.28rem 0 0;
+    max-width:none;
+    font-size:.72rem;
+    line-height:1.38;
+  }
+  .consent-actions{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:.42rem;
+    width:100%;
+  }
+  .consent-actions [data-consent-all]{grid-column:1/-1}
+  .consent-actions [data-consent-audience],
+  .consent-actions [data-consent-necessary]{
+    width:100%;
+    min-width:0;
+    padding:.68rem .45rem;
+    white-space:normal;
+    text-align:center;
+    line-height:1.12;
+  }
+  .consent-actions [data-consent-settings]{
+    grid-column:1/-1;
+    width:auto;
+    justify-self:center;
+    min-height:44px;
+    padding:.48rem .8rem;
+  }
+  .consent-dialog{
+    max-height:calc(100dvh - 2rem - env(safe-area-inset-bottom,0px));
+    overflow:auto;
+    overscroll-behavior:contain;
+    padding:1.35rem;
+    border-radius:22px;
+  }
+  .consent-dialog h2{font-size:1.7rem;padding-right:2.7rem}
+  .consent-option{padding:.9rem 0}
+}
+
 /* Tablet: keep enough density to feel editorial, never like a desktop grid squeezed smaller. */
 @media(min-width:641px) and (max-width:900px){
   .evidence-process--v6435{grid-template-columns:1fr;gap:2rem}
