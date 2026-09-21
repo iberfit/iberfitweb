@@ -1,3 +1,11 @@
+## 6.43.5 — Mobile experience & art direction
+
+- Home separates visual evidence from the conceptual IBERFIT system to remove duplicated explanation.
+- The practice section now shows assessment, supervised training and real product follow-up as one visible sequence.
+- Mobile uses purposeful horizontal scroll-snap rails for genuine sequences (Home system, Method, in-person weekly flow, Online continuity and brand journey).
+- Home hero is shorter on mobile to improve rhythm while preserving the same SEO copy and high-priority image.
+- No autoplay, no gratuitous motion, no SEO/meta/schema changes and no analytics/menu regressions.
+
 ## 6.43.4 — Human-first editorial pass
 
 - Rewrites the eight core ES pages and their EN counterparts so visitor concerns come before service language or methodology.
