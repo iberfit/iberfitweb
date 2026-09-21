@@ -37,7 +37,6 @@ js = r'''(()=>{
       const type=(el.getAttribute('type')||'text').toLowerCase();
       return !['button','submit','reset','checkbox','radio','range','color','file','hidden','image'].includes(type);
     };
-    const visible=el=>!!(el&&el.isConnected&&!el.hidden&&el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden'&&getComputedStyle(el).display!=='none');
     const sync=()=>{
       if(!mobile.matches){
         dock.classList.remove('dock-suppressed-v6439');
@@ -47,8 +46,8 @@ js = r'''(()=>{
         return;
       }
       const reasons=[];
-      if(visible(document.querySelector('.consent-banner')))reasons.push('consent');
-      if(visible(document.querySelector('.consent-modal')))reasons.push('privacy');
+      if(document.querySelector('.consent-banner'))reasons.push('consent');
+      if(document.querySelector('.consent-modal'))reasons.push('privacy');
       if(document.body.classList.contains('nav-panel-open'))reasons.push('menu');
       if(isEditable(document.activeElement))reasons.push('editing');
       if(ctaVisible)reasons.push('cta');
