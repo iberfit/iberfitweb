@@ -1,0 +1,132 @@
+name: Release WEB IBERFIT V6.43.7 AEO disclosure
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-7-aeo-disclosure
+    paths:
+      - '.github/workflows/release-web-v6437-aeo-disclosure.yml'
+      - '.github/scripts/build_v6437_aeo_disclosure.py'
+      - '.github/scripts/qa_v6437_aeo_disclosure.cjs'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-web-v6437-aeo-disclosure
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/web-v6-43-7-aeo-disclosure
+          fetch-depth: 0
+
+      - name: Verify exact V6.43.6 production source baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='61b59ca1380fcfa24685091343d4bb48b38813b6'
+          git cat-file -e "$BASE^{commit}"
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.6'
+          test "$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          git diff --exit-code "$BASE" HEAD -- candidate/v628
+
+      - name: Build V6.43.7 AEO disclosure
+        run: python3 .github/scripts/build_v6437_aeo_disclosure.py
+
+      - name: Validate exact scope and preserved contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='61b59ca1380fcfa24685091343d4bb48b38813b6'
+          root='candidate/v628'
+          test "$(tr -d '\r\n ' < "$root/VERSION")" = '6.43.7'
+          test "$(find "$root" -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          test -s "$root/assets/aeo-disclosure.v6437.css"
+          test -s "$root/assets/aeo-disclosure.v6437.js"
+          python3 - <<'PY' >/tmp/v6437-targets.txt
+          from pathlib import Path
+          root=Path('candidate/v628')
+          for p in sorted(root.rglob('*.html')):
+              base=p.read_text(encoding='utf-8')
+              if 'answer-section' in base and 'answer-item' in base:
+                  print(p.as_posix())
+          PY
+          targets="$(wc -l </tmp/v6437-targets.txt | tr -d ' ')"
+          test "$targets" -ge 4
+          changed="$(git diff --name-only "$BASE" -- "$root" | sort)"
+          changed_html="$(printf '%s\n' "$changed" | grep -c '\.html$' || true)"
+          test "$changed_html" = "$targets"
+          test "$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l | tr -d ' ')" = "$((targets + 2))"
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/CHANGELOG.md'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/VERSION'
+          while IFS= read -r f; do
+            test "$(grep -o '/assets/aeo-disclosure.v6437.css' "$f" | wc -l | tr -d ' ')" = '1'
+            test "$(grep -o '/assets/aeo-disclosure.v6437.js' "$f" | wc -l | tr -d ' ')" = '1'
+          done </tmp/v6437-targets.txt
+          test "$(grep -R -l '/assets/aeo-disclosure.v6437.css' "$root" --include='*.html' | wc -l | tr -d ' ')" = "$targets"
+          test "$(grep -R -l '/assets/aeo-disclosure.v6437.js' "$root" --include='*.html' | wc -l | tr -d ' ')" = "$targets"
+          while IFS= read -r f; do
+            if grep -qx "$f" /tmp/v6437-targets.txt; then continue; fi
+            git diff --exit-code "$BASE" -- "$f"
+          done < <(find "$root" -name '*.html' -type f | sort)
+          grep -q '<h1>Entrenamiento personal con criterio.</h1>' "$root/index.html"
+          grep -q '<h1>Personal training. With purpose.</h1>' "$root/en/index.html"
+          grep -q '/assets/focus.v6436.css' "$root/index.html"
+          grep -q '/assets/focus.v6436.js' "$root/index.html"
+          grep -q '/assets/mobile.v6435.css' "$root/index.html"
+          grep -q '/assets/analytics.v643.js' "$root/index.html"
+          grep -q '/assets/menu.v642.js' "$root/index.html"
+          ! grep -R -q '/assets/hardening.v630.js' "$root" --include='*.html'
+          git diff --exit-code "$BASE" -- "$root/_headers"
+          git diff --check "$BASE" -- "$root"
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,re
+          root=Path('candidate/v628'); htmls=sorted(root.rglob('*.html')); assert len(htmls)==33
+          pat=re.compile(r'<script type="application/ld\+json">(.*?)</script>',re.S); blocks=0
+          for p in htmls:
+              t=p.read_text(encoding='utf-8')
+              for m in pat.finditer(t):json.loads(m.group(1));blocks+=1
+          assert blocks>=32,blocks
+          print({'html':len(htmls),'jsonld':blocks})
+          PY
+
+      - name: Browser regression and AEO disclosure QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.58.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4175 --directory candidate/v628 >/tmp/v6437-server.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4175/ >/dev/null && break || true; sleep 1; done
+          curl -fsS http://127.0.0.1:4175/ >/dev/null
+          node .github/scripts/qa_v6437_aeo_disclosure.cjs
+
+      - name: Commit certified V6.43.7 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add candidate/v628
+          git commit -m 'feat(web): make AEO answers progressive in V6.43.7'
+          git push origin HEAD:work/web-v6-43-7-aeo-disclosure
+
+      - name: Save V6.43.7 visual QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v6437-aeo-disclosure-evidence
+          path: |
+            /tmp/v6437-server.log
+            /tmp/v6437-evidence
+          if-no-files-found: warn
+          retention-days: 30
