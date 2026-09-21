@@ -1,0 +1,129 @@
+name: Release WEB IBERFIT V6.43.6 Home IRI focus
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-6-home-iri-focus
+    paths:
+      - '.github/workflows/release-web-v6436-home-iri-focus.yml'
+      - '.github/scripts/build_v6436_home_iri_focus.py'
+      - '.github/scripts/qa_v6436_home_iri_focus.cjs'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-web-v6436-home-iri-focus
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/web-v6-43-6-home-iri-focus
+          fetch-depth: 0
+
+      - name: Verify exact V6.43.5 production source baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='867d55b62350eb4e3fe9eb63a5c976e11758dad8'
+          git cat-file -e "$BASE^{commit}"
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.5'
+          test "$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          git diff --exit-code "$BASE" HEAD -- candidate/v628
+
+      - name: Build V6.43.6 focused Home IRI
+        run: python3 .github/scripts/build_v6436_home_iri_focus.py
+
+      - name: Validate exact scope and preserved contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='867d55b62350eb4e3fe9eb63a5c976e11758dad8'
+          root='candidate/v628'
+          test "$(tr -d '\r\n ' < "$root/VERSION")" = '6.43.6'
+          test "$(find "$root" -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          test -s "$root/assets/focus.v6436.css"
+          test -s "$root/assets/focus.v6436.js"
+          changed="$(git diff --name-only "$BASE" -- "$root" | sort)"
+          printf '%s\n' "$changed"
+          test "$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l | tr -d ' ')" = '4'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/CHANGELOG.md'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/VERSION'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/index.html'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/en/index.html'
+          test "$(grep -o '/assets/focus.v6436.css' "$root/index.html" | wc -l | tr -d ' ')" = '1'
+          test "$(grep -o '/assets/focus.v6436.js' "$root/index.html" | wc -l | tr -d ' ')" = '1'
+          test "$(grep -o '/assets/focus.v6436.css' "$root/en/index.html" | wc -l | tr -d ' ')" = '1'
+          test "$(grep -o '/assets/focus.v6436.js' "$root/en/index.html" | wc -l | tr -d ' ')" = '1'
+          test "$(grep -R -l '/assets/focus.v6436.css' "$root" --include='*.html' | wc -l | tr -d ' ')" = '2'
+          test "$(grep -R -l '/assets/focus.v6436.js' "$root" --include='*.html' | wc -l | tr -d ' ')" = '2'
+          grep -q '<h1>Entrenamiento personal con criterio.</h1>' "$root/index.html"
+          grep -q '<h1>Personal training. With purpose.</h1>' "$root/en/index.html"
+          grep -q 'Lo que hacemos hoy tiene que servir para decidir mejor mañana.' "$root/index.html"
+          grep -q 'What we do today should help us decide better with you tomorrow.' "$root/en/index.html"
+          grep -q '/assets/mobile.v6435.css' "$root/index.html"
+          grep -q '/assets/analytics.v643.js' "$root/index.html"
+          grep -q '/assets/menu.v642.js' "$root/index.html"
+          ! grep -R -q '/assets/hardening.v630.js' "$root" --include='*.html'
+          git diff --exit-code "$BASE" -- "$root/_headers"
+          while IFS= read -r f; do
+            case "$f" in
+              "$root/index.html"|"$root/en/index.html") ;;
+              *) git diff --exit-code "$BASE" -- "$f" ;;
+            esac
+          done < <(find "$root" -name '*.html' -type f | sort)
+          git diff --check "$BASE" -- "$root"
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,re
+          root=Path('candidate/v628')
+          htmls=sorted(root.rglob('*.html'))
+          assert len(htmls)==33
+          pattern=re.compile(r'<script type="application/ld\+json">(.*?)</script>',re.S)
+          blocks=0
+          for p in htmls:
+              text=p.read_text(encoding='utf-8')
+              for m in pattern.finditer(text):
+                  json.loads(m.group(1)); blocks+=1
+          assert blocks>=32, blocks
+          print({'html':len(htmls),'jsonld':blocks})
+          PY
+
+      - name: Browser regression and disclosure QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.58.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4174 --directory candidate/v628 >/tmp/v6436-server.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4174/ >/dev/null && break || true; sleep 1; done
+          curl -fsS http://127.0.0.1:4174/ >/dev/null
+          node .github/scripts/qa_v6436_home_iri_focus.cjs
+
+      - name: Commit certified V6.43.6 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add candidate/v628
+          git commit -m 'feat(web): focus Home IRI preview in V6.43.6'
+          git push origin HEAD:work/web-v6-43-6-home-iri-focus
+
+      - name: Save V6.43.6 visual QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v6436-home-iri-focus-evidence
+          path: |
+            /tmp/v6436-server.log
+            /tmp/v6436-evidence
+          if-no-files-found: warn
+          retention-days: 30
