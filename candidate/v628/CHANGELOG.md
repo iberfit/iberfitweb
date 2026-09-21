@@ -1,3 +1,9 @@
+## V6.43.6 — Home IRI focus
+
+- Keeps the Home IRI example concise by default while preserving the deeper report content behind a native accessible disclosure.
+- Leaves the dedicated IRI page unchanged as the full explanation surface.
+- Adds only a Home-scoped CSS/JS enhancement; without JavaScript the original complete report remains visible.
+
 ## 6.43.5 — Mobile experience & art direction
 
 - Home separates visual evidence from the conceptual IBERFIT system to remove duplicated explanation.
