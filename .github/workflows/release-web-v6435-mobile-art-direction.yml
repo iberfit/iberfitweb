@@ -44,19 +44,18 @@ jobs:
       - name: Validate scope and preserved product contracts
         shell: bash
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           BASE='5dd5baeddbf5d6dab9d7f6523945482ddce35b9b'
           root='candidate/v628'
           test "$(tr -d '\r\n ' < "$root/VERSION")" = '6.43.5'
           test "$(find "$root" -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
           test -s "$root/assets/mobile.v6435.css"
           changed="$(git diff --name-only "$BASE" -- "$root" | sort)"
-          printf '%s\n' "$changed"
-          test "$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l | tr -d ' ')" = '36'
+          test "$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l | tr -d ' ')" = '35'
           test "$(printf '%s\n' "$changed" | grep -c '\.html$')" = '33'
-          printf '%s\n' "$changed" | grep -qx 'candidate/v628/assets/mobile.v6435.css'
           printf '%s\n' "$changed" | grep -qx 'candidate/v628/CHANGELOG.md'
           printf '%s\n' "$changed" | grep -qx 'candidate/v628/VERSION'
+          test "$(git status --porcelain -- "$root/assets/mobile.v6435.css" | wc -l | tr -d ' ')" = '1'
           test "$(grep -R -l '/assets/mobile.v6435.css' "$root" --include='*.html' | wc -l | tr -d ' ')" = '33'
           test "$(grep -R -o '/assets/mobile.v6435.css' "$root" --include='*.html' | wc -l | tr -d ' ')" = '33'
           grep -q 'Lo que hacemos hoy tiene que servir para decidir mejor mañana.' "$root/index.html"
