@@ -1,3 +1,9 @@
+## V6.43.7 — AEO disclosure
+
+- Converts 28 AEO answer surfaces into native progressive disclosures when JavaScript is available.
+- Keeps every answer in source HTML and preserves the original fully visible content when JavaScript is unavailable.
+- Uses native exclusive details groups so only one answer can be open per section.
+
 ## V6.43.6 — Home IRI focus
 
 - Keeps the Home IRI example concise by default while preserving the deeper report content behind a native accessible disclosure.
