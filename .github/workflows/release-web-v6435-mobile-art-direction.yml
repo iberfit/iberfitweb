@@ -44,13 +44,14 @@ jobs:
       - name: Validate scope and preserved product contracts
         shell: bash
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           BASE='5dd5baeddbf5d6dab9d7f6523945482ddce35b9b'
           root='candidate/v628'
           test "$(tr -d '\r\n ' < "$root/VERSION")" = '6.43.5'
           test "$(find "$root" -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
           test -s "$root/assets/mobile.v6435.css"
           changed="$(git diff --name-only "$BASE" -- "$root" | sort)"
+          printf '%s\n' "$changed"
           test "$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l | tr -d ' ')" = '36'
           test "$(printf '%s\n' "$changed" | grep -c '\.html$')" = '33'
           printf '%s\n' "$changed" | grep -qx 'candidate/v628/assets/mobile.v6435.css'
