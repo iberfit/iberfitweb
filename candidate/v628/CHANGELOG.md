@@ -1,3 +1,9 @@
+## V6.43.8 — In-person editorial value
+
+- Replaces the four-card visual treatment on the in-person service with an open editorial matrix.
+- On mobile, the same content becomes four compact ruled rows instead of a tall card stack.
+- Copy, pricing, coverage, structured data and service semantics remain unchanged.
+
 ## V6.43.7 — AEO disclosure
 
 - Converts 28 AEO answer surfaces into native progressive disclosures when JavaScript is available.
