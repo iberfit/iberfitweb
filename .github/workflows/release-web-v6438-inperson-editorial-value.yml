@@ -1,0 +1,127 @@
+name: Release WEB IBERFIT V6.43.8 in-person editorial value
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-8-inperson-editorial-value
+    paths:
+      - '.github/workflows/release-web-v6438-inperson-editorial-value.yml'
+      - '.github/scripts/build_v6438_inperson_editorial_value.py'
+      - '.github/scripts/qa_v6438_inperson_editorial_value.cjs'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-web-v6438-inperson-editorial-value
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/web-v6-43-8-inperson-editorial-value
+          fetch-depth: 0
+
+      - name: Verify exact V6.43.7 production source baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='7a4dc8b3b4a2878bd6f114164d50257fa00482f1'
+          git cat-file -e "$BASE^{commit}"
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.7'
+          test "$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          git diff --exit-code "$BASE" HEAD -- candidate/v628
+
+      - name: Build V6.43.8 in-person editorial value
+        run: python3 .github/scripts/build_v6438_inperson_editorial_value.py
+
+      - name: Validate exact scope and preserved contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='7a4dc8b3b4a2878bd6f114164d50257fa00482f1'
+          root='candidate/v628'
+          test "$(tr -d '\r\n ' < "$root/VERSION")" = '6.43.8'
+          test "$(find "$root" -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          test -s "$root/assets/inperson.v6438.css"
+          test "$(grep -R -l '/assets/inperson.v6438.css' "$root" --include='*.html' | wc -l | tr -d ' ')" = '2'
+          grep -q '/assets/inperson.v6438.css' "$root/presencial/index.html"
+          grep -q '/assets/inperson.v6438.css' "$root/en/in-person/index.html"
+          test "$(grep -o 'class="deliverable reveal"' "$root/presencial/index.html" | wc -l | tr -d ' ')" = '4'
+          test "$(grep -o 'class="deliverable reveal"' "$root/en/in-person/index.html" | wc -l | tr -d ' ')" = '4'
+          git diff --exit-code "$BASE" -- "$root/_headers"
+          git diff --check "$BASE" -- "$root"
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,re,subprocess
+          root=Path('candidate/v628')
+          htmls=sorted(root.rglob('*.html'))
+          assert len(htmls)==33
+          changed=subprocess.check_output(['git','diff','--name-only','7a4dc8b3b4a2878bd6f114164d50257fa00482f1','--','candidate/v628'],text=True).splitlines()
+          expected={
+            'candidate/v628/VERSION',
+            'candidate/v628/CHANGELOG.md',
+            'candidate/v628/presencial/index.html',
+            'candidate/v628/en/in-person/index.html',
+          }
+          assert set(changed)==expected,(changed,expected)
+          status=subprocess.check_output(['git','status','--porcelain','--','candidate/v628'],text=True).splitlines()
+          untracked=[line[3:] for line in status if line.startswith('?? ')]
+          assert untracked==['candidate/v628/assets/inperson.v6438.css'],untracked
+          pat=re.compile(r'<script type="application/ld\+json">(.*?)</script>',re.S);blocks=0
+          for p in htmls:
+            t=p.read_text(encoding='utf-8')
+            for m in pat.finditer(t):json.loads(m.group(1));blocks+=1
+          assert blocks>=32,blocks
+          for rel in ['presencial/index.html','en/in-person/index.html']:
+            now=(root/rel).read_text(encoding='utf-8')
+            base=subprocess.check_output(['git','show',f'7a4dc8b3b4a2878bd6f114164d50257fa00482f1:candidate/v628/{rel}'],text=True)
+            now=now.replace('<link href="/assets/inperson.v6438.css" rel="stylesheet"/>','')
+            assert now==base,rel
+          print({'html':len(htmls),'jsonld':blocks,'scope':'2 html + version/changelog + css'})
+          PY
+          grep -q '<h1>Si te ayuda tener a alguien a tu lado, entrenamos contigo.</h1>' "$root/presencial/index.html"
+          grep -q '<h1>If having someone beside you helps, we train with you.</h1>' "$root/en/in-person/index.html"
+          grep -q '/assets/aeo-disclosure.v6437.css' "$root/presencial/index.html"
+          grep -q '/assets/mobile.v6435.css' "$root/presencial/index.html"
+          grep -q '/assets/analytics.v643.js' "$root/presencial/index.html"
+          grep -q '/assets/menu.v642.js' "$root/presencial/index.html"
+          ! grep -R -q '/assets/hardening.v630.js' "$root" --include='*.html'
+
+      - name: Browser regression and in-person visual QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.58.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4176 --directory candidate/v628 >/tmp/v6438-server.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4176/ >/dev/null && break || true; sleep 1; done
+          curl -fsS http://127.0.0.1:4176/ >/dev/null
+          node .github/scripts/qa_v6438_inperson_editorial_value.cjs
+
+      - name: Commit certified V6.43.8 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add candidate/v628
+          git commit -m 'feat(web): make in-person value section editorial in V6.43.8'
+          git push origin HEAD:work/web-v6-43-8-inperson-editorial-value
+
+      - name: Save V6.43.8 visual QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-v6438-inperson-editorial-evidence
+          path: |
+            /tmp/v6438-server.log
+            /tmp/v6438-evidence
+          if-no-files-found: warn
+          retention-days: 30
