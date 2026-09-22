@@ -1,3 +1,10 @@
+## V6.43.10 — Evocative institutional origin story
+
+- Rewrites the IBERFIT origin as an institutional story rather than a founder biography.
+- Preserves only verified pillars: passion for training and health, university education in Spain, Spanish and German contexts, later adaptation in Chile.
+- Connects the European journey directly to the present-day IRI, review process and training formats.
+- Refines the visual journey on desktop while preserving the existing swipe interaction on mobile.
+
 ## V6.43.8 — In-person editorial value
 
 - Replaces the four-card visual treatment on the in-person service with an open editorial matrix.
