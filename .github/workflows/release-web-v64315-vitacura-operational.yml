@@ -1,0 +1,149 @@
+name: Release WEB IBERFIT V6.43.15 Vitacura operational landing
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-15-vitacura-operational
+    paths:
+      - '.github/workflows/release-web-v64315-vitacura-operational.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: web-v64315-vitacura-operational
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact V6.43.14 production source baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = '047695c82dab0a0250af469991fbde358f778fc4'
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.14'
+
+      - name: Build V6.43.15 Vitacura operational landing
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          es=Path('candidate/v628/entrenador-personal-vitacura/index.html')
+          en=Path('candidate/v628/en/personal-trainer-vitacura/index.html')
+
+          t=es.read_text()
+          replacements=[
+            ('<h1>Entrenar en Vitacura con un plan que encaje en tu entorno, no al revés.</h1><p class="lead">En una comuna residencial y verde, entrenar cerca puede ser una ventaja. La clave es convertir esa comodidad en continuidad y no en improvisación.</p><p class="hero-support">Podemos trabajar en domicilio, espacios residenciales o combinar sesiones presenciales con trabajo guiado, según lo que realmente te ayude a avanzar.</p>',
+             '<h1>Entrenamiento personal en Vitacura, con una modalidad que podamos sostener bien.</h1><p class="lead">Antes de confirmar sesiones presenciales revisamos sector, acceso, horario y espacio disponible. La cercanía solo aporta valor si permite mantener una frecuencia realista.</p><p class="hero-support">Podemos trabajar en domicilio o gimnasio de edificio, o combinar presencial y trabajo guiado cuando el formato híbrido reduce fricción.</p>'),
+            ('<div class="local-service-chip"><b>01</b><span><strong>Domicilio</strong><br>Cuando entrenar cerca de casa mejora constancia y comodidad.</span></div><div class="local-service-chip"><b>02</b><span><strong>Gimnasio de edificio</strong><br>Aprovechamos el equipamiento disponible si permite progresar bien.</span></div><div class="local-service-chip"><b>03</b><span><strong>Exterior</strong><br>Puede encajar cuando el entorno y las condiciones acompañan.</span></div><div class="local-service-chip"><b>04</b><span><strong>Híbrido</strong><br>Presencialidad estratégica y trabajo guiado entre sesiones.</span></div>',
+             '<div class="local-service-chip"><b>01</b><span><strong>Domicilio</strong><br>Si sector, acceso y horario permiten una frecuencia estable.</span></div><div class="local-service-chip"><b>02</b><span><strong>Gimnasio de edificio</strong><br>Si el espacio y el equipamiento permiten entrenar con calidad.</span></div><div class="local-service-chip"><b>03</b><span><strong>Exterior</strong><br>Solo cuando las condiciones y el objetivo permiten una sesión adecuada.</span></div><div class="local-service-chip"><b>04</b><span><strong>Híbrido</strong><br>Cuando concentrar la supervisión presencial mejora la continuidad.</span></div>'),
+            ('<div class="section-head reveal"><div class="kicker">Entrenar aquí</div><h2>Estar cerca ayuda. Tener dirección marca la diferencia.</h2><p class="lead">Si tu entorno ya facilita moverte, caminar, usar bicicleta o entrenar cerca de casa, lo tenemos en cuenta. El plan parte de lo que ya forma parte de tu vida.</p></div><div class="local-context-note reveal"><strong>Entorno residencial y vida activa</strong><p>En Vitacura el espacio disponible puede ser una ventaja: domicilio, equipamiento residencial y actividad cotidiana pueden integrarse en el plan. La decisión no depende de tener “más material”, sino de qué entorno permite entrenar con más continuidad y mejor criterio.</p></div>',
+             '<div class="section-head reveal"><div class="kicker">Entrenar aquí</div><h2>La cobertura se confirma antes de prometer una frecuencia.</h2><p class="lead">Sector, acceso, horario y espacio disponible determinan si el entrenamiento presencial puede sostenerse con calidad.</p></div><div class="local-context-note reveal"><strong>Qué verificamos contigo</strong><p>Revisamos el acceso al lugar, las condiciones reales del espacio y tu disponibilidad. Si ese encaje no permite continuidad, preferimos proponerte un formato híbrido u online antes que forzar una frecuencia presencial.</p></div>'),
+          ]
+          for old,new in replacements:
+              assert t.count(old)==1,(old[:60],t.count(old))
+              t=t.replace(old,new)
+
+          old_section='<section class="section section-cream"><div class="container"><div class="section-head reveal"><div class="kicker">Cómo se decide</div><h2>No necesitas más supervisión de la necesaria; necesitas la adecuada.</h2><div class="grid cards-4"><article class="card reveal"><div class="card-index">01</div><h3>Tu entorno cuenta</h3><p>Revisamos el espacio que ya tienes disponible y qué podemos aprovechar sin añadir complicaciones.</p></article><article class="card reveal"><div class="card-index">02</div><h3>Qué quieres mejorar</h3><p>Fuerza, salud, composición corporal o rendimiento requieren prioridades distintas. No empezamos por una rutina estándar.</p></article><article class="card reveal"><div class="card-index">03</div><h3>Autonomía bien guiada</h3><p>Si puedes entrenar parte de la semana por tu cuenta, diseñamos esa parte para que siga conectada con lo que hacemos juntos.</p></article><article class="card reveal"><div class="card-index">04</div><h3>Revisar sin esperar a que algo falle</h3><p>Seguimos tu respuesta y ajustamos antes de que una semana difícil se convierta en abandono.</p></article></div></div></div></section>'
+          new_section='<section class="section section-cream"><div class="container"><div class="section-head reveal"><div class="kicker">Antes de recomendar una modalidad</div><h2>Tres cosas tienen que funcionar en la vida real.</h2></div><div class="principle-stack"><article class="principle-row reveal"><h3>Cobertura real</h3><p>Confirmamos sector, acceso y horario antes de reservar una frecuencia presencial.</p></article><article class="principle-row reveal"><h3>Espacio útil</h3><p>Domicilio o gimnasio de edificio solo tienen sentido si el espacio permite desarrollar la sesión con calidad.</p></article><article class="principle-row reveal"><h3>Frecuencia sostenible</h3><p>Si no conviene que todo sea presencial, el formato híbrido mantiene planificación y seguimiento sin forzar traslados innecesarios.</p></article></div></div></section>'
+          assert t.count(old_section)==1,t.count(old_section)
+          t=t.replace(old_section,new_section)
+
+          redundant='<section class="section"><div class="container"><div class="section-head reveal"><div class="kicker">Antes de reservar</div><h2>Antes de coordinar, vemos cómo encaja el servicio en tu día a día.</h2><p class="lead">Sector, acceso, horario y espacio importan. Los revisamos contigo y te proponemos solo una modalidad que podamos sostener bien.</p></div></div></section>'
+          assert t.count(redundant)==1,t.count(redundant)
+          t=t.replace(redundant,'')
+          es.write_text(t)
+
+          t=en.read_text()
+          replacements=[
+            ('<h1>Use the environment you already have, with a plan that gives it direction.</h1><p class="lead">In a residential, active environment, training close to home can be a real advantage when convenience is turned into consistency rather than improvisation.</p><p class="hero-support">Home, residential training space, outdoor work or hybrid support can all make sense depending on your goal and week.</p>',
+             '<h1>Personal training in Vitacura, with a format we can realistically sustain.</h1><p class="lead">Before confirming in-person sessions, we review area, access, schedule and available training space. Proximity only adds value when it supports a realistic frequency.</p><p class="hero-support">We can train at home or in a residential gym, or combine in-person and guided work when a hybrid format reduces friction.</p>'),
+            ('<div class="local-service-chip"><b>01</b><span><strong>Home training</strong><br>When training near home improves consistency and convenience.</span></div><div class="local-service-chip"><b>02</b><span><strong>Condominium gym</strong><br>We use available equipment when it supports good progression.</span></div><div class="local-service-chip"><b>03</b><span><strong>Outdoor training</strong><br>It can fit when the environment and conditions support the session.</span></div><div class="local-service-chip"><b>04</b><span><strong>Hybrid</strong><br>Strategic in-person support with guided work between sessions.</span></div>',
+             '<div class="local-service-chip"><b>01</b><span><strong>Home training</strong><br>When area, access and schedule support a stable frequency.</span></div><div class="local-service-chip"><b>02</b><span><strong>Residential gym</strong><br>When the space and equipment allow the session to be delivered well.</span></div><div class="local-service-chip"><b>03</b><span><strong>Outdoor training</strong><br>Only when conditions and the training goal make the session appropriate.</span></div><div class="local-service-chip"><b>04</b><span><strong>Hybrid</strong><br>When concentrating direct supervision improves continuity.</span></div>'),
+            ('<div class="section-head reveal"><div class="kicker">Training here</div><h2>Being close helps. Having direction makes the difference.</h2><p class="lead">If your environment already makes it easy to walk, cycle or train near home, that activity becomes part of the context rather than something we ignore.</p></div><div class="local-context-note reveal"><strong>Residential environment and active routines</strong><p>In Vitacura, available space can be an advantage. Home, residential equipment and everyday activity can be integrated into the plan. The decision is not about having more equipment; it is about choosing the environment that supports better continuity and judgement.</p></div>',
+             '<div class="section-head reveal"><div class="kicker">Training here</div><h2>Coverage is confirmed before we promise a frequency.</h2><p class="lead">Area, access, schedule and available training space determine whether in-person training can be sustained well.</p></div><div class="local-context-note reveal"><strong>What we confirm with you</strong><p>We review access, the actual training space and your availability. If that combination does not support continuity, we would rather recommend hybrid or online training than force an in-person frequency.</p></div>'),
+          ]
+          for old,new in replacements:
+              assert t.count(old)==1,(old[:60],t.count(old))
+              t=t.replace(old,new)
+
+          old_section='<section class="section section-cream"><div class="container"><div class="section-head reveal"><div class="kicker">How we decide</div><h2>You do not need more supervision than necessary; you need the right amount.</h2><div class="grid cards-4"><article class="card reveal"><div class="card-index">01</div><h3>Your environment matters</h3><p>We review the space you already have and what can be used well without adding unnecessary complexity.</p></article><article class="card reveal"><div class="card-index">02</div><h3>What you want to improve</h3><p>Strength, health, body composition and performance require different priorities.</p></article><article class="card reveal"><div class="card-index">03</div><h3>Guided autonomy</h3><p>If you can train independently part of the week, those sessions stay connected to the supervised work.</p></article><article class="card reveal"><div class="card-index">04</div><h3>Review before things drift</h3><p>We follow the response and adjust before a difficult week becomes a reason to stop altogether.</p></article></div></div></div></section>'
+          new_section='<section class="section section-cream"><div class="container"><div class="section-head reveal"><div class="kicker">Before recommending a format</div><h2>Three things have to work in real life.</h2></div><div class="principle-stack"><article class="principle-row reveal"><h3>Real coverage</h3><p>We confirm area, access and schedule before booking an in-person frequency.</p></article><article class="principle-row reveal"><h3>Usable training space</h3><p>Home or residential-gym training only makes sense when the space allows the session to be delivered well.</p></article><article class="principle-row reveal"><h3>Sustainable frequency</h3><p>If everything does not need to be in person, hybrid training keeps planning and review connected without forcing unnecessary travel.</p></article></div></div></section>'
+          assert t.count(old_section)==1,t.count(old_section)
+          t=t.replace(old_section,new_section)
+
+          redundant='<section class="section"><div class="container"><div class="section-head reveal"><div class="kicker">Before booking</div><h2>We first check how the service fits your day-to-day life.</h2><p class="lead">Area, access, schedule and space matter. We review them with you and only recommend a format we can support consistently.</p></div></div></section>'
+          assert t.count(redundant)==1,t.count(redundant)
+          t=t.replace(redundant,'')
+          en.write_text(t)
+
+          Path('candidate/v628/VERSION').write_text('6.43.15\n')
+          ch=Path('candidate/v628/CHANGELOG.md'); prev=ch.read_text()
+          ch.write_text('## 6.43.15 — Vitacura operational landing\n- Removed non-operational local colour and generic objective/autonomy template copy from Vitacura ES/EN.\n- Shortened the landing around coverage, usable space and sustainable frequency.\n- Preserved service formats, AEO answers, canonical/hreflang and technical SEO.\n\n'+prev)
+          PY
+
+      - name: Validate exact scope and operational standard
+        shell: bash
+        run: |
+          set -euo pipefail
+          b=candidate/v628; es="$b/entrenador-personal-vitacura/index.html"; en="$b/en/personal-trainer-vitacura/index.html"
+          test "$(tr -d '\r\n ' < "$b/VERSION")" = '6.43.15'
+          ! grep -Eqi 'comuna residencial y verde|vida activa|usar bicicleta|qué quieres mejorar|autonomía bien guiada|revisar sin esperar' "$es"
+          ! grep -Eqi 'residential, active environment|active routines|walk, cycle|what you want to improve|guided autonomy|review before things drift' "$en"
+          grep -q 'Cobertura real' "$es"; grep -q 'Espacio útil' "$es"; grep -q 'Frecuencia sostenible' "$es"
+          grep -q 'Real coverage' "$en"; grep -q 'Usable training space' "$en"; grep -q 'Sustainable frequency' "$en"
+          test "$(grep -o 'class=\"principle-row reveal\"' "$es" | wc -l | tr -d ' ')" -ge '3'
+          ! grep -q '<div class="grid cards-4">' "$es"
+          grep -q '¿IBERFIT ofrece entrenamiento personal en Vitacura?' "$es"
+          grep -q 'Does IBERFIT offer personal training in Vitacura?' "$en"
+          grep -q 'rel="canonical"' "$es"; grep -q 'hreflang="en"' "$es"; grep -q 'hreflang="es"' "$en"
+          grep -q '/assets/analytics.v643.js' "$es"; grep -q '/assets/menu.v642.js' "$es"
+          grep -q "script-src-attr 'none'" "$b/_headers"; ! grep -q "'unsafe-inline'" "$b/_headers"
+          changed="$(git diff --name-only | sort)"
+          expected="$(printf '%s\n' candidate/v628/CHANGELOG.md candidate/v628/VERSION candidate/v628/en/personal-trainer-vitacura/index.html candidate/v628/entrenador-personal-vitacura/index.html | sort)"
+          test "$changed" = "$expected"
+
+      - name: Browser regression and mobile reduction
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --silent playwright@1.55.0
+          npx playwright install --with-deps chromium >/dev/null
+          git worktree add --detach /tmp/v64314-base 047695c82dab0a0250af469991fbde358f778fc4 >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v64315-http.log 2>&1 & c=$!
+          python3 -m http.server 4174 --directory /tmp/v64314-base/candidate/v628 >/tmp/v64314-http.log 2>&1 & b=$!
+          trap 'kill $c $b || true' EXIT
+          node <<'NODE'
+          const { chromium }=require('playwright');
+          (async()=>{const browser=await chromium.launch({headless:true});
+            for(const [route,width] of [['/entrenador-personal-vitacura/',390],['/en/personal-trainer-vitacura/',390],['/entrenador-personal-vitacura/',1440],['/en/personal-trainer-vitacura/',1440]]){
+              const page=await browser.newPage({viewport:{width,height:900}});const errs=[];page.on('pageerror',e=>errs.push(String(e)));
+              await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'networkidle'});
+              const text=await page.locator('body').innerText();
+              if(/comuna residencial y verde|vida activa|usar bicicleta|residential, active environment|active routines|walk, cycle/i.test(text)) throw Error('LOCAL_COLOR_REMAINS '+route);
+              const ov=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);if(ov>2)throw Error('OVERFLOW '+route+' '+width+' '+ov);if(errs.length)throw Error('PAGEERROR '+errs.join('|'));
+              if(width===390){const candidateH=await page.evaluate(()=>document.documentElement.scrollHeight);const base=await browser.newPage({viewport:{width,height:900}});await base.goto('http://127.0.0.1:4174'+route,{waitUntil:'networkidle'});const baselineH=await base.evaluate(()=>document.documentElement.scrollHeight);await base.close();if(!(candidateH<baselineH-180))throw Error('NO_MATERIAL_REDUCTION '+route+' base='+baselineH+' candidate='+candidateH);console.log('VITACURA_HEIGHT',route,{baselineH,candidateH,gain:baselineH-candidateH});}
+              await page.close();
+            }
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)})
+          NODE
+
+      - name: Commit certified V6.43.15 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name iberfit; git config user.email iberfit.cl@gmail.com
+          git add candidate/v628/entrenador-personal-vitacura/index.html candidate/v628/en/personal-trainer-vitacura/index.html candidate/v628/VERSION candidate/v628/CHANGELOG.md
+          git commit -m 'refactor(web): ground Vitacura in operational fit in V6.43.15'
+          git push origin HEAD:work/web-v6-43-15-vitacura-operational
