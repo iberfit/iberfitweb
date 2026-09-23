@@ -79,15 +79,19 @@ jobs:
           expected="$(printf '%s\n' candidate/v628/CHANGELOG.md candidate/v628/VERSION candidate/v628/en/index.html candidate/v628/index.html | sort)"
           test "$changed" = "$expected"
 
-      - name: Browser regression and mobile height check
+      - name: Browser regression and measured mobile height reduction
         shell: bash
         run: |
           set -euo pipefail
           npm init -y >/dev/null 2>&1
           npm install --silent playwright@1.55.0
           npx playwright install --with-deps chromium >/dev/null
+          git worktree add --detach /tmp/v64313-base 3f29cd5d44aeb7287ecb21dd00b943c0e35ce5f9 >/dev/null
           python3 -m http.server 4173 --directory candidate/v628 >/tmp/v64314-http.log 2>&1 &
-          server=$!; trap 'kill $server || true' EXIT
+          candidate_server=$!
+          python3 -m http.server 4174 --directory /tmp/v64313-base/candidate/v628 >/tmp/v64313-http.log 2>&1 &
+          baseline_server=$!
+          trap 'kill $candidate_server $baseline_server || true' EXIT
           node <<'NODE'
           const { chromium }=require('playwright');
           (async()=>{const browser=await chromium.launch({headless:true});
@@ -98,7 +102,16 @@ jobs:
               const practice=await page.locator('.evidence-process-section').count(); const system=await page.locator('.system-rail').count(); if(practice!==1||system!==1) throw Error('CORE_NARRATIVE');
               const ov=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth); if(ov>2) throw Error('OVERFLOW '+route+' '+width+' '+ov);
               if(errors.length) throw Error('PAGEERROR '+errors.join('|'));
-              if(width===390){const h=await page.locator('.authenticity-editorial').evaluate(el=>el.getBoundingClientRect().height); if(h>1050) throw Error('PHILOSOPHY_TOO_TALL '+route+' '+h);}
+              if(width===390){
+                const candidateH=await page.locator('.authenticity-editorial').evaluate(el=>el.getBoundingClientRect().height);
+                const baseline=await browser.newPage({viewport:{width,height:900}});
+                await baseline.goto('http://127.0.0.1:4174'+route,{waitUntil:'networkidle'});
+                const baselineH=await baseline.locator('.authenticity-editorial').evaluate(el=>el.getBoundingClientRect().height);
+                await baseline.close();
+                const minGain=route==='/en/'?40:120;
+                if(!(candidateH <= baselineH-minGain)) throw Error('NO_MATERIAL_HEIGHT_REDUCTION '+route+' baseline='+baselineH+' candidate='+candidateH+' required='+minGain);
+                console.log('HEIGHT_REDUCTION',route,{baselineH,candidateH,gain:baselineH-candidateH});
+              }
               await page.close();
             }
             await browser.close();
