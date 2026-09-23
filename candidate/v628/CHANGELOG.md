@@ -1,3 +1,8 @@
+## 6.43.15 — Vitacura operational landing
+- Removed non-operational local colour and generic objective/autonomy template copy from Vitacura ES/EN.
+- Shortened the landing around coverage, usable space and sustainable frequency.
+- Preserved service formats, AEO answers, canonical/hreflang and technical SEO.
+
 ## 6.43.14 — Home editorial pruning
 - Preserved “IBERFIT en práctica” as evidence and “Sistema IBERFIT” as the methodological model.
 - Reduced the lower philosophy ledger from five/four repeated concepts to three consolidated ideas: understand, decide and sustain.
