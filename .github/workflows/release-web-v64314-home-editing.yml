@@ -27,8 +27,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = '3f29cd5d44aeb7287ecb21dd00b943c0e35ce5f9'
+          git merge-base --is-ancestor '3f29cd5d44aeb7287ecb21dd00b943c0e35ce5f9' HEAD
           test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.13'
+          test -z "$(git diff --name-only 3f29cd5d44aeb7287ecb21dd00b943c0e35ce5f9..HEAD -- candidate/v628)"
 
       - name: Build V6.43.14 Home editorial pruning
         shell: bash
