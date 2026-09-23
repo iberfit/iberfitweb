@@ -1,3 +1,8 @@
+## 6.43.13 — Local evidence standard
+- Removed non-operational territorial colour from Lo Barnechea ES/EN.
+- Kept differentiation grounded in travel, sustainable frequency, workload, recovery, availability and continuity.
+- Preserved coverage, service formats, SEO architecture and bilingual pairing.
+
 ## 6.43.12 — Method evidence
 - Added real anonymised/demo app evidence to Method: execution → feedback → review.
 - Preserved the existing working cycle and operating principles; evidence demonstrates rather than replaces the method.
