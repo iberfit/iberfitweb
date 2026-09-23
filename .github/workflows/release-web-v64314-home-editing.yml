@@ -1,0 +1,115 @@
+name: Release WEB IBERFIT V6.43.14 Home editorial pruning
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-14-home-editing
+    paths:
+      - '.github/workflows/release-web-v64314-home-editing.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: web-v64314-home-editing
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact V6.43.13 production source baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = '3f29cd5d44aeb7287ecb21dd00b943c0e35ce5f9'
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.13'
+
+      - name: Build V6.43.14 Home editorial pruning
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          es=Path('candidate/v628/index.html'); en=Path('candidate/v628/en/index.html')
+          t=es.read_text()
+          old='''<div class="authenticity-ledger reveal"><div class="authenticity-line"><strong>Entender mejor</strong><p>Escuchamos tu contexto antes de proponerte qué hacer.</p></div><div class="authenticity-line"><strong>Decidir mejor</strong><p>Los datos solo valen si ayudan a tomar una decisión mejor.</p></div><div class="authenticity-line"><strong>Sostener mejor</strong><p>El plan puede adaptarse cuando tu vida cambia.</p></div><div class="authenticity-line"><strong>Claridad</strong><p>Puedes preguntar y entender por qué proponemos algo.</p></div><div class="authenticity-line"><strong>Continuidad</strong><p>Lo que ocurre hoy sirve para decidir mejor el siguiente paso.</p></div></div>'''
+          new='''<div class="authenticity-ledger reveal"><div class="authenticity-line"><strong>Entender</strong><p>Tu contexto va antes que una receta. Preguntar y explicar forma parte del proceso.</p></div><div class="authenticity-line"><strong>Decidir</strong><p>Medimos y registramos para elegir mejor el siguiente paso, no para acumular datos.</p></div><div class="authenticity-line"><strong>Sostener</strong><p>El plan mantiene continuidad, pero puede cambiar cuando cambia tu respuesta o tu realidad.</p></div></div>'''
+          assert t.count(old)==1,t.count(old); es.write_text(t.replace(old,new))
+          t=en.read_text()
+          old='''<div class="authenticity-ledger reveal"><div class="authenticity-line"><strong>Continuity</strong><p>Assessment, sessions and changes remain connected.</p></div><div class="authenticity-line"><strong>Professional judgement</strong><p>Tools support professional decisions; they do not replace them.</p></div><div class="authenticity-line"><strong>Genuine adaptation</strong><p>The plan responds to progress, context and adherence.</p></div><div class="authenticity-line"><strong>Clarity</strong><p>You can ask what is changing and understand why.</p></div></div>'''
+          new='''<div class="authenticity-ledger reveal"><div class="authenticity-line"><strong>Understand</strong><p>Your context comes before a prescription. Questions and clear explanations are part of the process.</p></div><div class="authenticity-line"><strong>Decide</strong><p>We measure and record to support a better next decision, not to accumulate data.</p></div><div class="authenticity-line"><strong>Sustain</strong><p>The plan keeps continuity while adapting when your response, context or adherence changes.</p></div></div>'''
+          assert t.count(old)==1,t.count(old); en.write_text(t.replace(old,new))
+          Path('candidate/v628/VERSION').write_text('6.43.14\n')
+          ch=Path('candidate/v628/CHANGELOG.md'); prev=ch.read_text()
+          ch.write_text('## 6.43.14 — Home editorial pruning\n- Preserved “IBERFIT en práctica” as evidence and “Sistema IBERFIT” as the methodological model.\n- Reduced the lower philosophy ledger from five/four repeated concepts to three consolidated ideas: understand, decide and sustain.\n- No new sections or components added.\n\n'+prev)
+          PY
+
+      - name: Validate exact scope and preserved narrative
+        shell: bash
+        run: |
+          set -euo pipefail
+          b=candidate/v628
+          test "$(tr -d '\r\n ' < "$b/VERSION")" = '6.43.14'
+          test "$(grep -o 'class=\"authenticity-line\"' "$b/index.html" | wc -l | tr -d ' ')" = '3'
+          test "$(grep -o 'class=\"authenticity-line\"' "$b/en/index.html" | wc -l | tr -d ' ')" = '3'
+          grep -q '<strong>Entender</strong>' "$b/index.html"
+          grep -q '<strong>Decidir</strong>' "$b/index.html"
+          grep -q '<strong>Sostener</strong>' "$b/index.html"
+          grep -q '<strong>Understand</strong>' "$b/en/index.html"
+          grep -q '<strong>Decide</strong>' "$b/en/index.html"
+          grep -q '<strong>Sustain</strong>' "$b/en/index.html"
+          ! grep -q '<strong>Claridad</strong>' "$b/index.html"
+          ! grep -q '<strong>Continuidad</strong>' "$b/index.html"
+          grep -q 'IBERFIT en práctica' "$b/index.html"
+          grep -q 'El Sistema IBERFIT' "$b/index.html"
+          grep -q 'Lo que hacemos hoy tiene que servir para decidir mejor mañana.' "$b/index.html"
+          grep -q 'Cada decisión tiene un porqué.' "$b/index.html"
+          grep -q '/assets/app-online-progress.webp' "$b/index.html"
+          grep -q '/assets/analytics.v643.js' "$b/index.html"
+          grep -q '/assets/menu.v642.js' "$b/index.html"
+          grep -q "script-src-attr 'none'" "$b/_headers"
+          ! grep -q "'unsafe-inline'" "$b/_headers"
+          changed="$(git diff --name-only | sort)"
+          expected="$(printf '%s\n' candidate/v628/CHANGELOG.md candidate/v628/VERSION candidate/v628/en/index.html candidate/v628/index.html | sort)"
+          test "$changed" = "$expected"
+
+      - name: Browser regression and mobile height check
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --silent playwright@1.55.0
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v64314-http.log 2>&1 &
+          server=$!; trap 'kill $server || true' EXIT
+          node <<'NODE'
+          const { chromium }=require('playwright');
+          (async()=>{const browser=await chromium.launch({headless:true});
+            for(const [route,width] of [['/',390],['/en/',390],['/',1440],['/en/',1440]]){
+              const page=await browser.newPage({viewport:{width,height:900}}); const errors=[]; page.on('pageerror',e=>errors.push(String(e)));
+              await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'networkidle'});
+              const lines=await page.locator('.authenticity-line').count(); if(lines!==3) throw Error('PHILOSOPHY_LINES '+route+' '+lines);
+              const practice=await page.locator('.evidence-process-section').count(); const system=await page.locator('.system-rail').count(); if(practice!==1||system!==1) throw Error('CORE_NARRATIVE');
+              const ov=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth); if(ov>2) throw Error('OVERFLOW '+route+' '+width+' '+ov);
+              if(errors.length) throw Error('PAGEERROR '+errors.join('|'));
+              if(width===390){const h=await page.locator('.authenticity-editorial').evaluate(el=>el.getBoundingClientRect().height); if(h>1050) throw Error('PHILOSOPHY_TOO_TALL '+route+' '+h);}
+              await page.close();
+            }
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)})
+          NODE
+
+      - name: Commit certified V6.43.14 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name iberfit; git config user.email iberfit.cl@gmail.com
+          git add candidate/v628/index.html candidate/v628/en/index.html candidate/v628/VERSION candidate/v628/CHANGELOG.md
+          git commit -m 'refactor(web): tighten Home philosophy in V6.43.14'
+          git push origin HEAD:work/web-v6-43-14-home-editing
