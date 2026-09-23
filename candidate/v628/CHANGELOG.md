@@ -1,3 +1,7 @@
+## 6.43.11 — Home evidence copy polish
+- Removed internal/editorial metacopy from “IBERFIT en práctica” / “IBERFIT in practice”.
+- Preserved the evidence-first Antes/Durante/Después structure without adding replacement copy.
+
 ## V6.43.10 — Evocative institutional origin story
 
 - Rewrites the IBERFIT origin as an institutional story rather than a founder biography.
