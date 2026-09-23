@@ -1,0 +1,171 @@
+name: Release WEB IBERFIT V6.43.12 method evidence
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-12-method-evidence
+    paths:
+      - '.github/workflows/release-web-v64312-method-evidence.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: web-v64312-method-evidence
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact V6.43.11 baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = '067c62af90c1c046afa3355a0aa249981059ab2f'
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.11'
+
+      - name: Build V6.43.12 method evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > candidate/v628/assets/method-evidence.v64312.css <<'CSS'
+          /* IBERFIT V6.43.12 — real method evidence, not dashboard decoration */
+          body[data-page="method"] .method-proof-section{background:#0b2419;color:#f5f0e6;overflow:hidden}
+          .method-proof{display:grid;grid-template-columns:minmax(0,.68fr) minmax(0,1.32fr);gap:clamp(2rem,5vw,5rem);align-items:center}
+          .method-proof-copy .kicker{color:#d9b568}
+          .method-proof-copy h2{color:#fffdf8;max-width:12ch}
+          .method-proof-copy .lead{color:rgba(255,255,255,.76);max-width:38rem}
+          .method-proof-note{margin:1.4rem 0 0;padding-top:1rem;border-top:1px solid rgba(217,181,104,.24);color:rgba(255,255,255,.58);font-size:.78rem;line-height:1.55}
+          .method-proof-stage{display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);grid-template-rows:1fr 1fr;gap:.9rem;min-width:0}
+          .method-proof-shot{margin:0;overflow:hidden;border:1px solid rgba(217,181,104,.24);border-radius:22px;background:#102b20;box-shadow:0 20px 48px rgba(0,0,0,.22)}
+          .method-proof-shot--session{grid-row:1/3}
+          .method-proof-shot--feedback{grid-column:2;grid-row:1}
+          .method-proof-shot--review{grid-column:2;grid-row:2}
+          .method-proof-shot img{display:block;width:100%;height:100%;min-height:0;object-fit:contain;background:#0b2419}
+          .method-proof-shot--session img{aspect-ratio:400/434}
+          .method-proof-shot--feedback img{aspect-ratio:400/336}
+          .method-proof-shot--review img{aspect-ratio:400/411}
+          .method-proof-shot figcaption{display:grid;grid-template-columns:auto 1fr;gap:.7rem;align-items:baseline;padding:.85rem 1rem .95rem;border-top:1px solid rgba(217,181,104,.16);background:rgba(255,255,255,.035)}
+          .method-proof-shot figcaption b{color:#d9b568;font-size:.66rem;letter-spacing:.12em;text-transform:uppercase}
+          .method-proof-shot figcaption span{color:rgba(255,255,255,.72);font-size:.82rem;line-height:1.45}
+          @media(max-width:760px){
+            .method-proof{grid-template-columns:1fr;gap:1.7rem}
+            .method-proof-copy h2{max-width:none}
+            .method-proof-stage{display:grid;grid-template-columns:none;grid-template-rows:none;grid-auto-flow:column;grid-auto-columns:minmax(248px,79vw);gap:.8rem;margin-inline:0 -16px;padding:4px 16px 14px 0;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-inline:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+            .method-proof-stage::-webkit-scrollbar{display:none}
+            .method-proof-shot,.method-proof-shot--session,.method-proof-shot--feedback,.method-proof-shot--review{grid-column:auto!important;grid-row:auto!important;scroll-snap-align:start;scroll-snap-stop:always;border-radius:20px}
+            .method-proof-shot img,.method-proof-shot--session img,.method-proof-shot--feedback img,.method-proof-shot--review img{width:100%;height:auto;aspect-ratio:5/4;object-fit:contain}
+            .method-proof-shot figcaption{min-height:82px}
+          }
+          @media(prefers-reduced-motion:reduce){.method-proof-stage{scroll-behavior:auto!important}}
+          CSS
+          python3 - <<'PY'
+          from pathlib import Path
+          es=Path('candidate/v628/metodo/index.html')
+          en=Path('candidate/v628/en/method/index.html')
+          es_html=es.read_text(); en_html=en.read_text()
+          css='<link href="/assets/method-evidence.v64312.css" rel="stylesheet"/>'
+          assert css not in es_html and css not in en_html
+          es_html=es_html.replace('</head>',css+'</head>',1)
+          en_html=en_html.replace('</head>',css+'</head>',1)
+          es_anchor='<section class="section"><div class="container"><div class="section-intro reveal"><div class="kicker">Ciclo de trabajo</div>'
+          en_anchor='<section class="section"><div class="container"><div class="section-intro reveal"><div class="kicker">Working cycle</div>'
+          assert es_html.count(es_anchor)==1
+          assert en_html.count(en_anchor)==1
+          es_section='''<section class="section method-proof-section" id="metodo-en-accion"><div class="container method-proof"><div class="method-proof-copy reveal"><div class="kicker">El método en acción</div><h2>La información importa cuando cambia una decisión.</h2><p class="lead">Durante una sesión registramos lo que realmente ocurrió. Al terminar recogemos cómo fue. En la revisión, esas señales ayudan a decidir si conviene mantener, progresar o adaptar.</p><p class="method-proof-note">Vistas reales de la app IBERFIT · entorno de demostración con datos sintéticos.</p></div><div class="method-proof-stage reveal" aria-label="Ejecución, feedback y revisión dentro del método IBERFIT"><figure class="method-proof-shot method-proof-shot--session"><img src="/assets/app-online-session.webp" width="400" height="434" loading="lazy" decoding="async" alt="Vista real de una sesión guiada en curso en la app IBERFIT."/><figcaption><b>Ejecutar</b><span>La sesión guía carga, esfuerzo, descansos y alternativas.</span></figcaption></figure><figure class="method-proof-shot method-proof-shot--feedback"><img src="/assets/app-hybrid-feedback.webp" width="400" height="336" loading="lazy" decoding="async" alt="Vista real del cierre y feedback de una sesión en la app IBERFIT."/><figcaption><b>Registrar</b><span>El cierre conserva cómo fue la sesión para no perder contexto.</span></figcaption></figure><figure class="method-proof-shot method-proof-shot--review"><img src="/assets/app-online-progress.webp" width="400" height="411" loading="lazy" decoding="async" alt="Vista real del seguimiento de evolución en la app IBERFIT."/><figcaption><b>Revisar</b><span>La evolución se interpreta cuando hay información suficiente para decidir.</span></figcaption></figure></div></div></section>'''
+          en_section='''<section class="section method-proof-section" id="method-in-action"><div class="container method-proof"><div class="method-proof-copy reveal"><div class="kicker">The method in action</div><h2>Information matters when it changes a decision.</h2><p class="lead">During a session we record what actually happened. At the end, we capture how it felt. During review, those signals help decide whether to maintain, progress or adapt.</p><p class="method-proof-note">Real IBERFIT app views · demonstration environment with synthetic data.</p></div><div class="method-proof-stage reveal" aria-label="Execution, feedback and review within the IBERFIT method"><figure class="method-proof-shot method-proof-shot--session"><img src="/assets/app-online-session.webp" width="400" height="434" loading="lazy" decoding="async" alt="Real IBERFIT app view of a guided session in progress."/><figcaption><b>Execute</b><span>The session guides workload, effort, rest and alternatives.</span></figcaption></figure><figure class="method-proof-shot method-proof-shot--feedback"><img src="/assets/app-hybrid-feedback.webp" width="400" height="336" loading="lazy" decoding="async" alt="Real IBERFIT app view of session completion and feedback."/><figcaption><b>Record</b><span>Session feedback preserves what happened instead of losing context.</span></figcaption></figure><figure class="method-proof-shot method-proof-shot--review"><img src="/assets/app-online-progress.webp" width="400" height="411" loading="lazy" decoding="async" alt="Real IBERFIT app view of progress and ongoing review."/><figcaption><b>Review</b><span>Progress is interpreted when there is enough information to support a decision.</span></figcaption></figure></div></div></section>'''
+          es.write_text(es_html.replace(es_anchor,es_section+es_anchor,1))
+          en.write_text(en_html.replace(en_anchor,en_section+en_anchor,1))
+          Path('candidate/v628/VERSION').write_text('6.43.12\n')
+          ch=Path('candidate/v628/CHANGELOG.md'); old=ch.read_text()
+          ch.write_text('## 6.43.12 — Method evidence\n- Added real anonymised/demo app evidence to Method: execution → feedback → review.\n- Preserved the existing working cycle and operating principles; evidence demonstrates rather than replaces the method.\n- Added touch-first mobile exploration without autoplay.\n\n'+old)
+          PY
+
+      - name: Validate exact scope and preserved contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=candidate/v628
+          test "$(tr -d '\r\n ' < "$base/VERSION")" = '6.43.12'
+          test -s "$base/assets/method-evidence.v64312.css"
+          test "$(grep -R -l '/assets/method-evidence.v64312.css' "$base" --include='*.html' | wc -l | tr -d ' ')" = '2'
+          grep -q 'La información importa cuando cambia una decisión.' "$base/metodo/index.html"
+          grep -q 'Information matters when it changes a decision.' "$base/en/method/index.html"
+          test "$(grep -o 'method-proof-shot' "$base/metodo/index.html" | wc -l | tr -d ' ')" -ge 3
+          grep -q 'app-online-session.webp' "$base/metodo/index.html"
+          grep -q 'app-hybrid-feedback.webp' "$base/metodo/index.html"
+          grep -q 'app-online-progress.webp' "$base/metodo/index.html"
+          grep -q 'Ciclo de trabajo' "$base/metodo/index.html"
+          grep -q 'Principios operativos' "$base/metodo/index.html"
+          grep -q '/assets/analytics.v643.js' "$base/metodo/index.html"
+          grep -q '/assets/menu.v642.js' "$base/metodo/index.html"
+          grep -q "script-src-attr 'none'" "$base/_headers"
+          ! grep -q "'unsafe-inline'" "$base/_headers"
+          changed="$(git diff --name-only | sort)"
+          expected="$(printf '%s\n' candidate/v628/CHANGELOG.md candidate/v628/VERSION candidate/v628/en/method/index.html candidate/v628/metodo/index.html | sort)"
+          test "$changed" = "$expected"
+          test -f "$base/assets/method-evidence.v64312.css"
+
+      - name: Browser regression and visual contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --silent playwright@1.55.0
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v64312-http.log 2>&1 &
+          server=$!
+          trap 'kill $server || true' EXIT
+          node <<'NODE'
+          const { chromium }=require('playwright');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            for(const [route,width] of [['/metodo/',390],['/en/method/',390],['/metodo/',1440],['/en/method/',1440]]){
+              const page=await browser.newPage({viewport:{width,height:1000}});
+              const errors=[]; page.on('pageerror',e=>errors.push(String(e)));
+              await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'networkidle'});
+              await page.locator('.method-proof-section').scrollIntoViewIfNeeded();
+              const shots=page.locator('.method-proof-shot');
+              if(await shots.count()!==3) throw Error('SHOT_COUNT '+route);
+              for(let i=0;i<3;i++){
+                const img=shots.nth(i).locator('img');
+                await img.evaluate(el=>el.complete&&el.naturalWidth>0 || new Promise((r,j)=>{el.addEventListener('load',()=>r(true),{once:true});el.addEventListener('error',()=>j(new Error('IMG')),{once:true})}));
+              }
+              if(width<=760){
+                const rail=page.locator('.method-proof-stage');
+                const dims=await rail.evaluate(el=>({sw:el.scrollWidth,cw:el.clientWidth,x:el.scrollLeft}));
+                if(!(dims.sw>dims.cw+40)) throw Error('NO_MOBILE_SCROLL '+JSON.stringify(dims));
+                await rail.evaluate(el=>el.scrollTo({left:el.clientWidth*.7,behavior:'instant'}));
+                const x=await rail.evaluate(el=>el.scrollLeft);
+                if(x<20) throw Error('NO_SCROLL_MOVEMENT '+route);
+              }
+              const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
+              if(overflow>2) throw Error('OVERFLOW '+route+' '+width+' '+overflow);
+              if(errors.length) throw Error('PAGEERROR '+errors.join('|'));
+              await page.close();
+            }
+            const page=await browser.newPage({viewport:{width:390,height:900}});
+            for(const route of ['/','/diagnostico-iri/','/presencial/','/hibrido/','/online/','/sobre-iberfit/','/contacto/','/en/']){
+              await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'domcontentloaded'});
+              const ov=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
+              if(ov>2) throw Error('SMOKE_OVERFLOW '+route+' '+ov);
+            }
+            await page.close(); await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)})
+          NODE
+
+      - name: Commit certified V6.43.12 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name iberfit
+          git config user.email iberfit.cl@gmail.com
+          git add candidate/v628/metodo/index.html candidate/v628/en/method/index.html candidate/v628/assets/method-evidence.v64312.css candidate/v628/VERSION candidate/v628/CHANGELOG.md
+          git commit -m 'feat(web): show real method evidence in V6.43.12'
+          git push origin HEAD:work/web-v6-43-12-method-evidence
