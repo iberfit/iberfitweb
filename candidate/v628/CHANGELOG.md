@@ -1,3 +1,8 @@
+## 6.43.14 — Home editorial pruning
+- Preserved “IBERFIT en práctica” as evidence and “Sistema IBERFIT” as the methodological model.
+- Reduced the lower philosophy ledger from five/four repeated concepts to three consolidated ideas: understand, decide and sustain.
+- No new sections or components added.
+
 ## 6.43.13 — Local evidence standard
 - Removed non-operational territorial colour from Lo Barnechea ES/EN.
 - Kept differentiation grounded in travel, sustainable frequency, workload, recovery, availability and continuity.
