@@ -1,0 +1,108 @@
+name: Release WEB IBERFIT V6.43.13 Lo Barnechea evidence standard
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-13-local-evidence
+    paths:
+      - '.github/workflows/release-web-v64313-local-evidence.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: web-v64313-local-evidence
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify exact V6.43.12 production source baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = 'b8ee589ec08b92155cc387a571f1bb1fd34ee199'
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.12'
+      - name: Build V6.43.13 local evidence standard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          changes={
+            Path('candidate/v628/entrenador-personal-lo-barnechea/index.html'):[
+              ('Lo Barnechea combina zonas urbanas con una relación muy cercana con la montaña y grandes diferencias de desplazamiento. El plan tiene que convivir con esa realidad.','Las diferencias de desplazamiento entre sectores de Lo Barnechea pueden cambiar la frecuencia presencial que tiene sentido sostener. El plan debe considerar esa logística desde el principio.'),
+              ('<h3>Tu actividad real</h3><p>Si además haces deporte al aire libre, bicicleta, trekking u otra actividad, lo incorporamos al contexto en vez de ignorarlo.</p>','<h3>Tu actividad fuera de las sesiones</h3><p>Cualquier otra actividad relevante se incorpora a la planificación cuando afecta carga, recuperación o disponibilidad.</p>')
+            ],
+            Path('candidate/v628/en/personal-trainer-lo-barnechea/index.html'):[
+              ('Lo Barnechea combines urban areas, mountain-adjacent activity and very different travel conditions. The training plan has to live with that reality.','Travel conditions can differ substantially between areas of Lo Barnechea and can change the in-person frequency that is realistic to sustain. The plan should account for that logistics from the start.'),
+              ('<h3>Your actual activity</h3><p>If cycling, hiking or outdoor sport is part of your life, we account for it rather than treat it as invisible.</p>','<h3>Your activity outside sessions</h3><p>Any relevant activity outside sessions is included in planning when it affects workload, recovery or availability.</p>')
+            ]
+          }
+          for p,repls in changes.items():
+              t=p.read_text()
+              for old,new in repls:
+                  assert t.count(old)==1,(p,old,t.count(old))
+                  t=t.replace(old,new)
+              p.write_text(t)
+          Path('candidate/v628/VERSION').write_text('6.43.13\n')
+          ch=Path('candidate/v628/CHANGELOG.md'); old=ch.read_text()
+          ch.write_text('## 6.43.13 — Local evidence standard\n- Removed non-operational territorial colour from Lo Barnechea ES/EN.\n- Kept differentiation grounded in travel, sustainable frequency, workload, recovery, availability and continuity.\n- Preserved coverage, service formats, SEO architecture and bilingual pairing.\n\n'+old)
+          PY
+      - name: Validate exact scope and local contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          b=candidate/v628
+          test "$(tr -d '\r\n ' < "$b/VERSION")" = '6.43.13'
+          es="$b/entrenador-personal-lo-barnechea/index.html"; en="$b/en/personal-trainer-lo-barnechea/index.html"
+          ! grep -qi 'relación muy cercana con la montaña' "$es"
+          ! grep -Eqi 'bicicleta|trekking' "$es"
+          ! grep -Eqi 'mountain-adjacent|cycling|hiking' "$en"
+          grep -q 'diferencias de desplazamiento entre sectores' "$es"
+          grep -q 'carga, recuperación o disponibilidad' "$es"
+          grep -q 'Travel conditions can differ substantially between areas' "$en"
+          grep -q 'workload, recovery or availability' "$en"
+          grep -q 'rel="canonical"' "$es"; grep -q 'hreflang="en"' "$es"; grep -q 'hreflang="es"' "$en"
+          grep -q 'Domicilio' "$es"; grep -q 'Espacio residencial' "$es"; grep -q 'Exterior' "$es"; grep -q 'Híbrido' "$es"
+          grep -q 'Local coverage is confirmed by area, training space and schedule' "$en"
+          grep -q '/assets/analytics.v643.js' "$es"; grep -q '/assets/menu.v642.js' "$es"
+          grep -q "script-src-attr 'none'" "$b/_headers"; ! grep -q "'unsafe-inline'" "$b/_headers"
+          changed="$(git diff --name-only | sort)"
+          expected="$(printf '%s\n' candidate/v628/CHANGELOG.md candidate/v628/VERSION candidate/v628/en/personal-trainer-lo-barnechea/index.html candidate/v628/entrenador-personal-lo-barnechea/index.html | sort)"
+          test "$changed" = "$expected"
+      - name: Browser regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --silent playwright@1.55.0
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v64313-http.log 2>&1 &
+          server=$!; trap 'kill $server || true' EXIT
+          node <<'NODE'
+          const { chromium }=require('playwright');
+          (async()=>{const browser=await chromium.launch({headless:true});
+            for(const [route,width] of [['/entrenador-personal-lo-barnechea/',390],['/en/personal-trainer-lo-barnechea/',390],['/entrenador-personal-lo-barnechea/',1440],['/en/personal-trainer-lo-barnechea/',1440]]){
+              const page=await browser.newPage({viewport:{width,height:900}});const errs=[];page.on('pageerror',e=>errs.push(String(e)));
+              await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'networkidle'});
+              const text=await page.locator('body').innerText();
+              if(/relación muy cercana con la montaña|bicicleta|trekking|mountain-adjacent|cycling|hiking/i.test(text)) throw Error('NON_OPERATIONAL_LOCAL_COPY '+route);
+              const ov=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);if(ov>2) throw Error('OVERFLOW '+route+' '+width+' '+ov);if(errs.length) throw Error('PAGEERROR '+errs.join('|'));await page.close();
+            }
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)})
+          NODE
+      - name: Commit certified V6.43.13 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name iberfit; git config user.email iberfit.cl@gmail.com
+          git add candidate/v628/entrenador-personal-lo-barnechea/index.html candidate/v628/en/personal-trainer-lo-barnechea/index.html candidate/v628/VERSION candidate/v628/CHANGELOG.md
+          git commit -m 'fix(web): ground Lo Barnechea in operational evidence in V6.43.13'
+          git push origin HEAD:work/web-v6-43-13-local-evidence
