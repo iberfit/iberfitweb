@@ -1,3 +1,8 @@
+## 6.43.12 — Method evidence
+- Added real anonymised/demo app evidence to Method: execution → feedback → review.
+- Preserved the existing working cycle and operating principles; evidence demonstrates rather than replaces the method.
+- Added touch-first mobile exploration without autoplay.
+
 ## 6.43.11 — Home evidence copy polish
 - Removed internal/editorial metacopy from “IBERFIT en práctica” / “IBERFIT in practice”.
 - Preserved the evidence-first Antes/Durante/Después structure without adding replacement copy.
