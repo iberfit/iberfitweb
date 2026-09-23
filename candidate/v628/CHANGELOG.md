@@ -1,3 +1,9 @@
+## 6.43.16 — Contextual WhatsApp intent
+- Replaced the generic WhatsApp prefill with human, page-aware messages across the public site.
+- Message intent now follows the visible CTA first, then its position and page context (IRI, Online, Hybrid, In-person, local landing, Method, Contact, About or Home).
+- Local landing messages identify the commune naturally; modality CTAs distinguish hero/final intent while IRI CTAs preserve the IRI entry point.
+- Static links remain functional without JavaScript; analytics data attributes are unchanged.
+
 ## 6.43.15 — Vitacura operational landing
 - Removed non-operational local colour and generic objective/autonomy template copy from Vitacura ES/EN.
 - Shortened the landing around coverage, usable space and sustainable frequency.
