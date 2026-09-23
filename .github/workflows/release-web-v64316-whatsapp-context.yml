@@ -1,0 +1,334 @@
+name: Release WEB IBERFIT V6.43.16 contextual WhatsApp intent
+
+on:
+  push:
+    branches: [work/web-v6-43-16-whatsapp-context]
+    paths: ['.github/workflows/release-web-v64316-whatsapp-context.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact V6.43.15 production source baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = '16c03bb73f152dafebee773eb6a3d56d67233462'
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.15'
+
+      - name: Build V6.43.16 contextual WhatsApp links
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from urllib.parse import quote
+          import html, re
+
+          root = Path('candidate/v628')
+          phone = '56944040032'
+          old_generic = 'Hola IBERFIT, quiero recibir orientación para realizar el Diagnóstico IRI.'
+          old_generic_url = 'https://wa.me/' + phone + '?text=' + quote(old_generic, safe='')
+          anchor_re = re.compile(r'(<a\b(?=[^>]*href="https://wa\.me/56944040032\?text=[^"]*")[^>]*)(>)(.*?)(</a>)', re.I | re.S)
+          tag_re = re.compile(r'<[^>]+>')
+
+          def visible_text(fragment):
+              return ' '.join(html.unescape(tag_re.sub(' ', fragment)).split())
+
+          def page_context(path, source):
+              rel = path.relative_to(root).as_posix()
+              en = rel.startswith('en/') or '<html lang="en"' in source
+              loc_match = re.search(r'class="local-place-copy"[^>]*>.*?<strong>([^<]+)</strong>', source, re.S)
+              location = html.unescape(loc_match.group(1)).strip() if loc_match else None
+              if location:
+                  return en, 'local', location
+              if rel in ('online/index.html', 'en/online/index.html'):
+                  return en, 'online', None
+              if rel in ('hibrido/index.html', 'en/hybrid/index.html'):
+                  return en, 'hybrid', None
+              if rel in ('presencial/index.html', 'en/in-person/index.html'):
+                  return en, 'inperson', None
+              if rel in ('diagnostico-iri/index.html', 'en/iri-assessment/index.html'):
+                  return en, 'iri', None
+              if rel in ('metodo/index.html', 'en/method/index.html'):
+                  return en, 'method', None
+              if rel in ('contacto/index.html', 'en/contact/index.html'):
+                  return en, 'contact', None
+              if rel in ('sobre-iberfit/index.html', 'en/about/index.html'):
+                  return en, 'about', None
+              if rel in ('index.html', 'en/index.html'):
+                  return en, 'home', None
+              return en, 'other', None
+
+          def is_iri_intent(text):
+              low = text.lower()
+              return 'iri' in low or 'punto de partida' in low or 'starting point' in low
+
+          def message_es(kind, location, iri, position):
+              if kind == 'local':
+                  if iri:
+                      return f'Hola IBERFIT, estoy viendo la opción de entrenamiento en {location} y quiero empezar por el Diagnóstico IRI. Me gustaría saber cómo coordinarlo y si tienen cobertura en mi sector.'
+                  if position == 'final':
+                      return f'Hola IBERFIT, estoy valorando entrenar con IBERFIT en {location}. Me gustaría contarles mi sector, disponibilidad y objetivo para saber qué modalidad podría encajar mejor conmigo.'
+                  return f'Hola IBERFIT, estoy buscando entrenamiento personal en {location}. Me gustaría saber si tienen cobertura en mi sector y qué modalidad podría encajar mejor conmigo.'
+              if kind == 'online':
+                  if iri:
+                      return 'Hola IBERFIT, estoy viendo el entrenamiento online y quiero empezar por el Diagnóstico IRI. Me gustaría saber cómo coordinarlo y cómo encaja con el acompañamiento a distancia.'
+                  if position == 'final':
+                      return 'Hola IBERFIT, me interesa el entrenamiento online. Me gustaría contarles dónde entreno, con qué material cuento y qué quiero conseguir para saber cómo podría funcionar conmigo.'
+                  return 'Hola IBERFIT, he estado viendo el entrenamiento online. Me gustaría saber cómo sería mi plan y cómo funciona el seguimiento a distancia.'
+              if kind == 'hybrid':
+                  if iri:
+                      return 'Hola IBERFIT, estoy viendo la modalidad híbrida y quiero empezar por el Diagnóstico IRI. Me gustaría saber cómo coordinarlo y cómo encajaría después con sesiones presenciales y trabajo guiado.'
+                  if position == 'final':
+                      return 'Hola IBERFIT, me interesa el formato híbrido. Me gustaría contarles cómo es mi semana y saber cómo podrían organizar la parte presencial y el trabajo guiado.'
+                  return 'Hola IBERFIT, he estado viendo la modalidad híbrida. Me gustaría saber si encaja conmigo para combinar sesiones presenciales con trabajo guiado entre sesiones.'
+              if kind == 'inperson':
+                  if iri:
+                      return 'Hola IBERFIT, estoy viendo el entrenamiento presencial y quiero empezar por el Diagnóstico IRI. Me gustaría saber cómo coordinarlo y qué cobertura tienen.'
+                  if position == 'final':
+                      return 'Hola IBERFIT, me interesa entrenar de forma presencial. Me gustaría contarles dónde estoy y cómo es mi semana para saber qué opción podría encajar mejor.'
+                  return 'Hola IBERFIT, estoy buscando entrenamiento personal presencial. Me gustaría contarles mi objetivo y saber qué disponibilidad y cobertura tienen.'
+              if kind == 'iri':
+                  if position == 'final':
+                      return 'Hola IBERFIT, después de ver qué incluye el Diagnóstico IRI quiero coordinar el mío. ¿Qué disponibilidad tienen?'
+                  return 'Hola IBERFIT, quiero realizar el Diagnóstico IRI para entender bien mi punto de partida antes de empezar. ¿Cómo podemos coordinarlo?'
+              if kind == 'method':
+                  if iri:
+                      return 'Hola IBERFIT, he estado viendo su método y quiero empezar por el Diagnóstico IRI. ¿Cómo podemos coordinarlo?'
+                  if position == 'final':
+                      return 'Hola IBERFIT, el método de trabajo me encaja y me gustaría saber cómo aplicarían este proceso a mi caso.'
+                  return 'Hola IBERFIT, he estado viendo cómo trabajan y me gustaría contarles mi caso para saber qué modalidad y punto de partida tendría más sentido para mí.'
+              if kind == 'contact':
+                  if iri:
+                      return 'Hola IBERFIT, quiero empezar por el Diagnóstico IRI. ¿Cómo podemos coordinarlo?'
+                  return 'Hola IBERFIT, he estado viendo la web y me gustaría contarles mi caso para saber qué opción podría encajar mejor conmigo.'
+              if kind == 'about':
+                  if iri:
+                      return 'Hola IBERFIT, he estado conociendo cómo trabajan y quiero empezar por el Diagnóstico IRI. ¿Cómo podemos coordinarlo?'
+                  return 'Hola IBERFIT, he estado conociendo su forma de trabajar y me gustaría saber qué opción podría encajar mejor conmigo.'
+              if kind == 'home':
+                  if iri:
+                      return 'Hola IBERFIT, he estado viendo la web y quiero empezar por entender bien mi punto de partida con el Diagnóstico IRI. ¿Cómo podemos coordinarlo?'
+                  if position == 'final':
+                      return 'Hola IBERFIT, quiero dar el primer paso y me gustaría contarles mi situación para que me orienten sobre la opción más adecuada.'
+                  return 'Hola IBERFIT, he estado viendo su forma de trabajar y me gustaría contarles qué quiero conseguir para saber por dónde tendría sentido empezar.'
+              if iri:
+                  return 'Hola IBERFIT, quiero empezar por el Diagnóstico IRI. ¿Cómo podemos coordinarlo?'
+              return 'Hola IBERFIT, he estado viendo la web y me gustaría recibir orientación sobre qué opción puede encajar mejor conmigo.'
+
+          def message_en(kind, location, iri, position):
+              if kind == 'local':
+                  if iri:
+                      return f"Hi IBERFIT, I'm looking at personal training in {location} and I'd like to start with the IRI Assessment. Could you tell me how to arrange it and whether you cover my area?"
+                  if position == 'final':
+                      return f"Hi IBERFIT, I'm considering training with IBERFIT in {location}. I'd like to share my area, availability and goal so you can tell me which format might fit best."
+                  return f"Hi IBERFIT, I'm looking for personal training in {location}. Could you tell me whether you cover my area and which format might fit me best?"
+              if kind == 'online':
+                  if iri:
+                      return "Hi IBERFIT, I've been looking at your online coaching and I'd like to start with the IRI Assessment. Could you tell me how to arrange it and how it connects with remote coaching?"
+                  if position == 'final':
+                      return "Hi IBERFIT, I'm interested in online coaching. I'd like to tell you where I train, what equipment I have and what I want to achieve so I can understand how it could work for me."
+                  return "Hi IBERFIT, I've been looking at your online coaching. I'd like to understand what my plan would look like and how the remote follow-up works."
+              if kind == 'hybrid':
+                  if iri:
+                      return "Hi IBERFIT, I've been looking at your hybrid coaching and I'd like to start with the IRI Assessment. Could you tell me how to arrange it and how it would connect with in-person and guided sessions?"
+                  if position == 'final':
+                      return "Hi IBERFIT, I'm interested in the hybrid format. I'd like to tell you what my week looks like and understand how the in-person and guided parts could be organised."
+                  return "Hi IBERFIT, I've been looking at the hybrid format. I'd like to know whether it could suit me for combining in-person sessions with guided training between sessions."
+              if kind == 'inperson':
+                  if iri:
+                      return "Hi IBERFIT, I've been looking at in-person training and I'd like to start with the IRI Assessment. Could you tell me how to arrange it and what areas you cover?"
+                  if position == 'final':
+                      return "Hi IBERFIT, I'm interested in in-person training. I'd like to tell you where I am and what my week looks like so I can understand which option might fit best."
+                  return "Hi IBERFIT, I'm looking for in-person personal training. I'd like to tell you my goal and understand your availability and coverage."
+              if kind == 'iri':
+                  if position == 'final':
+                      return "Hi IBERFIT, after seeing what the IRI Assessment includes, I'd like to arrange mine. What availability do you have?"
+                  return "Hi IBERFIT, I'd like to do the IRI Assessment so I can understand my starting point before I begin. How can we arrange it?"
+              if kind == 'method':
+                  if iri:
+                      return "Hi IBERFIT, I've been looking at your method and I'd like to start with the IRI Assessment. How can we arrange it?"
+                  if position == 'final':
+                      return "Hi IBERFIT, your way of working makes sense to me and I'd like to understand how you would apply the process to my case."
+                  return "Hi IBERFIT, I've been looking at how you work and I'd like to tell you about my situation so I can understand which format and starting point would make most sense."
+              if kind == 'contact':
+                  if iri:
+                      return "Hi IBERFIT, I'd like to start with the IRI Assessment. How can we arrange it?"
+                  return "Hi IBERFIT, I've been looking through the website and I'd like to tell you about my situation so I can understand which option might fit me best."
+              if kind == 'about':
+                  if iri:
+                      return "Hi IBERFIT, I've been learning about how you work and I'd like to start with the IRI Assessment. How can we arrange it?"
+                  return "Hi IBERFIT, I've been learning about the way you work and I'd like to understand which option might fit me best."
+              if kind == 'home':
+                  if iri:
+                      return "Hi IBERFIT, I've been looking through the website and I'd like to start by understanding my current starting point with the IRI Assessment. How can we arrange it?"
+                  if position == 'final':
+                      return "Hi IBERFIT, I'd like to take the first step and tell you about my situation so you can guide me towards the most suitable option."
+                  return "Hi IBERFIT, I've been looking at the way you work and I'd like to tell you what I want to achieve so I can understand where it makes sense to start."
+              if iri:
+                  return "Hi IBERFIT, I'd like to start with the IRI Assessment. How can we arrange it?"
+              return "Hi IBERFIT, I've been looking through the website and I'd like some guidance on which option might fit me best."
+
+          total_before = 0
+          total_after = 0
+          changed_pages = 0
+          messages = []
+
+          for path in sorted(root.rglob('*.html')):
+              source = path.read_text()
+              before = len(anchor_re.findall(source))
+              if not before:
+                  continue
+              total_before += before
+              en, kind, location = page_context(path, source)
+
+              def repl(match):
+                  nonlocal_messages = None
+                  open_tag, gt, body, close = match.groups()
+                  text = visible_text(body)
+                  pos_match = re.search(r'data-cta-position="([^"]+)"', open_tag)
+                  position = pos_match.group(1).strip().lower() if pos_match else ''
+                  iri = is_iri_intent(text)
+                  msg = message_en(kind, location, iri, position) if en else message_es(kind, location, iri, position)
+                  url = 'https://wa.me/' + phone + '?text=' + quote(msg, safe='')
+                  updated_open = re.sub(r'href="https://wa\.me/56944040032\?text=[^"]*"', f'href="{url}"', open_tag, count=1)
+                  messages.append((path.relative_to(root).as_posix(), text, position, kind, msg))
+                  return updated_open + gt + body + close
+
+              updated = anchor_re.sub(repl, source)
+              after = len(anchor_re.findall(updated))
+              assert after == before, (path, before, after)
+              total_after += after
+              assert old_generic_url not in updated, path
+              if updated != source:
+                  changed_pages += 1
+                  path.write_text(updated)
+
+          assert total_before == total_after and total_before >= 60, (total_before, total_after)
+          assert changed_pages >= 25, changed_pages
+          assert len(messages) == total_before
+
+          # Intent-level guarantees on representative pages/buttons.
+          def msgs_for(rel):
+              return [(text, pos, kind, msg) for p, text, pos, kind, msg in messages if p == rel]
+
+          online = msgs_for('online/index.html')
+          assert any('plan online' in t.lower() and 'entrenamiento online' in m.lower() and 'seguimiento a distancia' in m.lower() for t,_,_,m in online)
+          assert any(pos == 'final' and 'material' in m.lower() for _,pos,_,m in online)
+          hybrid = msgs_for('hibrido/index.html')
+          assert any('híbrido' in t.lower() and 'modalidad híbrida' in m.lower() for t,_,_,m in hybrid)
+          assert any(pos == 'final' and 'cómo es mi semana' in m.lower() for _,pos,_,m in hybrid)
+          vit = msgs_for('entrenador-personal-vitacura/index.html')
+          assert any('Vitacura' in m and 'cobertura' in m.lower() for _,_,_,m in vit)
+          lc = msgs_for('entrenador-personal-las-condes/index.html')
+          assert any('Las Condes' in m and 'cobertura' in m.lower() for _,_,_,m in lc)
+          en_online = msgs_for('en/online/index.html')
+          assert any('online coaching' in m.lower() and 'remote follow-up' in m.lower() for t,_,_,m in en_online if 'online' in t.lower())
+
+          Path('/tmp/v64316-whatsapp-matrix.txt').write_text('\n'.join(f'{p}\t{text}\t{pos}\t{kind}\t{msg}' for p,text,pos,kind,msg in messages) + '\n')
+          Path('candidate/v628/VERSION').write_text('6.43.16\n')
+          ch = Path('candidate/v628/CHANGELOG.md')
+          prev = ch.read_text()
+          ch.write_text('## 6.43.16 — Contextual WhatsApp intent\n- Replaced the generic WhatsApp prefill with human, page-aware messages across the public site.\n- Message intent now follows the visible CTA first, then its position and page context (IRI, Online, Hybrid, In-person, local landing, Method, Contact, About or Home).\n- Local landing messages identify the commune naturally; modality CTAs distinguish hero/final intent while IRI CTAs preserve the IRI entry point.\n- Static links remain functional without JavaScript; analytics data attributes are unchanged.\n\n' + prev)
+
+          print('WHATSAPP_LINKS', total_before)
+          print('CHANGED_PAGES', changed_pages)
+          PY
+
+      - name: Validate contextual message matrix and exact scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          b=candidate/v628
+          test "$(tr -d '\r\n ' < "$b/VERSION")" = '6.43.16'
+          test -s /tmp/v64316-whatsapp-matrix.txt
+          ! grep -R -Fq 'Hola%20IBERFIT%2C%20quiero%20recibir%20orientaci%C3%B3n%20para%20realizar%20el%20Diagn%C3%B3stico%20IRI.' "$b" --include='*.html'
+          grep -q 'Vitacura' /tmp/v64316-whatsapp-matrix.txt
+          grep -q 'Las Condes' /tmp/v64316-whatsapp-matrix.txt
+          grep -qi 'entrenamiento online' /tmp/v64316-whatsapp-matrix.txt
+          grep -qi 'modalidad híbrida' /tmp/v64316-whatsapp-matrix.txt
+          grep -qi 'entrenamiento personal presencial' /tmp/v64316-whatsapp-matrix.txt
+          grep -qi 'Diagnóstico IRI' /tmp/v64316-whatsapp-matrix.txt
+          grep -qi 'online coaching' /tmp/v64316-whatsapp-matrix.txt
+          grep -qi 'hybrid' /tmp/v64316-whatsapp-matrix.txt
+          grep -R -q '/assets/analytics.v643.js' "$b" --include='*.html'
+          grep -R -q '/assets/menu.v642.js' "$b" --include='*.html'
+          grep -q "script-src-attr 'none'" "$b/_headers"
+          ! grep -q "'unsafe-inline'" "$b/_headers"
+          python3 - <<'PY'
+          from pathlib import Path
+          from urllib.parse import urlparse, parse_qs
+          import json, re
+          root=Path('candidate/v628')
+          htmls=sorted(root.rglob('*.html'))
+          assert len(htmls)==33, len(htmls)
+          total=0
+          for p in htmls:
+              t=p.read_text()
+              for raw in re.findall(r'href="(https://wa\.me/56944040032\?text=[^"]+)"', t):
+                  q=parse_qs(urlparse(raw).query)
+                  assert len(q.get('text',[]))==1 and len(q['text'][0].strip())>=30, (p,raw)
+                  total += 1
+              for payload in re.findall(r'<script type="application/ld\+json">(.*?)</script>', t, re.S):
+                  json.loads(payload)
+          assert total >= 60, total
+          print('HTML',len(htmls),'WA',total,'JSONLD_OK')
+          PY
+          changed="$(git diff --name-only | sort)"
+          test -n "$changed"
+          test "$(printf '%s\n' "$changed" | grep -Ev '^candidate/v628/(.*\.html|VERSION|CHANGELOG\.md)$' || true)" = ''
+
+      - name: Browser smoke on contextual links
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --silent playwright@1.55.0
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v64316-http.log 2>&1 & server=$!
+          trap 'kill $server || true' EXIT
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const cases=[
+              ['/online/',390,'entrenamiento%20online'],
+              ['/hibrido/',390,'modalidad%20h%C3%ADbrida'],
+              ['/entrenador-personal-vitacura/',390,'Vitacura'],
+              ['/entrenador-personal-las-condes/',1440,'Las%20Condes'],
+              ['/en/online/',1440,'online%20coaching']
+            ];
+            for(const [route,width,needle] of cases){
+              const page=await browser.newPage({viewport:{width,height:900}});const errs=[];page.on('pageerror',e=>errs.push(String(e)));
+              await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'networkidle'});
+              const links=page.locator('a[href^="https://wa.me/56944040032?text="]');
+              const n=await links.count();if(n<2)throw Error('WA_LINK_COUNT '+route+' '+n);
+              const hrefs=await links.evaluateAll(xs=>xs.map(x=>x.getAttribute('href')));
+              if(!hrefs.some(h=>h.includes(needle)))throw Error('CONTEXT_MISSING '+route+' '+needle+' '+hrefs.join('|'));
+              if(hrefs.some(h=>h.includes('quiero%20recibir%20orientaci%C3%B3n%20para%20realizar')))throw Error('GENERIC_REMAINS '+route);
+              const ov=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);if(ov>2)throw Error('OVERFLOW '+route+' '+ov);
+              if(errs.length)throw Error('PAGEERROR '+route+' '+errs.join('|'));
+              await page.close();
+            }
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Commit certified V6.43.16 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name iberfit
+          git config user.email iberfit.cl@gmail.com
+          git add candidate/v628
+          git commit -m 'feat(web): contextualize WhatsApp intent in V6.43.16'
+          git push origin HEAD:work/web-v6-43-16-whatsapp-context
