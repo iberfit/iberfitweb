@@ -1,0 +1,112 @@
+name: Release WEB IBERFIT V6.43.11 home evidence copy
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-10-origin-story
+    paths:
+      - '.github/workflows/release-web-v64311-remove-metacopy.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: web-v64311-home-evidence
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact V6.43.10 production source baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = 'd821d2d2a11c0a76e45c640f9fca74e5eea5ed5c'
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.10'
+
+      - name: Build V6.43.11
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          files={
+            Path('candidate/v628/index.html'):'<p class="evidence-process-note">Menos explicación abstracta. Más señales reales del proceso.</p>',
+            Path('candidate/v628/en/index.html'):'<p class="evidence-process-note">Less abstract explanation. More visible evidence of the process.</p>',
+          }
+          for p,s in files.items():
+              t=p.read_text()
+              assert t.count(s)==1,(p,t.count(s))
+              p.write_text(t.replace(s,''))
+          Path('candidate/v628/VERSION').write_text('6.43.11\n')
+          ch=Path('candidate/v628/CHANGELOG.md')
+          old=ch.read_text()
+          ch.write_text('## 6.43.11 — Home evidence copy polish\n- Removed internal/editorial metacopy from “IBERFIT en práctica” / “IBERFIT in practice”.\n- Preserved the evidence-first Antes/Durante/Después structure without adding replacement copy.\n\n'+old)
+          PY
+
+      - name: Validate exact scope and contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.11'
+          ! grep -q 'Menos explicación abstracta' candidate/v628/index.html
+          ! grep -q 'Less abstract explanation' candidate/v628/en/index.html
+          grep -q 'Lo que hacemos hoy tiene que servir para decidir mejor mañana.' candidate/v628/index.html
+          grep -q 'What we do today should help us decide better with you tomorrow.' candidate/v628/en/index.html
+          test "$(grep -o 'evidence-shot' candidate/v628/index.html | wc -l | tr -d ' ')" -ge 3
+          grep -q 'El Sistema IBERFIT' candidate/v628/index.html
+          grep -q 'The IBERFIT system' candidate/v628/en/index.html
+          grep -q '/assets/analytics.v643.js' candidate/v628/index.html
+          grep -q '/assets/menu.v642.js' candidate/v628/index.html
+          grep -q "script-src-attr 'none'" candidate/v628/_headers
+          ! grep -q "'unsafe-inline'" candidate/v628/_headers
+          changed="$(git diff --name-only | sort)"
+          expected="$(printf '%s\n' candidate/v628/CHANGELOG.md candidate/v628/VERSION candidate/v628/en/index.html candidate/v628/index.html | sort)"
+          test "$changed" = "$expected"
+
+      - name: Browser regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --silent playwright@1.55.0
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v64311-http.log 2>&1 &
+          server=$!
+          trap 'kill $server || true' EXIT
+          node <<'NODE'
+          const { chromium }=require('playwright');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            for(const [route,width] of [['/',390],['/en/',390],['/',1440],['/en/',1440]]){
+              const page=await browser.newPage({viewport:{width,height:900}});
+              const errors=[]; page.on('pageerror',e=>errors.push(String(e)));
+              await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'networkidle'});
+              const body=await page.locator('body').innerText();
+              if(body.includes('Menos explicación abstracta')||body.includes('Less abstract explanation')) throw Error('METACOPY_VISIBLE '+route+' '+width);
+              const shots=await page.locator('.evidence-process-media .evidence-shot').count();
+              if(shots!==3) throw Error('EVIDENCE_COUNT '+route+' '+shots);
+              const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
+              if(overflow>2) throw Error('OVERFLOW '+route+' '+width+' '+overflow);
+              if(errors.length) throw Error('PAGEERROR '+errors.join('|'));
+              await page.close();
+            }
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)})
+          NODE
+
+      - name: Commit certified V6.43.11 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name iberfit
+          git config user.email iberfit.cl@gmail.com
+          git add candidate/v628/index.html candidate/v628/en/index.html candidate/v628/VERSION candidate/v628/CHANGELOG.md
+          git commit -m 'fix(web): let Home evidence speak for itself in V6.43.11'
+          git push origin HEAD:work/web-v6-43-10-origin-story
