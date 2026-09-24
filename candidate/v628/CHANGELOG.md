@@ -1,3 +1,9 @@
+## 6.43.19 — Service certainty
+
+- Makes the in-person footprint explicit across Home, In-person, Hybrid and Contact in ES/EN.
+- Reframes location, space and schedule as service coordination rather than uncertainty about whether IBERFIT can deliver.
+- Keeps Online explicitly available from anywhere and preserves the distinction between service availability and personal format fit.
+
 
 ## 6.43.18 — Confianza local sin fricción
 - Todas las landings locales ES/EN comunican disponibilidad de entrenamiento desde el primer contacto.
