@@ -253,3 +253,13 @@
 - SEO técnico reforzado: lastmod real, previews ampliadas de Google y datos estructurados preservados.
 - Medición de conversión reforzada con evento GA4 recomendado generate_lead, siempre posterior al consentimiento.
 - Interacción premium adaptativa: profundidad en escritorio, composición táctil específica en móvil/tableta y respeto estricto de reducir movimiento.
+
+## 6.43.22 — UX First Impression & Mobile Compression (2026-09-24)
+- Consentimiento inicial más compacto sin eliminar ninguna opción ni preferencia.
+- Home: decisión inicial simplificada; las tres modalidades siguen visibles inmediatamente después.
+- Dos reseñas verificadas pasan de carrusel con autoplay a evidencia estática/eswipe simple.
+- Indicadores discretos para secuencias horizontales en móvil.
+- Footer y ritmo vertical móvil más compactos sin reducir targets táctiles.
+- Capturas reales de la app online ganan escala útil en móvil.
+- Corregida la semántica de “otra opción puede ser mejor” en Online ES/EN.
+- Prevención de copy de incertidumbre en chips locales generados por JS.
