@@ -1,0 +1,112 @@
+name: Release WEB IBERFIT V6.43.18 local confidence final
+
+on:
+  push:
+    branches: [work/web-v6-43-18-local-confidence]
+    paths: ['.github/workflows/release-web-v64318-local-confidence-final.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact V6.43.17 production source baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor b9a6710dc1657be56f1e74587efe4c12e40aaf98 HEAD
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.17'
+          test "$(git diff --name-only b9a6710dc1657be56f1e74587efe4c12e40aaf98 -- candidate/v628 | wc -l | tr -d ' ')" = '0'
+
+      - name: Build V6.43.18 local confidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/build_v64318_local_confidence.py
+
+      - name: Validate all local confidence contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.18'
+          test "$(find candidate/v628 -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          python3 - <<'PY'
+          from pathlib import Path
+          from urllib.parse import unquote
+          import re
+          root=Path('candidate/v628')
+          pages=[
+            ('entrenador-personal-la-reina/index.html','La Reina','es'),('entrenador-personal-las-condes/index.html','Las Condes','es'),
+            ('entrenador-personal-lo-barnechea/index.html','Lo Barnechea','es'),('personal-trainer-nunoa/index.html','Ñuñoa','es'),
+            ('entrenador-personal-penalolen/index.html','Peñalolén','es'),('entrenador-personal-vitacura/index.html','Vitacura','es'),
+            ('entrenamiento-personal-providencia/index.html','Providencia','es'),('en/personal-trainer-la-reina/index.html','La Reina','en'),
+            ('en/personal-trainer-las-condes/index.html','Las Condes','en'),('en/personal-trainer-lo-barnechea/index.html','Lo Barnechea','en'),
+            ('en/personal-trainer-nunoa/index.html','Ñuñoa','en'),('en/personal-trainer-penalolen/index.html','Peñalolén','en'),
+            ('en/personal-trainer-vitacura/index.html','Vitacura','en'),('en/personal-training-providencia/index.html','Providencia','en')]
+          banned=[
+            'cobertura local','según cobertura','sujeto a cobertura','si tienen cobertura','primero confirmamos si','no damos por hecha la cobertura',
+            'cobertura local se confirma','antes de confirmar se revisa','cobertura real','si la cobertura','si podemos acompañarte',
+            'comprobamos que podamos prestar','antes de recomendar presencial','la cobertura se confirma','confirmamos sector',
+            'antes de confirmar sesiones','determinan si el entrenamiento','local coverage','depending on coverage','subject to coverage','subject to area',
+            'whether you cover my area','first we confirm whether','coverage is confirmed','before confirming','real coverage','if coverage',
+            'whether we can support you','we first check that the service can be delivered','before recommending in-person',
+            'determine whether in-person','we confirm area']
+          wa_re=re.compile(r'https://wa\.me/56944040032\?text=([^"&]*)')
+          for rel,loc,lang in pages:
+              s=(root/rel).read_text(); low=s.lower()
+              badge='<small>Entrenamiento disponible</small>' if lang=='es' else '<small>Training available</small>'
+              assert badge in s, rel
+              for phrase in banned: assert phrase not in low, (rel,phrase)
+              msgs=[unquote(x) for x in wa_re.findall(s)]
+              assert msgs and all(loc in m for m in msgs), (rel,msgs)
+              if lang=='es': assert any('quiero empezar' in m.lower() for m in msgs)
+              else: assert any("i'd like to start" in m.lower() for m in msgs)
+          lr=(root/'entrenador-personal-la-reina/index.html').read_text()
+          vit=(root/'entrenador-personal-vitacura/index.html').read_text()
+          lren=(root/'en/personal-trainer-la-reina/index.html').read_text()
+          viten=(root/'en/personal-trainer-vitacura/index.html').read_text()
+          assert 'IBERFIT ofrece entrenamiento personal en La Reina.' in lr
+          assert 'Entrenamiento personal en La Reina, con una forma de trabajo clara desde el principio.' in lr
+          assert 'Entrenamos en Vitacura y organizamos la logística alrededor de tu semana.' in vit
+          assert 'IBERFIT provides personal training in La Reina.' in lren
+          assert 'We train in Vitacura and organise the logistics around your week.' in viten
+          print('Static local confidence contracts passed')
+          PY
+          changed="$(git diff --name-only b9a6710dc1657be56f1e74587efe4c12e40aaf98 -- candidate/v628 | sort)"
+          test "$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l | tr -d ' ')" = '16'
+          test "$(printf '%s\n' "$changed" | grep -Ev '^candidate/v628/(CHANGELOG\.md|VERSION|entrenador-personal-(la-reina|las-condes|lo-barnechea|penalolen|vitacura)/index\.html|entrenamiento-personal-providencia/index\.html|personal-trainer-nunoa/index\.html|en/personal-trainer-(la-reina|las-condes|lo-barnechea|nunoa|penalolen|vitacura)/index\.html|en/personal-training-providencia/index\.html)$' || true)" = ''
+          grep -q "script-src-attr 'none'" candidate/v628/_headers
+          ! grep -q "'unsafe-inline'" candidate/v628/_headers
+
+      - name: Browser regression local pages mobile desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --silent playwright@1.55.0
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v64318-http.log 2>&1 & server=$!
+          trap 'kill $server || true' EXIT
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          const routes=[['/entrenador-personal-la-reina/','La Reina','Entrenamiento disponible'],['/entrenador-personal-las-condes/','Las Condes','Entrenamiento disponible'],['/entrenador-personal-lo-barnechea/','Lo Barnechea','Entrenamiento disponible'],['/personal-trainer-nunoa/','Ñuñoa','Entrenamiento disponible'],['/entrenador-personal-penalolen/','Peñalolén','Entrenamiento disponible'],['/entrenador-personal-vitacura/','Vitacura','Entrenamiento disponible'],['/entrenamiento-personal-providencia/','Providencia','Entrenamiento disponible'],['/en/personal-trainer-la-reina/','La Reina','Training available'],['/en/personal-trainer-las-condes/','Las Condes','Training available'],['/en/personal-trainer-lo-barnechea/','Lo Barnechea','Training available'],['/en/personal-trainer-nunoa/','Ñuñoa','Training available'],['/en/personal-trainer-penalolen/','Peñalolén','Training available'],['/en/personal-trainer-vitacura/','Vitacura','Training available'],['/en/personal-training-providencia/','Providencia','Training available']];
+          (async()=>{const browser=await chromium.launch({headless:true});for(const width of [390,1440]){for(const [route,loc,badge] of routes){const page=await browser.newPage({viewport:{width,height:900}});const errors=[];page.on('pageerror',e=>errors.push(String(e)));page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});const r=await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'networkidle'});if(!r||r.status()!==200)throw Error('status '+route);const x=await page.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth,badge:document.querySelector('.local-place-copy small')?.textContent.trim()||'',wa:[...document.querySelectorAll('a[href*="wa.me/56944040032"]')].map(a=>decodeURIComponent(a.href))}));if(x.sw>x.cw+1)throw Error('overflow '+route+' '+width);if(x.badge!==badge)throw Error('badge '+route+' '+x.badge);if(!x.wa.length||!x.wa.every(h=>h.includes(loc)))throw Error('whatsapp '+route);if(errors.length)throw Error('browser '+route+' '+errors.join(' | '));await page.close();}}
+          const fs=require('fs'),path=require('path');const root='candidate/v628',files=[];const walk=d=>{for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);e.isDirectory()?walk(p):e.name.endsWith('.html')&&files.push(p)}};walk(root);if(files.length!==33)throw Error('html '+files.length);for(const f of files){const rel=path.relative(root,f).replaceAll('\\','/');const route=rel==='index.html'?'/':rel==='404.html'?'/404.html':'/'+rel.replace(/index\.html$/,'');const p=await browser.newPage();const r=await p.goto('http://127.0.0.1:4173'+route,{waitUntil:'domcontentloaded'});if(!r||r.status()!==200)throw Error('route '+route);await p.close();}await browser.close();console.log('Browser regression passed');})().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Commit certified V6.43.18 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name iberfit
+          git config user.email iberfit.cl@gmail.com
+          git add candidate/v628
+          git commit -m 'refactor(web): make local availability explicit in V6.43.18'
+          git push origin HEAD:work/web-v6-43-18-local-confidence
