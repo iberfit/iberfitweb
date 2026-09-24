@@ -1,0 +1,114 @@
+name: Release WEB IBERFIT V6.43.17 La Reina operational landing
+
+on:
+  push:
+    branches: [work/web-v6-43-17-la-reina-operational]
+    paths: ['.github/workflows/release-web-v64317-la-reina-operational.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact V6.43.16 production source baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor ba153d4ccffe1693f7dbfebedc71d976f1263be4 HEAD
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.16'
+          test "$(git diff --name-only ba153d4ccffe1693f7dbfebedc71d976f1263be4 -- candidate/v628 | wc -l | tr -d ' ')" = '0'
+
+      - name: Build V6.43.17 La Reina operational landing
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/build_v64317_la_reina_operational.py
+
+      - name: Validate exact product scope and content contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=candidate/v628
+          es="$root/entrenador-personal-la-reina/index.html"
+          en="$root/en/personal-trainer-la-reina/index.html"
+          test "$(tr -d '\r\n ' < "$root/VERSION")" = '6.43.17'
+          test "$(find "$root" -name '*.html' -type f | wc -l | tr -d ' ')" = '33'
+          changed="$(git diff --name-only ba153d4ccffe1693f7dbfebedc71d976f1263be4 -- candidate/v628 | sort)"
+          expected=$'candidate/v628/CHANGELOG.md\ncandidate/v628/VERSION\ncandidate/v628/en/personal-trainer-la-reina/index.html\ncandidate/v628/entrenador-personal-la-reina/index.html'
+          test "$changed" = "$expected"
+          ! grep -Eqi 'escala residencial|espacios verdes|caminas, pedaleas|cards-4|Antes de reservar' "$es"
+          ! grep -Eqi 'residential scale|green spaces|walking, cycling|cards-4|Before booking' "$en"
+          grep -q 'Cobertura real' "$es"; grep -q 'Espacio útil' "$es"; grep -q 'Horario sostenible' "$es"
+          grep -q 'Real coverage' "$en"; grep -q 'Usable space' "$en"; grep -q 'Sustainable schedule' "$en"
+          grep -q 'href="/hibrido/">Conocer entrenamiento híbrido' "$es"
+          grep -q 'href="/en/hybrid/">Explore hybrid training' "$en"
+          grep -q '¿IBERFIT ofrece entrenamiento personal en La Reina?' "$es"
+          grep -q 'Does IBERFIT offer personal training in La Reina?' "$en"
+          grep -q 'wa.me/56944040032' "$es"; grep -q 'La%20Reina' "$es"
+          grep -q 'wa.me/56944040032' "$en"; grep -q 'La%20Reina' "$en"
+          grep -q "script-src-attr 'none'" "$root/_headers"; ! grep -q "'unsafe-inline'" "$root/_headers"
+          python3 - <<'PY'
+          import subprocess
+          from pathlib import Path
+          root=Path('candidate/v628')
+          for rel in ['entrenador-personal-la-reina/index.html','en/personal-trainer-la-reina/index.html']:
+              old=subprocess.check_output(['git','show','ba153d4ccffe1693f7dbfebedc71d976f1263be4:candidate/v628/'+rel], text=True)
+              new=(root/rel).read_text()
+              assert len(new) < len(old)-900, (rel,len(old),len(new))
+          print('Static reduction verified')
+          PY
+
+      - name: Browser regression ES EN mobile desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --silent playwright@1.55.0
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v64317-http.log 2>&1 & server=$!
+          trap 'kill $server || true' EXIT
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const routes=['/entrenador-personal-la-reina/','/en/personal-trainer-la-reina/'];
+            for(const width of [390,1440]){
+              for(const route of routes){
+                const page=await browser.newPage({viewport:{width,height:900}});
+                const errors=[]; page.on('pageerror',e=>errors.push(String(e))); page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});
+                await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'networkidle'});
+                const metrics=await page.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,clientWidth:document.documentElement.clientWidth,h1:document.querySelector('h1')?.textContent||'',cards:document.querySelectorAll('.grid.cards-4').length,rows:document.querySelectorAll('.principle-stack .principle-row').length,whats:[...document.querySelectorAll('a[href*="wa.me/56944040032"]')].map(a=>a.getAttribute('href')),hybrid:[...document.querySelectorAll('a')].some(a=>/híbrido|hybrid/i.test(a.textContent||'') && /\/hibrido\/|\/en\/hybrid\//.test(a.getAttribute('href')||''))}));
+                if(metrics.scrollWidth>metrics.clientWidth+1) throw Error('overflow '+route+' '+width+' '+JSON.stringify(metrics));
+                if(metrics.cards!==0||metrics.rows!==3) throw Error('structure '+route+' '+JSON.stringify(metrics));
+                if(!metrics.whats.length||!metrics.whats.every(h=>h.includes('La%20Reina'))) throw Error('whatsapp-context '+route);
+                if(!metrics.hybrid) throw Error('hybrid-link '+route);
+                if(errors.length) throw Error('browser-errors '+route+' '+errors.join(' | '));
+                await page.close();
+              }
+            }
+            const root='candidate/v628';
+            const fs=require('fs'), path=require('path');
+            const files=[]; const walk=d=>{for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name); e.isDirectory()?walk(p):e.name.endsWith('.html')&&files.push(p)}}; walk(root);
+            if(files.length!==33) throw Error('html-count '+files.length);
+            for(const f of files){const rel=path.relative(root,f).replaceAll('\\','/'); const route=rel==='index.html'?'/':rel==='404.html'?'/404.html':'/'+rel.replace(/index\.html$/,''); const page=await browser.newPage(); const r=await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'domcontentloaded'}); if(!r||r.status()!==200) throw Error('route '+route+' '+(r&&r.status())); await page.close();}
+            await browser.close();
+            console.log('Browser regression passed');
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Commit certified V6.43.17 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name iberfit
+          git config user.email iberfit.cl@gmail.com
+          git add candidate/v628/VERSION candidate/v628/CHANGELOG.md candidate/v628/entrenador-personal-la-reina/index.html candidate/v628/en/personal-trainer-la-reina/index.html
+          git commit -m 'refactor(web): ground La Reina in operational fit in V6.43.17'
+          git push origin HEAD:work/web-v6-43-17-la-reina-operational
