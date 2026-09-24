@@ -81,6 +81,12 @@
   background:rgba(255,253,248,.88);
   border-color:var(--line-gold-strong);
 }
+/* experience.v629 gives local scope-notes a more specific gradient. Match that
+   specificity here so V6.43.21 owns the final light-surface treatment without !important. */
+body:is([data-page="local"],[data-page="local_en"]) .scope-note{
+  background:rgba(255,253,248,.92);
+  border-color:var(--line-gold-strong);
+}
 .scope-note{
   box-shadow:0 14px 38px rgba(16,42,29,.07);
 }
