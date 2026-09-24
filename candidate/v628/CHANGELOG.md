@@ -1,3 +1,11 @@
+## 6.43.17 — La Reina: operational local fit
+
+- Removes decorative territorial assumptions from the La Reina local landing.
+- Grounds the page in real coverage, usable training space, schedule and sustainable frequency.
+- Replaces the old Objective/Autonomy/Follow-up card template with a shorter operational decision block.
+- Fixes the hybrid recommendation link so its label and destination match.
+- Spanish and English updated consistently; SEO architecture, AEO answers and contextual WhatsApp intent are preserved.
+
 ## 6.43.16 — Contextual WhatsApp intent
 - Replaced the generic WhatsApp prefill with human, page-aware messages across the public site.
 - Message intent now follows the visible CTA first, then its position and page context (IRI, Online, Hybrid, In-person, local landing, Method, Contact, About or Home).
