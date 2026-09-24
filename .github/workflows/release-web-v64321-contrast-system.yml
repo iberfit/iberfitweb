@@ -1,0 +1,130 @@
+name: Release WEB IBERFIT V6.43.21 contrast system
+
+on:
+  push:
+    branches: [work/web-v6-43-21-contrast-system]
+    paths: [.github/workflows/release-web-v64321-contrast-system.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify exact V6.43.20 base and build
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=a9af3b52d67332f323f5e648613e609661f31639
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(git show "$BASE":candidate/v628/VERSION | tr -d '\r\n ')" = '6.43.20'
+          test "$(git show "$BASE":candidate/v628/assets/contrast.v64321.css 2>/dev/null || true)" = ''
+          python3 .github/scripts/build_v64321_contrast_system.py
+      - name: Static contracts and contrast ratios
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess,re,math
+          BASE='a9af3b52d67332f323f5e648613e609661f31639'
+          b=Path('candidate/v628')
+          assert b.joinpath('VERSION').read_text().strip()=='6.43.21'
+          htmls=sorted(b.rglob('*.html')); assert len(htmls)==33
+          link='<link href="/assets/contrast.v64321.css" rel="stylesheet"/>'
+          for p in htmls:
+              rel=p.as_posix()
+              new=p.read_text(encoding='utf-8')
+              assert new.count('contrast.v64321.css')==1, rel
+              old=subprocess.check_output(['git','show',f'{BASE}:{rel}'],text=True)
+              assert new.replace(link,'')==old, rel
+          changed=set(subprocess.check_output(['git','diff','--name-only',BASE,'--','candidate/v628'],text=True).splitlines())
+          expected={'candidate/v628/VERSION','candidate/v628/CHANGELOG.md','candidate/v628/assets/contrast.v64321.css'}|{p.as_posix() for p in htmls}
+          assert changed==expected,(changed-expected,expected-changed)
+          css=b.joinpath('assets/contrast.v64321.css').read_text()
+          for token in ['--text-secondary:#44564c','--gold-text-strong:#755916','--line-gold-strong:rgba(128,98,22,.38)','scope-note','section-cream']:
+              assert token in css,token
+          joined='\n'.join(p.read_text(encoding='utf-8') for p in htmls)
+          assert 'Primero vemos si podemos hacerlo bien, no solo si podemos ir' not in joined
+          def rgb(h):
+              h=h.lstrip('#');return tuple(int(h[i:i+2],16)/255 for i in (0,2,4))
+          def lum(h):
+              v=[]
+              for c in rgb(h):v.append(c/12.92 if c<=.04045 else ((c+.055)/1.055)**2.4)
+              return .2126*v[0]+.7152*v[1]+.0722*v[2]
+          def contrast(a,b):
+              x,y=lum(a),lum(b);return (max(x,y)+.05)/(min(x,y)+.05)
+          checks=[('#44564c','#eee5d7'),('#44564c','#fffdf8'),('#755916','#eee5d7'),('#755916','#fffdf8')]
+          for fg,bg in checks:
+              ratio=contrast(fg,bg); assert ratio>=4.5,(fg,bg,ratio)
+              print('CONTRAST',fg,bg,round(ratio,2))
+          print('STATIC_OK',len(htmls),len(changed))
+          PY
+      - name: Browser QA 390 768 1440 and visual evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright@1.56.1 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/http.log 2>&1 &
+          pid=$!; trap 'kill $pid 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break; sleep .5; done
+          mkdir -p /tmp/v64321-screens
+          cat > qa-v64321.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const routes=['/','/presencial/','/hibrido/','/online/','/contacto/','/sobre-iberfit/','/entrenador-personal-la-reina/','/entrenador-personal-vitacura/','/en/','/en/in-person/','/en/hybrid/','/en/contact/'];
+          const browser=await chromium.launch({headless:true});
+          const metrics=[];
+          for(const width of [390,768,1440]){
+            const context=await browser.newContext({viewport:{width,height:1000}});
+            for(const route of routes){
+              const page=await context.newPage(); const errors=[]; page.on('pageerror',e=>errors.push(String(e)));
+              const response=await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'networkidle'});
+              if(!response?.ok()) throw Error(`HTTP ${route}`);
+              const s=await page.evaluate(()=>{
+                const d=document.documentElement;
+                const lead=document.querySelector('.hero .lead');
+                const label=document.querySelector('.hero .eyebrow,.hero .kicker');
+                const scope=document.querySelector('.scope-note');
+                const css=[...document.styleSheets].map(x=>x.href||'').join('\n');
+                return {overflow:d.scrollWidth-d.clientWidth,lead:lead?getComputedStyle(lead).color:null,label:label?getComputedStyle(label).color:null,scopeBg:scope?getComputedStyle(scope).backgroundColor:null,scopeBorder:scope?getComputedStyle(scope).borderTopColor:null,loaded:css.includes('contrast.v64321.css')};
+              });
+              if(!s.loaded||s.overflow>2||errors.length) throw Error(`QA ${route} ${width} ${JSON.stringify({...s,errors})}`);
+              if(s.lead && s.lead!=='rgb(68, 86, 76)') throw Error(`LEAD_COLOR ${route} ${width} ${s.lead}`);
+              if(s.label && s.label!=='rgb(117, 89, 22)') throw Error(`LABEL_COLOR ${route} ${width} ${s.label}`);
+              metrics.push({route,width,...s});
+              if((width===390||width===1440)&&['/','/presencial/','/hibrido/','/entrenador-personal-la-reina/','/entrenador-personal-vitacura/'].includes(route)){
+                const slug=route==='/'?'home':route.replace(/^\/+|\/+$/g,'').replaceAll('/','-');
+                await page.screenshot({path:`/tmp/v64321-screens/${slug}-${width}.png`,fullPage:true});
+              }
+              await page.close();
+            }
+            await context.close();
+          }
+          await browser.close();
+          await import('node:fs').then(fs=>fs.writeFileSync('/tmp/v64321-screens/metrics.json',JSON.stringify(metrics,null,2)));
+          console.log('BROWSER_OK',metrics.length);
+          JS
+          node qa-v64321.mjs
+      - name: Commit certified product
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'IBERFIT Release Bot'
+          git config user.email 'iberfit-release@users.noreply.github.com'
+          git add candidate/v628
+          git commit -m 'style(web): strengthen visual hierarchy in V6.43.21'
+          git push origin HEAD:work/web-v6-43-21-contrast-system
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-v64321-contrast-evidence
+          path: /tmp/v64321-screens
+          retention-days: 30
