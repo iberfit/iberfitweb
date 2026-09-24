@@ -69,7 +69,7 @@ assert 'We never measure message content or personal details.' in analytics
 css=root.joinpath('assets/ux.v64322.css').read_text(encoding='utf-8')
 for token in [
     '.intent-router--compact','.review-pair','.consent-banner','.mobile-swipe-hint',
-    'grid-auto-columns:minmax(92%,1fr)','min-height:44px','body[data-page="home"] .section',
+    'grid-auto-columns:minmax(94%,1fr)','min-height:44px','body[data-page="home"] .section',
     '.site-footer .footer-links','body:has(.consent-banner) .device-dock'
 ]: assert token in css,token
 js=root.joinpath('assets/ux.v64322.js').read_text(encoding='utf-8')
