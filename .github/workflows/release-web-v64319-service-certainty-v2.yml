@@ -1,0 +1,121 @@
+name: Release WEB IBERFIT V6.43.19 service certainty v2
+
+on:
+  push:
+    branches: [work/web-v6-43-19-service-certainty]
+    paths:
+      - .github/workflows/release-web-v64319-service-certainty-v2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify base and build
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 5e973469cc0b53201addf9f1013541a85166e7ee HEAD
+          test "$(git show 5e973469cc0b53201addf9f1013541a85166e7ee:candidate/v628/VERSION | tr -d '\r\n ')" = "6.43.18"
+          python3 .github/scripts/build_v64319_service_certainty.py
+      - name: Static certification
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,re,subprocess
+          b=Path('candidate/v628')
+          assert b.joinpath('VERSION').read_text().strip()=='6.43.19'
+          assert len(list(b.rglob('*.html')))==33
+          expected={
+            'candidate/v628/CHANGELOG.md','candidate/v628/VERSION','candidate/v628/index.html','candidate/v628/presencial/index.html','candidate/v628/hibrido/index.html','candidate/v628/contacto/index.html','candidate/v628/en/index.html','candidate/v628/en/in-person/index.html','candidate/v628/en/hybrid/index.html','candidate/v628/en/contact/index.html'
+          }
+          actual=set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())
+          assert actual==expected,(actual-expected,expected-actual)
+          guards={
+            'index.html':['Híbrido según cobertura'],
+            'presencial/index.html':['Quiero saber si hay cobertura para mí','Consulta la disponibilidad según comuna','La disponibilidad se confirma siempre de manera individual'],
+            'hibrido/index.html':['Presencial según zona','Si no existe cobertura presencial'],
+            'contacto/index.html':['Presencial según cobertura','Consulta disponibilidad, cobertura'],
+            'en/index.html':['Hybrid where coverage allows'],
+            'en/in-person/index.html':['Check whether I am in the coverage area','Explore availability by area','Availability is always confirmed individually'],
+            'en/hybrid/index.html':['Where in-person coverage is unavailable'],
+            'en/contact/index.html':['In person by service area','Ask about availability, coverage'],
+          }
+          for rel,phrases in guards.items():
+            text=b.joinpath(rel).read_text(encoding='utf-8').lower()
+            for x in phrases: assert x.lower() not in text,(rel,x)
+          must={
+            'index.html':'Presencial en Las Condes, Vitacura, Providencia, Lo Barnechea, Ñuñoa, La Reina y Peñalolén · Híbrido en estas comunas · Online desde cualquier lugar.',
+            'presencial/index.html':'Quiero empezar presencial',
+            'hibrido/index.html':'Seguimiento a distancia entre sesiones',
+            'contacto/index.html':'Online desde cualquier lugar.',
+            'en/index.html':'Hybrid in these areas · Online worldwide.',
+            'en/in-person/index.html':'I want to start in person',
+            'en/hybrid/index.html':'Remote review between sessions',
+            'en/contact/index.html':'Online worldwide.',
+            'online/index.html':'Disponible desde cualquier lugar',
+            'en/online/index.html':'Available worldwide',
+          }
+          for rel,phrase in must.items(): assert phrase in b.joinpath(rel).read_text(encoding='utf-8'),(rel,phrase)
+          for p in b.rglob('*.html'):
+            text=p.read_text(encoding='utf-8')
+            for raw in re.findall(r'<script type="application/ld\+json">(.*?)</script>',text,re.S): json.loads(raw)
+          headers=b.joinpath('_headers').read_text(encoding='utf-8')
+          assert "script-src-attr 'none'" in headers and "'unsafe-inline'" not in headers
+          print('STATIC_CERT_OK')
+          PY
+      - name: Browser certification
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright@1.56.1 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v64319-http.log 2>&1 &
+          pid=$!; trap 'kill $pid 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break; sleep .5; done
+          mkdir -p /tmp/v64319-screens
+          cat >/tmp/qa.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const routes=['/','/presencial/','/hibrido/','/online/','/contacto/','/en/','/en/in-person/','/en/hybrid/','/en/online/','/en/contact/'];
+          const browser=await chromium.launch({headless:true});
+          for(const width of [390,768,1440]){
+            const ctx=await browser.newContext({viewport:{width,height:1000}});
+            for(const route of routes){
+              const p=await ctx.newPage(); const errors=[]; p.on('pageerror',e=>errors.push(String(e)));
+              const r=await p.goto('http://127.0.0.1:4173'+route,{waitUntil:'networkidle'}); if(!r?.ok()) throw Error(`HTTP ${route}`);
+              const s=await p.evaluate(()=>{const d=document.documentElement,a=document.querySelector('.hero-actions .btn-primary'),r=a?.getBoundingClientRect();return{overflow:d.scrollWidth-d.clientWidth,w:r?.width||0,h:r?.height||0,meta:document.querySelector('.hero-meta')?.textContent||'',h1:document.querySelector('h1')?.textContent||''}});
+              if(s.overflow>2||s.w<44||s.h<44||!s.h1||errors.length) throw Error(`QA ${route} ${width} ${JSON.stringify(s)} ${errors}`);
+              if((route==='/presencial/'||route==='/en/in-person/')&&!s.meta.includes('Las Condes')) throw Error(`certainty missing ${route}`);
+              if(width!==768){const slug=route==='/'?'home':route.replace(/^\/+|\/+$/g,'').replaceAll('/','-');await p.screenshot({path:`/tmp/v64319-screens/${slug}-${width}.png`,fullPage:true});}
+              await p.close();
+            }
+            await ctx.close();
+          }
+          await browser.close(); console.log('BROWSER_CERT_OK');
+          JS
+          node /tmp/qa.mjs
+      - name: Commit certified candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'IBERFIT Release Bot'
+          git config user.email 'iberfit-release@users.noreply.github.com'
+          git add candidate/v628
+          git commit -m 'refactor(web): make service availability explicit in V6.43.19'
+          git push origin HEAD:work/web-v6-43-19-service-certainty
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-v64319-service-certainty-evidence
+          path: /tmp/v64319-screens
+          retention-days: 30
