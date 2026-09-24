@@ -62,4 +62,4 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-# rerun after correcting the local compact scope-note selector
+# rerun after fixing local surface cascade and bilingual semantic gate
