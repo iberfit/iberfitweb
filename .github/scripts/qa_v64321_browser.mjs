@@ -36,8 +36,8 @@ for(const width of [390,768,1440]){
    if(s.scopeSpan!=='rgb(128, 98, 22)') throw Error(`SCOPE_GOLD ${route} ${width} ${s.scopeSpan}`);
    if(width<=768 && s.scopeTarget && (s.scopeTarget.h<44||s.scopeTarget.w<44)) throw Error(`TOUCH ${route} ${width} ${JSON.stringify(s.scopeTarget)}`);
   }
-  if(route==='/'&&(s.text.includes('Según cobertura presencial')||!s.text.includes('En estas comunas + seguimiento a distancia'))) throw Error('HOME_ES_COPY');
-  if(route==='/en/'&&(s.text.includes('Where in-person coverage allows')||!s.text.includes('In these areas + remote support'))) throw Error('HOME_EN_COPY');
+  if(route==='/'&&(s.text.includes('Según cobertura presencial')||!s.text.includes('Híbrida'))) throw Error('HOME_ES_COPY');
+  if(route==='/en/'&&(s.text.includes('Where in-person coverage allows')||!s.text.includes('Hybrid'))) throw Error('HOME_EN_COPY');
   if(route==='/entrenador-personal-las-condes/'&&s.text.includes('Primero vemos si podemos hacerlo bien')) throw Error('LAS_CONDES_OLD');
   if(route==='/entrenador-personal-vitacura/'&&!s.scopeText?.includes('guiar el resto con el mismo plan')) throw Error('VITACURA_SCOPE');
   metrics.push({route,width,overflow:s.overflow,scopeHref:s.scopeHref,scopeLabel:s.scopeLabel,scopeP:s.scopeP,scopeSpan:s.scopeSpan,scopeBorder:s.scopeBorder,scopeBg:s.scopeBg,scopeTarget:s.scopeTarget});
