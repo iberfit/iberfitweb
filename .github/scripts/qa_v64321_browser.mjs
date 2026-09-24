@@ -20,7 +20,7 @@ for(const width of [390,768,1440]){
   const response=await page.goto(base+route,{waitUntil:'networkidle'});
   if(!response?.ok()) throw Error(`HTTP ${route} ${response?.status()}`);
   const s=await page.evaluate(()=>{
-   const d=document.documentElement,scope=document.querySelector('.scope-note');
+   const d=document.documentElement,scope=document.querySelector('section.compact-section .scope-note');
    const scopeLink=scope?.querySelector('a'); const r=scopeLink?.getBoundingClientRect();
    const styles=[...document.styleSheets].map(x=>x.href||'').join('\n');
    return {overflow:d.scrollWidth-d.clientWidth,loaded:styles.includes('contrast.v64321.css'),text:document.body.innerText,
