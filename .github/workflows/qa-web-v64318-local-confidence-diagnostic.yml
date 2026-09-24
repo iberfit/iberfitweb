@@ -1,4 +1,5 @@
 name: QA WEB IBERFIT V6.43.18 local confidence diagnostic
+# revision 2: after La Reina/Vitacura affirmative rewrite
 
 on:
   push:
