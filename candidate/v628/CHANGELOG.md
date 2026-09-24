@@ -1,3 +1,9 @@
+## 6.43.20 — Client voice
+
+- Keeps service availability explicit while rewriting the remaining institutional phrasing to speak directly to the client.
+- Applies the same human-first voice to Home, In-person, Hybrid and Contact in ES/EN.
+- Leaves structure, styling, tracking, technical SEO and service facts unchanged.
+
 ## 6.43.19 — Service certainty
 
 - Makes the in-person footprint explicit across Home, In-person, Hybrid and Contact in ES/EN.
