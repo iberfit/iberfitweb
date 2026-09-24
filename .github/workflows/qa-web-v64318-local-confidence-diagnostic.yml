@@ -1,0 +1,58 @@
+name: QA WEB IBERFIT V6.43.18 local confidence diagnostic
+
+on:
+  push:
+    branches: [work/web-v6-43-18-local-confidence]
+    paths: ['.github/workflows/qa-web-v64318-local-confidence-diagnostic.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build and report all remaining uncertainty language
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = '6.43.17'
+          test "$(git diff --name-only b9a6710dc1657be56f1e74587efe4c12e40aaf98 -- candidate/v628 | wc -l | tr -d ' ')" = '0'
+          python3 .github/scripts/build_v64318_local_confidence.py
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path('candidate/v628')
+          pages=[
+            'entrenador-personal-la-reina/index.html','entrenador-personal-las-condes/index.html',
+            'entrenador-personal-lo-barnechea/index.html','personal-trainer-nunoa/index.html',
+            'entrenador-personal-penalolen/index.html','entrenador-personal-vitacura/index.html',
+            'entrenamiento-personal-providencia/index.html','en/personal-trainer-la-reina/index.html',
+            'en/personal-trainer-las-condes/index.html','en/personal-trainer-lo-barnechea/index.html',
+            'en/personal-trainer-nunoa/index.html','en/personal-trainer-penalolen/index.html',
+            'en/personal-trainer-vitacura/index.html','en/personal-training-providencia/index.html'
+          ]
+          banned=[
+            'cobertura local','según cobertura','sujeto a cobertura','si tienen cobertura','primero confirmamos si',
+            'no damos por hecha la cobertura','cobertura local se confirma','antes de confirmar se revisa','cobertura real',
+            'si la cobertura','si podemos acompañarte','comprobamos que podamos prestar','antes de recomendar presencial',
+            'la cobertura se confirma','confirmamos sector','antes de confirmar sesiones','determinan si el entrenamiento',
+            'local coverage','depending on coverage','subject to coverage','subject to area','whether you cover my area',
+            'first we confirm whether','coverage is confirmed','before confirming','real coverage','if coverage',
+            'whether we can support you','we first check that the service can be delivered','before recommending in-person',
+            'determine whether in-person','we confirm area'
+          ]
+          hits=[]
+          for rel in pages:
+              s=(root/rel).read_text().lower()
+              for phrase in banned:
+                  if phrase in s:
+                      hits.append((rel,phrase))
+          if hits:
+              print('REMAINING_UNCERTAINTY_HITS')
+              for h in hits: print(h[0]+' :: '+h[1])
+              raise SystemExit(1)
+          print('No remaining uncertainty phrases in 14 local pages')
+          PY
