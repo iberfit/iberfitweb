@@ -1,0 +1,25 @@
+name: Diagnose V6.43.21 residual uncertainty copy
+
+on:
+  push:
+    branches: [work/web-v6-43-21-contrast-system]
+    paths: [.github/workflows/diagnose-v64321-copy.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Locate residual uncertainty language
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== EXACT ==='
+          grep -RFn 'Primero vemos si podemos hacerlo bien, no solo si podemos ir' candidate/v628 --include='*.html' || true
+          echo '=== UNCERTAINTY ES ==='
+          grep -REn 'viabil|podemos ir|si podemos|según sector|disponibilidad presencial|frecuencia.*podemos sostener|antes de reservar|cobertura presencial' candidate/v628 --include='*.html' || true
+          echo '=== UNCERTAINTY EN ==='
+          grep -REni 'viab|if we can|subject to|coverage|before booking|frequency.*can sustain|availability' candidate/v628/en --include='*.html' || true
