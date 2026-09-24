@@ -1,0 +1,8 @@
+{
+  "schema": "iberfit.web.stage.v1",
+  "worker": "web-iberfit",
+  "candidateSha": "86f62e1f813e10720769a1a9c46887b6d79097b9",
+  "approved": true,
+  "domainPromoted": false,
+  "requestedAt": "2026-09-24"
+}
