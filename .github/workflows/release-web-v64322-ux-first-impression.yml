@@ -26,6 +26,7 @@ jobs:
           test "$(git show "$BASE":candidate/v628/VERSION | tr -d '\r\n ')" = '6.43.21'
           git restore --source="$BASE" --staged --worktree candidate/v628
           python3 .github/scripts/build_v64322_ux_first_impression.py
+          python3 .github/scripts/tune_v64322_app_scale.py
       - name: Static product and semantic contracts
         run: python3 .github/scripts/qa_v64322_static.py
       - name: Browser regression and V6.43.22 UX QA
@@ -61,4 +62,4 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-# retry after untracked-assets QA accounting fix
+# retry after real browser gate required larger product proof at 390px
