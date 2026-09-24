@@ -1,0 +1,59 @@
+name: Diagnose V6.43.21 scope-note cascade
+
+on:
+  push:
+    branches: [work/web-v6-43-21-contrast-system]
+    paths: [.github/workflows/diagnose-v64321-scope-style.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+      - name: Rebuild exact candidate and inspect matched background rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=a9af3b52d67332f323f5e648613e609661f31639
+          mapfile -t htmls < <(git ls-tree -r --name-only "$BASE" candidate/v628 | grep -E '\.html$')
+          for f in "${htmls[@]}"; do git show "$BASE:$f" > "$f"; done
+          git show "$BASE:candidate/v628/VERSION" > candidate/v628/VERSION
+          git show "$BASE:candidate/v628/CHANGELOG.md" > candidate/v628/CHANGELOG.md
+          python3 .github/scripts/build_v64321_final.py
+          npm install --no-save --package-lock=false playwright@1.56.1 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/http.log 2>&1 &
+          pid=$!; trap 'kill $pid 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:4173/entrenador-personal-las-condes/ >/dev/null && break || sleep .5; done
+          node --input-type=module <<'JS'
+          import { chromium } from 'playwright';
+          const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:390,height:1000}});
+          await p.goto('http://127.0.0.1:4173/entrenador-personal-las-condes/',{waitUntil:'networkidle'});
+          const out=await p.evaluate(()=>{
+            const el=document.querySelector('section.compact-section .scope-note');
+            const matched=[];
+            function walk(rules,href,condition=''){
+              for(const r of rules){
+                if(r instanceof CSSStyleRule){
+                  let ok=false; try{ok=el.matches(r.selectorText)}catch{}
+                  if(ok && (r.style.background || r.style.backgroundColor)) matched.push({href,condition,selector:r.selectorText,background:r.style.background,backgroundColor:r.style.backgroundColor,important:r.style.getPropertyPriority('background')||r.style.getPropertyPriority('background-color')});
+                } else if(r.cssRules){
+                  let active=true;
+                  if(r instanceof CSSMediaRule) active=matchMedia(r.conditionText).matches;
+                  if(active) walk(r.cssRules,href,condition ? condition+' / '+(r.conditionText||r.name||'nested') : (r.conditionText||r.name||'nested'));
+                }
+              }
+            }
+            for(const s of document.styleSheets){try{walk(s.cssRules,s.href||'inline')}catch(e){matched.push({href:s.href,error:String(e)})}}
+            const cs=getComputedStyle(el);
+            return {computed:{background:cs.background,backgroundColor:cs.backgroundColor,border:cs.borderTopColor},matched};
+          });
+          console.log(JSON.stringify(out,null,2)); await b.close();
+          JS
