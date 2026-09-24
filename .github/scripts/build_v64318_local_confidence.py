@@ -98,8 +98,10 @@ def replace_common(src: str, loc: str, lang: str) -> str:
             'depending on coverage': 'with local coordination',
             'subject to coverage, schedule and real training space': 'with coordination around area, schedule and real training space',
             'subject to area, available training space and schedule': 'coordinated around area, available training space and schedule',
+            'subject to area, schedule and a suitable training space': 'with coordination around area, schedule and a suitable training space',
             'Coverage is confirmed by area, available training space and schedule': f'In {loc}, we coordinate area, training space and schedule to organise the in-person service',
             'Local coverage is confirmed by area, training space and schedule': f'In {loc}, we coordinate area, training space and schedule to organise the in-person service',
+            'Coverage is confirmed only when the frequency and environment are workable.': 'We coordinate frequency and training environment so the service stays practical and high-quality.',
             'Before confirming the format, we review': 'To organise the format, we review',
             'before confirming the format, we review': 'to organise the format, we review',
             'Before confirming, we review': 'When organising it, we review',
@@ -114,22 +116,22 @@ def replace_common(src: str, loc: str, lang: str) -> str:
         if loc == 'La Reina':
             src = src.replace('<h1>First we confirm whether we can support you well in La Reina.</h1>',
                               '<h1>Personal training in La Reina, with a clear way to get started.</h1>')
-            src = src.replace('<p class="lead">Before recommending in-person training, we review your area, schedule and the real space where you would train.</p>',
+            src = src.replace('<p class="lead">Before recommending in-person training, we check your area, your schedule and the real space where you would train.</p>',
                               '<p class="lead">We work in La Reina and organise area, schedule and training space with you so getting started is straightforward.</p>')
-            src = src.replace('<p class="hero-support">If coverage and frequency make sense, we define the format with you. If not, we propose hybrid or online with the same clarity.</p>',
+            src = src.replace('<p class="hero-support">If coverage and frequency make sense, we define the format with you. If not, we will recommend hybrid or online support just as clearly.</p>',
                               '<p class="hero-support">Home, an agreed space, hybrid or online: we define the format that best fits your week and the way you train.</p>')
-            src = src.replace('aria-label="What we confirm for training in La Reina"', 'aria-label="How we organise training in La Reina"')
-            src = src.replace('<strong>Usable space</strong><br>Home, condominium gym or outdoor training only if they allow good-quality training.',
+            src = src.replace('aria-label="What we confirm for personal training in La Reina"', 'aria-label="How we organise training in La Reina"')
+            src = src.replace('<strong>Usable space</strong><br>Home, condominium gym or outdoors only when the setting supports good training.',
                               '<strong>Usable space</strong><br>We adapt the session to home, a condominium gym or outdoors while protecting training quality.')
-            src = src.replace('<strong>Continuity</strong><br>If in-person is not enough, hybrid connects supervision and guided work.',
+            src = src.replace('<strong>Continuity</strong><br>If in-person alone is not enough, hybrid connects supervision and guided work.',
                               '<strong>Continuity</strong><br>Hybrid connects direct supervision and guided work when it helps organise the week better.')
-            src = src.replace('<div class="kicker">Before recommending in-person</div><h2>The decision comes down to three practical things.</h2><p class="lead">We do not assume coverage just because you are in La Reina. We first check that the service can be delivered with continuity and quality.</p>',
+            src = src.replace('<div class="kicker">Before recommending in-person training</div><h2>The decision depends on three concrete things.</h2><p class="lead">We do not assume coverage simply because you are in La Reina. We first check that the service can be delivered with continuity and quality.</p>',
                               '<div class="kicker">How we organise it</div><h2>Getting started in La Reina comes down to three simple decisions.</h2><p class="lead">IBERFIT provides personal training in La Reina. We coordinate area, space and schedule with you so the service fits your week with continuity.</p>')
-            src = src.replace('<h3>Coverage we can sustain</h3><p>Area, access and travel need to support a realistic frequency.</p>',
+            src = src.replace('<h3>Coverage we can actually deliver</h3><p>Area, access and travel need to support a realistic training frequency.</p>',
                               '<h3>Your area and access</h3><p>We organise travel and schedules to maintain a stable training frequency.</p>')
-            src = src.replace('<h3>A frequency you can sustain</h3><p>If in-person adds too much friction, hybrid or online can provide more continuity without losing follow-up.</p>',
+            src = src.replace('<h3>A frequency you can sustain</h3><p>If in-person adds too much friction, hybrid or online support may provide better continuity without losing follow-up.</p>',
                               '<h3>A frequency you can sustain</h3><p>In-person, hybrid and online can be combined when that helps maintain continuity without losing follow-up.</p>')
-            src = src.replace('<strong>Yes, IBERFIT considers in-person training in La Reina depending on area, available space and schedule.</strong> When organising it, we review whether the frequency is viable and whether the environment supports quality training.',
+            src = src.replace('<strong>Yes. IBERFIT provides in-person personal training in La Reina subject to area, available training space and schedule.</strong> We coordinate frequency and training environment so the service stays practical and high-quality.',
                               '<strong>Yes. IBERFIT provides in-person personal training in La Reina.</strong> We coordinate area, space and schedule to organise a sustainable frequency and a high-quality session.')
     return src
 
@@ -143,7 +145,6 @@ for rel, (loc, lang) in PAGES.items():
         path.write_text(out)
         changed += 1
 
-# Version/changelog
 (ROOT / 'VERSION').write_text('6.43.18\n')
 changelog = ROOT / 'CHANGELOG.md'
 old = changelog.read_text()
