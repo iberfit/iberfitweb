@@ -1,0 +1,145 @@
+/* IBERFIT WEB V6.43.21 — stronger hierarchy on light editorial surfaces. */
+:root{
+  --text-secondary:#44564c;
+  --text-tertiary:#5a6a61;
+  --gold-text-strong:#755916;
+  --line-strong:rgba(31,61,43,.20);
+  --line-gold-strong:rgba(128,98,22,.38);
+  --surface-paper:#fffdf8;
+  --surface-soft:#f1eadf;
+}
+
+/* Secondary copy should be calm, but never washed out. */
+.lead,
+.hero-support,
+.hero-meta,
+.section-intro>.lead,
+.section-head>.lead,
+.photo-story-note,
+.editorial-list li,
+.modality-row p,
+.modality-meta,
+.modality-row .modality-meta span,
+.principle-row p,
+.domain-row p,
+.system-stage p,
+.cycle-step p,
+.deliverable p,
+.week-step p,
+.scope-note p,
+.confidence-points p,
+.contact-option p,
+.answer-item p,
+.answer-source-note,
+.founder-copy,
+.local-service-chip span,
+.local-service-chip p,
+.local-place-copy small{
+  color:var(--text-secondary);
+}
+
+/* Small brand labels need authority on light surfaces. */
+.kicker,
+.eyebrow,
+.card-index,
+.modality-row>span,
+.scope-bar span,
+.contact-option>span,
+.scope-note span,
+.domain-row>span,
+.deliverable>span,
+.week-step>span,
+.cycle-step>span,
+.intent-route>span,
+.local-card-number{
+  color:var(--gold-text-strong);
+}
+
+/* Dark surfaces keep the lighter brand gold. */
+.section-dark .kicker,
+.section-dark .eyebrow,
+.decision-section .kicker,
+.origin-section .kicker,
+.review-proof .kicker,
+.cta-panel-inner .kicker,
+.alternative-note>span,
+.price-panel .kicker,
+.price-facts strong,
+.review-proof-card>span,
+.review-proof-card .text-link{
+  color:var(--gold-light);
+}
+
+/* Shared light callouts: a real surface, not a barely-visible outline. */
+.scope-note,
+.notice,
+.intent-route,
+.local-zone-link,
+.local-coverage-link,
+.coverage-list span,
+.scope-bar{
+  background:rgba(255,253,248,.88);
+  border-color:var(--line-gold-strong);
+}
+.scope-note{
+  box-shadow:0 14px 38px rgba(16,42,29,.07);
+}
+.scope-note .text-link{
+  color:var(--green-deep,var(--green));
+}
+
+/* Editorial rows and separators need more definition. */
+.principle-stack,
+.modality-list,
+.confidence-points,
+.domain-list{
+  border-top-color:var(--line-gold-strong);
+}
+.principle-row,
+.modality-row,
+.confidence-points p,
+.domain-row{
+  border-bottom-color:var(--line-strong);
+}
+
+/* Light content surfaces should not dissolve into the cream canvas. */
+.contact-option,
+.card:not(.card-dark),
+.deliverable,
+.cycle-step,
+.system-stage,
+.intent-route,
+.local-coverage-link{
+  border-color:var(--line-strong);
+}
+
+/* A clearer cream step gives sections depth without adding a new brand colour. */
+.section-cream{
+  background:linear-gradient(180deg,#eee5d7 0%,#f5efe5 54%,#f7f4ee 100%);
+  border-block-color:rgba(128,98,22,.16);
+}
+
+/* Links on light surfaces should read as actions, not just bold text. */
+.text-link{
+  color:var(--green-deep,var(--green));
+  text-decoration-color:rgba(31,61,43,.34);
+}
+.text-link:hover{
+  text-decoration-color:currentColor;
+}
+
+@media (max-width:720px){
+  .scope-note,
+  .notice,
+  .intent-route,
+  .local-coverage-link{
+    box-shadow:none;
+  }
+  .scope-note{
+    border-radius:18px;
+  }
+}
+
+@media (prefers-reduced-motion:reduce){
+  .text-link{transition:none!important}
+}
