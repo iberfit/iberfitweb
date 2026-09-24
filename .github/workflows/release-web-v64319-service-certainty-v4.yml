@@ -49,7 +49,7 @@ jobs:
             'en/hybrid/index.html':['Remote review between sessions'],
             'en/contact/index.html':['Online worldwide.'],
             'online/index.html':['Disponible desde cualquier lugar'],
-            'en/online/index.html':['Available worldwide']}
+            'en/online/index.html':['Online from anywhere']}
           for rel,phrases in must.items():
             text=b.joinpath(rel).read_text(encoding='utf-8')
             for phrase in phrases: assert phrase in text,(rel,phrase)
