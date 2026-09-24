@@ -1,3 +1,9 @@
+
+## 6.43.18 — Confianza local sin fricción
+- Todas las landings locales ES/EN comunican disponibilidad de entrenamiento desde el primer contacto.
+- Sector, espacio y horario se presentan como coordinación operativa, no como duda sobre si IBERFIT puede atender.
+- WhatsApp local parte de “estoy en [comuna] y quiero empezar”, conservando contexto e intención.
+- La Reina y Vitacura eliminan encuadres de “confirmar si podemos” y presentan presencial, híbrido y online como formas de organizar un servicio disponible.
 ## 6.43.17 — La Reina: operational local fit
 
 - Removes decorative territorial assumptions from the La Reina local landing.
