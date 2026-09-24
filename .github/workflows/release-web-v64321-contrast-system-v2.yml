@@ -1,0 +1,261 @@
+name: Release WEB IBERFIT V6.43.21 contrast system v2
+
+on:
+  push:
+    branches: [work/web-v6-43-21-contrast-system]
+    paths:
+      - .github/workflows/release-web-v64321-contrast-system-v2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Rebuild reproducibly from exact V6.43.20 baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=a9af3b52d67332f323f5e648613e609661f31639
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(git show "$BASE":candidate/v628/VERSION | tr -d '\r\n ')" = '6.43.20'
+          test "$(git show "$BASE":candidate/v628/assets/contrast.v64321.css 2>/dev/null || true)" = ''
+          mapfile -t base_html < <(git ls-tree -r --name-only "$BASE" candidate/v628 | grep -E '\.html$')
+          test "${#base_html[@]}" -eq 33
+          for f in "${base_html[@]}"; do git show "$BASE:$f" > "$f"; done
+          git show "$BASE:candidate/v628/VERSION" > candidate/v628/VERSION
+          git show "$BASE:candidate/v628/CHANGELOG.md" > candidate/v628/CHANGELOG.md
+          python3 .github/scripts/build_v64321_final.py
+
+      - name: Static contracts, semantic CTA audit and contrast ratios
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess,re,json,html
+
+          BASE='a9af3b52d67332f323f5e648613e609661f31639'
+          root=Path('candidate/v628')
+          assert root.joinpath('VERSION').read_text().strip()=='6.43.21'
+          htmls=sorted(root.rglob('*.html'))
+          assert len(htmls)==33
+          link='<link href="/assets/contrast.v64321.css" rel="stylesheet"/>'
+          mutable={
+            'candidate/v628/index.html','candidate/v628/en/index.html',
+            'candidate/v628/entrenador-personal-las-condes/index.html','candidate/v628/en/personal-trainer-las-condes/index.html',
+            'candidate/v628/entrenador-personal-vitacura/index.html','candidate/v628/en/personal-trainer-vitacura/index.html',
+            'candidate/v628/entrenador-personal-lo-barnechea/index.html','candidate/v628/en/personal-trainer-lo-barnechea/index.html',
+            'candidate/v628/entrenador-personal-penalolen/index.html','candidate/v628/en/personal-trainer-penalolen/index.html',
+            'candidate/v628/personal-trainer-nunoa/index.html','candidate/v628/en/personal-trainer-nunoa/index.html',
+            'candidate/v628/entrenamiento-personal-providencia/index.html','candidate/v628/en/personal-training-providencia/index.html',
+          }
+
+          def extract(pattern,text): return re.findall(pattern,text,re.I|re.S)
+          def visible(raw):
+              raw=re.sub(r'<script\b.*?</script>|<style\b.*?</style>',' ',raw,flags=re.I|re.S)
+              raw=re.sub(r'<[^>]+>',' ',raw)
+              return re.sub(r'\s+',' ',html.unescape(raw)).strip()
+
+          for p in htmls:
+              rel=p.as_posix(); new=p.read_text(encoding='utf-8')
+              assert new.count('contrast.v64321.css')==1, rel
+              old=subprocess.check_output(['git','show',f'{BASE}:{rel}'],text=True)
+              no_css=new.replace(link,'')
+              if rel not in mutable:
+                  assert no_css==old, rel
+              else:
+                  assert no_css.split('</head>',1)[0]==old.split('</head>',1)[0], rel
+              for pattern in [
+                  r'<link\b[^>]*rel="canonical"[^>]*>',
+                  r'<link\b[^>]*hreflang="[^"]+"[^>]*>',
+                  r'href="https://wa\.me/[^"]+"',
+                  r'<script type="application/ld\+json">(.*?)</script>',
+                  r'<script\b[^>]*src="/assets/(?:analytics-config\.js|analytics\.v643\.js)"[^>]*>',
+              ]:
+                  assert extract(pattern,no_css)==extract(pattern,old),(rel,pattern)
+              for raw in extract(r'<script type="application/ld\+json">(.*?)</script>',new): json.loads(raw)
+
+          changed=set(subprocess.check_output(['git','diff','--name-only',BASE,'--','candidate/v628'],text=True).splitlines())
+          expected={'candidate/v628/VERSION','candidate/v628/CHANGELOG.md','candidate/v628/assets/contrast.v64321.css'}|{p.as_posix() for p in htmls}
+          assert changed==expected,(changed-expected,expected-changed)
+          subprocess.check_call(['git','diff','--exit-code',BASE,'--','candidate/v628/_headers'])
+
+          local_files=[
+            'index.html','en/index.html',
+            'entrenador-personal-las-condes/index.html','en/personal-trainer-las-condes/index.html',
+            'entrenador-personal-lo-barnechea/index.html','en/personal-trainer-lo-barnechea/index.html',
+            'entrenador-personal-penalolen/index.html','en/personal-trainer-penalolen/index.html',
+            'personal-trainer-nunoa/index.html','en/personal-trainer-nunoa/index.html',
+            'entrenador-personal-vitacura/index.html','en/personal-trainer-vitacura/index.html',
+          ]
+          commercial='\n'.join(visible(root.joinpath(x).read_text(encoding='utf-8')) for x in local_files)
+          forbidden=[
+            'Primero vemos si podemos hacerlo bien, no solo si podemos ir','We first check whether we can deliver the service well',
+            'Según cobertura presencial','Where in-person coverage allows',
+            'viabilidad de una frecuencia presencial','frecuencia es viable','frecuencia viable',
+            'cuando la ubicación lo permite','Cuando el sector y el horario hacen viable',
+            'disponibilidad presencial se revisa','El sector se confirma primero',
+            'Antes de reservar, vemos qué frecuencia podemos sostener bien',
+            'Primero revisamos tu sector y la frecuencia que de verdad podemos sostener',
+            '¿Tu sector hace difícil sostener la presencialidad?',
+            'promise an impractical in-person routine','when the area makes it viable','what frequency is viable','viable frequency',
+            'In-person availability is reviewed individually','We confirm the area first',
+            'We first review your area and the frequency we can truly sustain','Does your area make frequent in-person work difficult?'
+          ]
+          for phrase in forbidden: assert phrase.lower() not in commercial.lower(),phrase
+
+          scope_expected={
+            'entrenador-personal-la-reina/index.html':'/hibrido/',
+            'entrenador-personal-las-condes/index.html':'/hibrido/',
+            'entrenador-personal-lo-barnechea/index.html':'/hibrido/',
+            'entrenador-personal-penalolen/index.html':'/hibrido/',
+            'entrenador-personal-vitacura/index.html':'/hibrido/',
+            'entrenamiento-personal-providencia/index.html':'/hibrido/',
+            'personal-trainer-nunoa/index.html':'/hibrido/',
+            'en/personal-trainer-la-reina/index.html':'/en/hybrid/',
+            'en/personal-trainer-las-condes/index.html':'/en/hybrid/',
+            'en/personal-trainer-lo-barnechea/index.html':'/en/hybrid/',
+            'en/personal-trainer-nunoa/index.html':'/en/hybrid/',
+            'en/personal-trainer-penalolen/index.html':'/en/hybrid/',
+            'en/personal-trainer-vitacura/index.html':'/en/hybrid/',
+            'en/personal-training-providencia/index.html':'/en/hybrid/',
+          }
+          found={}
+          for p in htmls:
+              rel=p.relative_to(root).as_posix(); text=p.read_text(encoding='utf-8')
+              for m in re.finditer(r'<section class="[^"]*compact-section[^"]*">(.*?)</section>',text,re.I|re.S):
+                  block=m.group(1)
+                  if 'scope-note' not in block: continue
+                  links=re.findall(r'<a\b[^>]*href="([^"]+)"[^>]*>(.*?)</a>',block,re.I|re.S)
+                  assert len(links)==1,(rel,links)
+                  found[rel]=(links[0][0],visible(links[0][1]),visible(block))
+          assert set(found)==set(scope_expected),(set(found)-set(scope_expected),set(scope_expected)-set(found))
+          for rel,expected_href in scope_expected.items():
+              href,label,block=found[rel]
+              assert href==expected_href,(rel,href,expected_href,block)
+              assert ('hybrid' in label.lower()) if rel.startswith('en/') else ('híbrido' in label.lower()),(rel,label)
+
+          for p in htmls:
+              rel=p.relative_to(root).as_posix(); text=p.read_text(encoding='utf-8')
+              for m in re.finditer(r'<a\b[^>]*class="[^"]*text-link[^"]*"[^>]*href="([^"]+)"[^>]*>(.*?)</a>',text,re.I|re.S):
+                  href,label=m.group(1),visible(m.group(2)).lower()
+                  if 'entrenamiento híbrido' in label: assert href=='/hibrido/',(rel,label,href)
+                  if 'hybrid training' in label: assert href=='/en/hybrid/',(rel,label,href)
+                  if 'entrenamiento online' in label: assert href=='/online/',(rel,label,href)
+                  if 'online training' in label: assert href=='/en/online/',(rel,label,href)
+
+          css=root.joinpath('assets/contrast.v64321.css').read_text(encoding='utf-8')
+          for token in ['--text-secondary:#44564c','--gold-text-strong:#806216','--line-gold-strong:rgba(128,98,22,.38)','scope-note','section-cream']:
+              assert token in css,token
+          assert '#755916' not in css
+
+          def rgb(h):
+              h=h.lstrip('#'); return tuple(int(h[i:i+2],16)/255 for i in (0,2,4))
+          def lum(h):
+              vals=[]
+              for c in rgb(h): vals.append(c/12.92 if c<=.04045 else ((c+.055)/1.055)**2.4)
+              return .2126*vals[0]+.7152*vals[1]+.0722*vals[2]
+          def contrast(a,b):
+              x,y=lum(a),lum(b); return (max(x,y)+.05)/(min(x,y)+.05)
+          checks=[('#44564c','#eee5d7'),('#44564c','#fffdf8'),('#806216','#eee5d7'),('#806216','#fffdf8'),('#D9B568','#1F3D2B')]
+          for fg,bg in checks:
+              ratio=contrast(fg,bg); assert ratio>=4.5,(fg,bg,ratio); print('CONTRAST',fg,bg,round(ratio,2))
+
+          changelog=root.joinpath('CHANGELOG.md').read_text(encoding='utf-8')
+          assert 'Aligns local flexibility callouts with Hybrid' in changelog
+          print('STATIC_OK',len(htmls),len(changed),'scope_notes',len(found))
+          PY
+
+      - name: Browser QA 390 768 1440 and visual evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright@1.56.1 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/http.log 2>&1 &
+          pid=$!; trap 'kill $pid 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break; sleep .5; done
+          mkdir -p /tmp/v64321-screens
+          cat > /tmp/qa-v64321.mjs <<'JS'
+          import { chromium } from 'playwright';
+          import fs from 'node:fs';
+          const routes=[
+            '/','/presencial/','/hibrido/','/online/','/entrenador-personal-las-condes/','/entrenador-personal-vitacura/','/entrenador-personal-lo-barnechea/','/entrenador-personal-penalolen/','/personal-trainer-nunoa/','/entrenador-personal-la-reina/',
+            '/en/','/en/in-person/','/en/hybrid/','/en/online/','/en/personal-trainer-las-condes/','/en/personal-trainer-vitacura/','/en/personal-trainer-lo-barnechea/','/en/personal-trainer-penalolen/','/en/personal-trainer-nunoa/','/en/personal-trainer-la-reina/'
+          ];
+          const localHybrid={
+            '/entrenador-personal-las-condes/':'/hibrido/','/entrenador-personal-vitacura/':'/hibrido/','/entrenador-personal-lo-barnechea/':'/hibrido/','/entrenador-personal-penalolen/':'/hibrido/','/personal-trainer-nunoa/':'/hibrido/','/entrenador-personal-la-reina/':'/hibrido/',
+            '/en/personal-trainer-las-condes/':'/en/hybrid/','/en/personal-trainer-vitacura/':'/en/hybrid/','/en/personal-trainer-lo-barnechea/':'/en/hybrid/','/en/personal-trainer-penalolen/':'/en/hybrid/','/en/personal-trainer-nunoa/':'/en/hybrid/','/en/personal-trainer-la-reina/':'/en/hybrid/'
+          };
+          const browser=await chromium.launch({headless:true}); const metrics=[];
+          for(const width of [390,768,1440]){
+            const context=await browser.newContext({viewport:{width,height:1000}});
+            for(const route of routes){
+              const page=await context.newPage(); const errors=[]; page.on('pageerror',e=>errors.push(String(e)));
+              const response=await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'networkidle'});
+              if(!response?.ok()) throw Error(`HTTP ${route} ${response?.status()}`);
+              const s=await page.evaluate(()=>{
+                const d=document.documentElement,scope=document.querySelector('.scope-note');
+                const scopeLink=scope?.querySelector('a'); const r=scopeLink?.getBoundingClientRect();
+                const styles=[...document.styleSheets].map(x=>x.href||'').join('\n');
+                return {overflow:d.scrollWidth-d.clientWidth,loaded:styles.includes('contrast.v64321.css'),text:document.body.innerText,
+                  scopeHref:scopeLink?.getAttribute('href')||null,scopeLabel:scopeLink?.textContent?.trim()||null,
+                  scopeText:scope?.innerText||null,scopeP:scope?getComputedStyle(scope.querySelector('p')).color:null,
+                  scopeSpan:scope?getComputedStyle(scope.querySelector('span')).color:null,
+                  scopeBorder:scope?getComputedStyle(scope).borderTopColor:null,
+                  scopeTarget:r?{w:r.width,h:r.height}:null};
+              });
+              if(!s.loaded||s.overflow>2||errors.length) throw Error(`QA ${route} ${width} ${JSON.stringify({...s,text:undefined,errors})}`);
+              if(localHybrid[route]){
+                if(s.scopeHref!==localHybrid[route]||!/h[ií]brid/i.test(s.scopeLabel||'')) throw Error(`SEMANTIC ${route} ${width} ${JSON.stringify(s)}`);
+                if(s.scopeP!=='rgb(68, 86, 76)') throw Error(`SCOPE_TEXT ${route} ${width} ${s.scopeP}`);
+                if(s.scopeSpan!=='rgb(128, 98, 22)') throw Error(`SCOPE_GOLD ${route} ${width} ${s.scopeSpan}`);
+                if(width<=768 && s.scopeTarget && (s.scopeTarget.h<44 || s.scopeTarget.w<44)) throw Error(`TOUCH ${route} ${width} ${JSON.stringify(s.scopeTarget)}`);
+              }
+              if(route==='/' && (s.text.includes('Según cobertura presencial')||!s.text.includes('En estas comunas + seguimiento a distancia'))) throw Error('HOME_ES_COPY');
+              if(route==='/en/' && (s.text.includes('Where in-person coverage allows')||!s.text.includes('In these areas + remote support'))) throw Error('HOME_EN_COPY');
+              if(route==='/entrenador-personal-las-condes/' && s.text.includes('Primero vemos si podemos hacerlo bien')) throw Error('LAS_CONDES_OLD');
+              if(route==='/entrenador-personal-vitacura/' && !s.scopeText?.includes('guiar el resto con el mismo plan')) throw Error('VITACURA_SCOPE');
+              metrics.push({route,width,overflow:s.overflow,scopeHref:s.scopeHref,scopeLabel:s.scopeLabel,scopeP:s.scopeP,scopeSpan:s.scopeSpan,scopeBorder:s.scopeBorder,scopeTarget:s.scopeTarget});
+              if((width===390||width===1440)){
+                const slug=route==='/'?'home-es':route==='/en/'?'home-en':route.replace(/^\/+|\/+$/g,'').replaceAll('/','-');
+                await page.screenshot({path:`/tmp/v64321-screens/${slug}-${width}.png`,fullPage:true});
+              }
+              await page.close();
+            }
+            await context.close();
+          }
+          await browser.close();
+          fs.writeFileSync('/tmp/v64321-screens/metrics.json',JSON.stringify(metrics,null,2));
+          console.log('BROWSER_OK',metrics.length);
+          JS
+          node /tmp/qa-v64321.mjs
+
+      - name: Commit certified V6.43.21 product
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'IBERFIT Release Bot'
+          git config user.email 'iberfit-release@users.noreply.github.com'
+          git add candidate/v628
+          git diff --cached --quiet && { echo 'Expected certified product changes but found none'; exit 1; }
+          git commit -m 'fix(web): align V6.43.21 local callouts with hybrid semantics'
+          git push origin HEAD:work/web-v6-43-21-contrast-system
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-v64321-contrast-evidence-v2
+          path: /tmp/v64321-screens
+          if-no-files-found: warn
+          retention-days: 30
