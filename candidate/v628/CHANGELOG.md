@@ -5,7 +5,7 @@
 - Uses a darker bronze for small labels on light backgrounds while preserving light gold on dark sections.
 - Removes residual uncertainty-first wording from Las Condes, Lo Barnechea, Peñalolén and Ñuñoa and makes hybrid availability explicit on Home.
 - Keeps the IBERFIT palette unchanged: deep green, gold and warm cream.
-- No routing, analytics, structured data or interaction changes.
+- Aligns local flexibility callouts with Hybrid when the copy describes direct supervision plus guided work; analytics, structured data and interactions remain unchanged.
 
 ## 6.43.20 — Client voice
 
