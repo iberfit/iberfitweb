@@ -15,6 +15,10 @@ patches = [
         "replace_exact(pres_en, '<strong>It can take place in an agreed, appropriate space within the service area.</strong>', f'<strong>It can take place in {AREAS_EN}, in an agreed and appropriate training space.</strong>')",
         "replace_exact(pres_en, '<strong>In an agreed suitable environment, subject to coverage.</strong>', f'<strong>It can take place in {AREAS_EN}, in an agreed and appropriate training space.</strong>')",
     ),
+    (
+        "(online_en, 'Available worldwide')",
+        "(online_en, 'Online from anywhere')",
+    ),
 ]
 for old, new in patches:
     if old not in text:
