@@ -1,3 +1,12 @@
+## 6.43.21 — Contrast & visual hierarchy
+
+- Strengthens secondary text contrast on cream/light surfaces.
+- Gives shared callouts and editorial rows clearer surface/border separation.
+- Uses a darker bronze for small labels on light backgrounds while preserving light gold on dark sections.
+- Removes residual uncertainty-first wording from Las Condes, Lo Barnechea, Peñalolén and Ñuñoa and makes hybrid availability explicit on Home.
+- Keeps the IBERFIT palette unchanged: deep green, gold and warm cream.
+- No routing, analytics, structured data or interaction changes.
+
 ## 6.43.20 — Client voice
 
 - Keeps service availability explicit while rewriting the remaining institutional phrasing to speak directly to the client.
