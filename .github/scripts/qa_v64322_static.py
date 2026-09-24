@@ -86,6 +86,7 @@ for phrase in ['Primero vemos si podemos hacerlo bien, no solo si podemos ir','S
     assert phrase.lower() not in commercial.lower(),phrase
 
 changed=set(subprocess.check_output(['git','diff','--name-only',BASE,'--','candidate/v628'],text=True).splitlines())
+changed |= set(subprocess.check_output(['git','ls-files','--others','--exclude-standard','candidate/v628'],text=True).splitlines())
 expected={'candidate/v628/VERSION','candidate/v628/CHANGELOG.md','candidate/v628/assets/ux.v64322.css','candidate/v628/assets/ux.v64322.js','candidate/v628/assets/analytics.v64322.js','candidate/v628/assets/experience.v64322.js'}|{p.as_posix() for p in htmls}
 assert changed==expected,(changed-expected,expected-changed)
 subprocess.check_call(['git','diff','--exit-code',BASE,'--','candidate/v628/_headers'])
