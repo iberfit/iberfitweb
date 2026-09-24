@@ -29,6 +29,9 @@ for(const width of [390,768,1440]){
       const reviewControls=document.querySelector('.review-carousel-controls');
       const appFirst=document.querySelector('.app-story-stage .app-screen');
       const ar=appFirst?.getBoundingClientRect();
+      const railSelectors=['.evidence-process-media--v6435','.system-rail','.method-cycle','.week-flow','.continuity-rail','.brand-journey--editorial','.app-story-stage','.review-pair'];
+      const rails=railSelectors.flatMap(selector=>[...document.querySelectorAll(selector)]);
+      const scrollRails=rails.filter(el=>el.scrollWidth>el.clientWidth+2).length;
       const hints=[...document.querySelectorAll('.mobile-swipe-hint')].map(x=>({display:getComputedStyle(x).display,text:x.textContent.trim()}));
       return {
         overflow:d.scrollWidth-d.clientWidth,
@@ -42,6 +45,7 @@ for(const width of [390,768,1440]){
         reviewControls:!!reviewControls,
         reviewScroll:reviewPair?{scrollWidth:reviewPair.scrollWidth,clientWidth:reviewPair.clientWidth}:null,
         appWidth:ar?.width||null,
+        scrollRails,
         hints,
         scripts:[...document.scripts].map(s=>s.src),
         css:[...document.styleSheets].map(s=>s.href||'')
@@ -68,8 +72,9 @@ for(const width of [390,768,1440]){
     if(route.includes('las-condes')){
       if(state.text.includes('Según sector y horario')||state.text.includes('Subject to area and schedule')) throw Error(`LOCAL_UNCERTAINTY ${route}`);
     }
-    if(width<=390 && ['/', '/en/','/online/','/en/online/','/presencial/','/hibrido/'].includes(route)){
-      if(!state.hints.some(h=>h.display!=='none')) throw Error(`SWIPE_HINT ${route}`);
+    if(width===390 && state.scrollRails>0){
+      const visibleHints=state.hints.filter(h=>h.display!=='none').length;
+      if(visibleHints<state.scrollRails) throw Error(`SWIPE_HINT ${route} rails=${state.scrollRails} hints=${visibleHints}`);
     }
     metrics.push({route,width,...state,text:undefined,scripts:undefined,css:undefined,hints:state.hints.length});
     if((width===390||width===1440)&&['/','/online/','/entrenador-personal-las-condes/'].includes(route)){
