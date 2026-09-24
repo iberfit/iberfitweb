@@ -22,6 +22,7 @@ def visible(raw):
  raw=re.sub(r'<[^>]+>',' ',raw)
  return re.sub(r'\s+',' ',html.unescape(raw)).strip()
 
+visible_by_rel={}
 for p in htmls:
  rel=p.as_posix(); new=p.read_text(encoding='utf-8'); assert new.count('contrast.v64321.css')==1,rel
  old=subprocess.check_output(['git','show',f'{BASE}:{rel}'],text=True)
@@ -31,14 +32,15 @@ for p in htmls:
  for pattern in [r'<link\b[^>]*rel="canonical"[^>]*>',r'<link\b[^>]*hreflang="[^"]+"[^>]*>',r'href="https://wa\.me/[^"]+"',r'<script type="application/ld\+json">(.*?)</script>',r'<script\b[^>]*src="/assets/(?:analytics-config\.js|analytics\.v643\.js)"[^>]*>']:
   assert extract(pattern,no_css)==extract(pattern,old),(rel,pattern)
  for raw in extract(r'<script type="application/ld\+json">(.*?)</script>',new): json.loads(raw)
+ body=re.search(r'<body\b.*?</body>',new,re.I|re.S)
+ visible_by_rel[p.relative_to(root).as_posix()]=visible(body.group(0) if body else new)
 
 changed=set(subprocess.check_output(['git','diff','--name-only',BASE,'--','candidate/v628'],text=True).splitlines())
 expected={'candidate/v628/VERSION','candidate/v628/CHANGELOG.md','candidate/v628/assets/contrast.v64321.css'}|{p.as_posix() for p in htmls}
 assert changed==expected,(changed-expected,expected-changed)
 subprocess.check_call(['git','diff','--exit-code',BASE,'--','candidate/v628/_headers'])
 
-local_files=['index.html','en/index.html','entrenador-personal-las-condes/index.html','en/personal-trainer-las-condes/index.html','entrenador-personal-lo-barnechea/index.html','en/personal-trainer-lo-barnechea/index.html','entrenador-personal-penalolen/index.html','en/personal-trainer-penalolen/index.html','personal-trainer-nunoa/index.html','en/personal-trainer-nunoa/index.html','entrenador-personal-vitacura/index.html','en/personal-trainer-vitacura/index.html']
-commercial='\n'.join(visible(root.joinpath(x).read_text(encoding='utf-8')) for x in local_files)
+commercial='\n'.join(visible_by_rel.values())
 for phrase in ['Primero vemos si podemos hacerlo bien, no solo si podemos ir','We first check whether we can deliver the service well','Según cobertura presencial','Where in-person coverage allows','viabilidad de una frecuencia presencial','frecuencia es viable','frecuencia viable','cuando la ubicación lo permite','Cuando el sector y el horario hacen viable','disponibilidad presencial se revisa','El sector se confirma primero','Antes de reservar, vemos qué frecuencia podemos sostener bien','Primero revisamos tu sector y la frecuencia que de verdad podemos sostener','¿Tu sector hace difícil sostener la presencialidad?','promise an impractical in-person routine','when the area makes it viable','what frequency is viable','viable frequency','In-person availability is reviewed individually','We confirm the area first','We first review your area and the frequency we can truly sustain','Does your area make frequent in-person work difficult?']:
  assert phrase.lower() not in commercial.lower(),phrase
 
@@ -68,7 +70,7 @@ for p in htmls:
   if 'online training' in label: assert href=='/en/online/',(rel,label,href)
 
 css=root.joinpath('assets/contrast.v64321.css').read_text(encoding='utf-8')
-for token in ['--text-secondary:#44564c','--gold-text-strong:#806216','--line-gold-strong:rgba(128,98,22,.38)','scope-note','section-cream','min-height:44px']: assert token in css,token
+for token in ['--text-secondary:#44564c','--gold-text-strong:#806216','--line-gold-strong:rgba(128,98,22,.38)','body:is([data-page="local"],[data-page="local_en"]) .scope-note','background:rgba(255,253,248,.92)','section-cream','min-height:44px']: assert token in css,token
 assert '#755916' not in css
 
 def rgb(h): h=h.lstrip('#'); return tuple(int(h[i:i+2],16)/255 for i in (0,2,4))
