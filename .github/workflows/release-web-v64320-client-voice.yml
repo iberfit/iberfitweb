@@ -1,0 +1,95 @@
+name: Release WEB IBERFIT V6.43.20 client voice
+
+on:
+  push:
+    branches: [work/web-v6-43-20-client-voice]
+    paths: [.github/workflows/release-web-v64320-client-voice.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify exact V6.43.19 base and build
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 8a30c44b107848243e7e12738217837a63aab381 HEAD
+          test "$(git show 8a30c44b107848243e7e12738217837a63aab381:candidate/v628/VERSION | tr -d '\r\n ')" = '6.43.19'
+          python3 .github/scripts/build_v64320_client_voice.py
+      - name: Static contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,re,subprocess
+          b=Path('candidate/v628')
+          assert b.joinpath('VERSION').read_text().strip()=='6.43.20'
+          assert len(list(b.rglob('*.html')))==33
+          expected={'candidate/v628/CHANGELOG.md','candidate/v628/VERSION','candidate/v628/index.html','candidate/v628/presencial/index.html','candidate/v628/hibrido/index.html','candidate/v628/contacto/index.html','candidate/v628/en/index.html','candidate/v628/en/in-person/index.html','candidate/v628/en/hybrid/index.html','candidate/v628/en/contact/index.html'}
+          actual=set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())
+          assert actual==expected,(actual-expected,expected-actual)
+          req={
+            'index.html':['podemos entrenar contigo en presencial o híbrido','Desde cualquier lugar, online.'],
+            'presencial/index.html':['Si estás en una de estas comunas, podemos entrenar contigo en presencial.','podemos organizar contigo el lugar, el horario y el primer paso.'],
+            'hibrido/index.html':['combinamos contigo sesiones presenciales y seguimiento a distancia.'],
+            'contacto/index.html':['podemos verte presencialmente','podemos acompañarte online.'],
+            'en/index.html':['we can work with you in person or in a hybrid format','From anywhere, online.'],
+            'en/in-person/index.html':['If you are in one of these areas, we can train with you in person.','we can organise the location, schedule and first step with you.'],
+            'en/hybrid/index.html':['we can combine in-person sessions with remote support between sessions.'],
+            'en/contact/index.html':['we can work with you in person','we can support you online.']}
+          for rel,phrases in req.items():
+            t=b.joinpath(rel).read_text(encoding='utf-8')
+            for phrase in phrases: assert phrase in t,(rel,phrase)
+          old=['Entrenamos presencialmente en estas comunas.','We provide in-person training in these areas.','Presencial en Las Condes, Vitacura, Providencia, Lo Barnechea, Ñuñoa, La Reina y Peñalolén · Seguimiento a distancia entre sesiones','In person in Las Condes, Vitacura, Providencia, Lo Barnechea, Ñuñoa, La Reina and Peñalolén · Remote review between sessions']
+          joined='\n'.join(b.joinpath(x).read_text(encoding='utf-8') for x in req)
+          for phrase in old: assert phrase not in joined,phrase
+          for p in b.rglob('*.html'):
+            t=p.read_text(encoding='utf-8')
+            for raw in re.findall(r'<script type="application/ld\+json">(.*?)</script>',t,re.S):json.loads(raw)
+          h=b.joinpath('_headers').read_text(encoding='utf-8')
+          assert "script-src-attr 'none'" in h and "'unsafe-inline'" not in h
+          print('STATIC_OK')
+          PY
+      - name: Browser QA 390 768 1440
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright@1.56.1 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/http.log 2>&1 &
+          pid=$!; trap 'kill $pid 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break; sleep .5; done
+          mkdir -p /tmp/v64320-screens
+          cat >qa-v64320.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const routes=['/','/presencial/','/hibrido/','/contacto/','/en/','/en/in-person/','/en/hybrid/','/en/contact/'];
+          const b=await chromium.launch({headless:true});
+          for(const width of [390,768,1440]){const c=await b.newContext({viewport:{width,height:1000}});for(const route of routes){const p=await c.newPage();const errors=[];p.on('pageerror',e=>errors.push(String(e)));const r=await p.goto('http://127.0.0.1:4173'+route,{waitUntil:'networkidle'});if(!r?.ok())throw Error(`HTTP ${route}`);const s=await p.evaluate(()=>{const d=document.documentElement,a=document.querySelector('.hero-actions .btn-primary'),rr=a?.getBoundingClientRect();return{overflow:d.scrollWidth-d.clientWidth,w:rr?.width||0,h:rr?.height||0,text:document.body.innerText}});if(s.overflow>2||s.w<44||s.h<44||errors.length)throw Error(`QA ${route} ${width} ${JSON.stringify({overflow:s.overflow,w:s.w,h:s.h,errors})}`);if(width!==768){const slug=route==='/'?'home':route.replace(/^\/+|\/+$/g,'').replaceAll('/','-');await p.screenshot({path:`/tmp/v64320-screens/${slug}-${width}.png`,fullPage:true});}await p.close();}await c.close();}
+          await b.close(); console.log('BROWSER_OK');
+          JS
+          node qa-v64320.mjs
+      - name: Commit certified product
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'IBERFIT Release Bot'
+          git config user.email 'iberfit-release@users.noreply.github.com'
+          git add candidate/v628
+          git commit -m 'refactor(web): speak directly to clients in V6.43.20'
+          git push origin HEAD:work/web-v6-43-20-client-voice
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-v64320-client-voice-evidence
+          path: /tmp/v64320-screens
+          retention-days: 30
