@@ -60,3 +60,5 @@ jobs:
             /tmp/v64321-regression/metrics.json
           if-no-files-found: warn
           retention-days: 30
+
+# retry after untracked-assets QA accounting fix
