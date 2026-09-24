@@ -62,4 +62,4 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-# retry after real browser gate required larger product proof at 390px
+# retry after binding swipe affordance QA to actual horizontal rails
