@@ -1,4 +1,4 @@
-name: Release WEB IBERFIT V6.43.21 contrast system v2
+name: Release WEB IBERFIT V6.43.21 contrast system final
 
 on:
   push:
@@ -41,8 +41,17 @@ jobs:
           htmls=sorted(b.rglob('*.html')); assert len(htmls)==33
           link='<link href="/assets/contrast.v64321.css" rel="stylesheet"/>'
           mutable={
+            'candidate/v628/index.html',
+            'candidate/v628/en/index.html',
+            'candidate/v628/entrenador-personal-las-condes/index.html',
+            'candidate/v628/en/personal-trainer-las-condes/index.html',
             'candidate/v628/entrenador-personal-lo-barnechea/index.html',
-            'candidate/v628/en/personal-trainer-lo-barnechea/index.html'
+            'candidate/v628/en/personal-trainer-lo-barnechea/index.html',
+            'candidate/v628/entrenador-personal-penalolen/index.html',
+            'candidate/v628/en/personal-trainer-penalolen/index.html',
+            'candidate/v628/personal-trainer-nunoa/index.html',
+            'candidate/v628/en/personal-trainer-nunoa/index.html',
+            'candidate/v628/entrenamiento-personal-providencia/index.html',
           }
           for p in htmls:
               rel=p.as_posix(); new=p.read_text(encoding='utf-8')
@@ -65,24 +74,42 @@ jobs:
           css=b.joinpath('assets/contrast.v64321.css').read_text()
           for token in ['--text-secondary:#44564c','--gold-text-strong:#755916','--line-gold-strong:rgba(128,98,22,.38)','scope-note','section-cream']:
               assert token in css,token
-          joined='\n'.join(p.read_text(encoding='utf-8') for p in htmls)
+          local_text='\n'.join(b.joinpath(x).read_text(encoding='utf-8') for x in [
+            'entrenador-personal-las-condes/index.html','en/personal-trainer-las-condes/index.html',
+            'entrenador-personal-lo-barnechea/index.html','en/personal-trainer-lo-barnechea/index.html',
+            'entrenador-personal-penalolen/index.html','en/personal-trainer-penalolen/index.html',
+            'personal-trainer-nunoa/index.html','en/personal-trainer-nunoa/index.html'])
           forbidden=[
             'Primero vemos si podemos hacerlo bien, no solo si podemos ir',
-            'viabilidad de una frecuencia presencial',
-            'cuando la ubicación lo permite',
+            'We first check whether we can deliver the service well',
+            'viabilidad de una frecuencia presencial','frecuencia es viable','frecuencia viable',
+            'cuando la ubicación lo permite','Cuando el sector y el horario hacen viable',
+            'disponibilidad presencial se revisa','El sector se confirma primero',
             'Antes de reservar, vemos qué frecuencia podemos sostener bien',
-            'que la frecuencia sea viable',
-            'promise an impractical in-person routine',
-            'when the area makes it viable',
-            'what frequency can be delivered well'
+            'Primero revisamos tu sector y la frecuencia que de verdad podemos sostener',
+            '¿Tu sector hace difícil sostener la presencialidad?',
+            'promise an impractical in-person routine','when the area makes it viable',
+            'what frequency is viable','viable frequency','In-person availability is reviewed individually',
+            'We confirm the area first','We first review your area and the frequency we can truly sustain',
+            'Does your area make frequent in-person work difficult?'
           ]
-          for phrase in forbidden: assert phrase not in joined,phrase
-          es=b.joinpath('entrenador-personal-lo-barnechea/index.html').read_text()
-          en=b.joinpath('en/personal-trainer-lo-barnechea/index.html').read_text()
-          for phrase in ['Entrenamos contigo en Lo Barnechea.','La frecuencia se organiza alrededor de tu semana, no al revés.','¿Tu semana cambia mucho?','Quiero empezar en Lo Barnechea']:
-              assert phrase in es,phrase
-          for phrase in ['We train with you in Lo Barnechea.','Your training frequency should fit your week, not the other way around.','Does your week change a lot?','I want to start in Lo Barnechea']:
-              assert phrase in en,phrase
+          for phrase in forbidden: assert phrase not in local_text,phrase
+          assert 'En estas comunas + seguimiento a distancia' in b.joinpath('index.html').read_text()
+          assert 'In these areas + remote support' in b.joinpath('en/index.html').read_text()
+          expected_copy={
+            'entrenador-personal-las-condes/index.html':['Organizamos contigo una forma de entrenar que encaje en tu semana.','Sí. IBERFIT ofrece entrenamiento personal presencial en Las Condes.','Quiero empezar en Las Condes'],
+            'entrenador-personal-lo-barnechea/index.html':['Entrenamos contigo en Lo Barnechea.','La frecuencia se organiza alrededor de tu semana, no al revés.','Quiero empezar en Lo Barnechea'],
+            'entrenador-personal-penalolen/index.html':['Entrenamos contigo en Peñalolén.','La modalidad se organiza contigo, alrededor de tu semana.','Quiero empezar en Peñalolén'],
+            'personal-trainer-nunoa/index.html':['Presencial en Ñuñoa','Organizamos contigo dónde, cuándo y cómo entrenar.','Quiero empezar en Ñuñoa'],
+            'en/personal-trainer-las-condes/index.html':['We organise training around the week you actually have.','I want to start in Las Condes'],
+            'en/personal-trainer-lo-barnechea/index.html':['We train with you in Lo Barnechea.','Your training frequency should fit your week, not the other way around.','I want to start in Lo Barnechea'],
+            'en/personal-trainer-penalolen/index.html':['We train with you in Peñalolén.','We organise the format with you around your real week.','I want to start in Peñalolén'],
+            'en/personal-trainer-nunoa/index.html':['In person in Ñuñoa','We organise where, when and how you train with you.','I want to start in Ñuñoa'],
+            'entrenamiento-personal-providencia/index.html':['Sí. IBERFIT ofrece entrenamiento personal presencial en Providencia.'],
+          }
+          for rel,phrases in expected_copy.items():
+              t=b.joinpath(rel).read_text(encoding='utf-8')
+              for phrase in phrases: assert phrase in t,(rel,phrase)
           def rgb(h):
               h=h.lstrip('#');return tuple(int(h[i:i+2],16)/255 for i in (0,2,4))
           def lum(h):
@@ -112,7 +139,7 @@ jobs:
           mkdir -p /tmp/v64321-screens
           cat > qa-v64321.mjs <<'JS'
           import { chromium } from 'playwright';
-          const routes=['/','/presencial/','/hibrido/','/online/','/contacto/','/sobre-iberfit/','/entrenador-personal-la-reina/','/entrenador-personal-vitacura/','/entrenador-personal-lo-barnechea/','/en/','/en/in-person/','/en/hybrid/','/en/contact/','/en/personal-trainer-lo-barnechea/'];
+          const routes=['/','/presencial/','/hibrido/','/online/','/contacto/','/sobre-iberfit/','/entrenador-personal-las-condes/','/entrenador-personal-vitacura/','/entrenamiento-personal-providencia/','/entrenador-personal-lo-barnechea/','/personal-trainer-nunoa/','/entrenador-personal-la-reina/','/entrenador-personal-penalolen/','/en/','/en/in-person/','/en/hybrid/','/en/contact/','/en/personal-trainer-las-condes/','/en/personal-trainer-lo-barnechea/','/en/personal-trainer-nunoa/','/en/personal-trainer-penalolen/'];
           const browser=await chromium.launch({headless:true}); const metrics=[];
           for(const width of [390,768,1440]){
             const context=await browser.newContext({viewport:{width,height:1000}});
@@ -128,10 +155,19 @@ jobs:
               if(!s.loaded||s.overflow>2||errors.length) throw Error(`QA ${route} ${width} ${JSON.stringify({...s,text:undefined,errors})}`);
               if(s.lead && s.lead!=='rgb(68, 86, 76)') throw Error(`LEAD_COLOR ${route} ${width} ${s.lead}`);
               if(s.label && s.label!=='rgb(117, 89, 22)') throw Error(`LABEL_COLOR ${route} ${width} ${s.label}`);
-              if(route==='/entrenador-personal-lo-barnechea/' && (!s.text.includes('Entrenamos contigo en Lo Barnechea.')||s.text.includes('viabilidad'))) throw Error('LO_BARNECHEA_ES_COPY');
-              if(route==='/en/personal-trainer-lo-barnechea/' && (!s.text.includes('We train with you in Lo Barnechea.')||s.text.includes('impractical'))) throw Error('LO_BARNECHEA_EN_COPY');
+              const checks={
+                '/entrenador-personal-las-condes/':['Organizamos contigo una forma de entrenar','Primero vemos si podemos hacerlo bien'],
+                '/entrenador-personal-lo-barnechea/':['Entrenamos contigo en Lo Barnechea.','viabilidad'],
+                '/entrenador-personal-penalolen/':['Entrenamos contigo en Peñalolén.','frecuencia viable'],
+                '/personal-trainer-nunoa/':['Presencial en Ñuñoa','Presencial según sector'],
+                '/en/personal-trainer-las-condes/':['We organise training around the week','We first check whether we can deliver'],
+                '/en/personal-trainer-lo-barnechea/':['We train with you in Lo Barnechea.','impractical'],
+                '/en/personal-trainer-penalolen/':['We train with you in Peñalolén.','viable frequency'],
+                '/en/personal-trainer-nunoa/':['In person in Ñuñoa','In person by area']
+              };
+              if(checks[route]&&(!s.text.includes(checks[route][0])||s.text.includes(checks[route][1]))) throw Error(`COPY ${route}`);
               metrics.push({route,width,overflow:s.overflow,lead:s.lead,label:s.label,scopeBg:s.scopeBg,scopeBorder:s.scopeBorder,loaded:s.loaded});
-              if((width===390||width===1440)&&['/','/presencial/','/hibrido/','/entrenador-personal-la-reina/','/entrenador-personal-vitacura/','/entrenador-personal-lo-barnechea/'].includes(route)){
+              if((width===390||width===1440)&&['/','/presencial/','/hibrido/','/entrenador-personal-las-condes/','/entrenador-personal-vitacura/','/entrenador-personal-lo-barnechea/','/personal-trainer-nunoa/','/entrenador-personal-penalolen/'].includes(route)){
                 const slug=route==='/'?'home':route.replace(/^\/+|\/+$/g,'').replaceAll('/','-'); await page.screenshot({path:`/tmp/v64321-screens/${slug}-${width}.png`,fullPage:true});
               }
               await page.close();
