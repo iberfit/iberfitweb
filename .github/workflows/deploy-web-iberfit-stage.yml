@@ -59,7 +59,21 @@ jobs:
           test -s candidate/v628/assets/app.v628.js
           test -s candidate/v628/assets/analytics.v628.js
           grep -q 'max-image-preview:large' candidate/v628/index.html
-          grep -q '<lastmod>2026-09-12</lastmod>' candidate/v628/sitemap.xml
+          python3 <<'PY'
+          import re
+          import xml.etree.ElementTree as ET
+          path='candidate/v628/sitemap.xml'
+          root=ET.parse(path).getroot()
+          ns={'sm':'http://www.sitemaps.org/schemas/sitemap/0.9'}
+          urls=root.findall('sm:url',ns)
+          assert urls, 'SITEMAP_HAS_NO_URLS'
+          for item in urls:
+              loc=(item.findtext('sm:loc',default='',namespaces=ns) or '').strip()
+              lastmod=(item.findtext('sm:lastmod',default='',namespaces=ns) or '').strip()
+              assert loc.startswith('https://iberfit.cl/'), f'SITEMAP_NON_IBERFIT_URL:{loc}'
+              assert re.fullmatch(r'\d{4}-\d{2}-\d{2}',lastmod), f'SITEMAP_LASTMOD_INVALID:{loc}:{lastmod}'
+          print('SITEMAP_OK',len(urls))
+          PY
           grep -q 'generate_lead' candidate/v628/assets/analytics.v628.js
 
       - name: Preparar Node
