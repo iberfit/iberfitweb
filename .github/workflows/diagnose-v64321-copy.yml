@@ -1,4 +1,4 @@
-name: Diagnose V6.43.21 residual uncertainty copy
+name: Diagnose V6.43.21 residual uncertainty and CTA semantics
 
 on:
   push:
@@ -13,13 +13,60 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Locate residual uncertainty language
+      - name: Audit visible uncertainty language and semantic callouts
         shell: bash
         run: |
           set -euo pipefail
-          echo '=== EXACT ==='
-          grep -RFn 'Primero vemos si podemos hacerlo bien, no solo si podemos ir' candidate/v628 --include='*.html' || true
-          echo '=== UNCERTAINTY ES ==='
-          grep -REn 'viabil|podemos ir|si podemos|según sector|disponibilidad presencial|frecuencia.*podemos sostener|antes de reservar|cobertura presencial' candidate/v628 --include='*.html' || true
-          echo '=== UNCERTAINTY EN ==='
-          grep -REni 'viab|if we can|subject to|coverage|before booking|frequency.*can sustain|availability' candidate/v628/en --include='*.html' || true
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, html
+
+          root=Path('candidate/v628')
+          pages=sorted(root.rglob('*.html'))
+          assert len(pages)==33, len(pages)
+
+          def visible(raw):
+              raw=re.sub(r'<script\b.*?</script>|<style\b.*?</style>', ' ', raw, flags=re.I|re.S)
+              raw=re.sub(r'<[^>]+>', ' ', raw)
+              return re.sub(r'\s+', ' ', html.unescape(raw)).strip()
+
+          patterns_es=re.compile(r'viabil|podemos ir|si podemos|según sector|disponibilidad presencial|frecuencia.{0,40}podemos sostener|antes de reservar|cobertura presencial',re.I)
+          patterns_en=re.compile(r'\bviab|if we can|subject to|coverage|before booking|frequency.{0,40}can sustain|in-person availability',re.I)
+
+          print('=== VISIBLE UNCERTAINTY ===')
+          for p in pages:
+              text=p.read_text(encoding='utf-8')
+              body=re.search(r'<body\b.*?</body>',text,re.I|re.S)
+              v=visible(body.group(0) if body else text)
+              hits=[]
+              for rx in (patterns_es,patterns_en):
+                  for m in rx.finditer(v):
+                      hits.append(v[max(0,m.start()-110):min(len(v),m.end()+150)])
+              if hits:
+                  print('\nPAGE',p.relative_to(root).as_posix())
+                  for h in hits: print(' HIT',h)
+
+          print('\n=== SCOPE-NOTE / COMPACT CALLOUTS ===')
+          count=0
+          for p in pages:
+              text=p.read_text(encoding='utf-8')
+              for m in re.finditer(r'<section class="[^"]*compact-section[^"]*">(.*?)</section>',text,re.I|re.S):
+                  block=m.group(1)
+                  if 'scope-note' not in block: continue
+                  links=re.findall(r'<a\b[^>]*href="([^"]+)"[^>]*>(.*?)</a>',block,re.I|re.S)
+                  print('\nPAGE',p.relative_to(root).as_posix())
+                  print(' TEXT',visible(block))
+                  for href,label in links: print(' CTA',href,'|',visible(label))
+                  count+=1
+          print('SCOPE_NOTE_COUNT',count)
+
+          print('\n=== ALL TEXT-LINK CTA CONTEXT ===')
+          count=0
+          for p in pages:
+              text=p.read_text(encoding='utf-8')
+              for m in re.finditer(r'<a\b[^>]*class="[^"]*text-link[^"]*"[^>]*href="([^"]+)"[^>]*>(.*?)</a>',text,re.I|re.S):
+                  context=text[max(0,m.start()-520):m.end()+40]
+                  print('CTA',p.relative_to(root).as_posix(),'|',m.group(1),'|',visible(m.group(2)),'| CTX',visible(context)[-480:])
+                  count+=1
+          print('TEXT_LINK_COUNT',count)
+          PY
