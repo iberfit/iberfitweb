@@ -114,6 +114,7 @@ def replace_common(src: str, loc: str, lang: str) -> str:
             'In person by area and schedule': f'In-person in {loc} · area and schedule coordinated',
             'Real coverage': 'Local coordination',
             'We confirm area and travel before setting a frequency.': 'We coordinate area and travel to sustain a stable frequency.',
+            'We confirm area and travel before agreeing a frequency.': 'We coordinate area and travel to sustain a stable frequency.',
         }
         for a,b in replacements.items():
             src = src.replace(a,b)
