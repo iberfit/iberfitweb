@@ -1,0 +1,158 @@
+name: Release WEB IBERFIT V6.43.19 service certainty
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-19-service-certainty
+    paths:
+      - .github/scripts/build_v64319_service_certainty.py
+      - .github/workflows/release-web-v64319-service-certainty.yml
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify exact production base
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-list --max-parents=0 HEAD | head -1)" != ""
+          git merge-base --is-ancestor 5e973469cc0b53201addf9f1013541a85166e7ee HEAD
+          test "$(git show 5e973469cc0b53201addf9f1013541a85166e7ee:candidate/v628/VERSION | tr -d '\r\n ')" = "6.43.18"
+      - name: Build V6.43.19
+        run: python3 .github/scripts/build_v64319_service_certainty.py
+      - name: Static contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          b=candidate/v628
+          test "$(tr -d '\r\n ' < "$b/VERSION")" = "6.43.19"
+          test "$(find "$b" -type f -name '*.html' | wc -l | tr -d ' ')" = "33"
+          expected=$(cat <<'EOF'
+          candidate/v628/CHANGELOG.md
+          candidate/v628/VERSION
+          candidate/v628/contacto/index.html
+          candidate/v628/en/contact/index.html
+          candidate/v628/en/hybrid/index.html
+          candidate/v628/en/in-person/index.html
+          candidate/v628/en/index.html
+          candidate/v628/hibrido/index.html
+          candidate/v628/index.html
+          candidate/v628/presencial/index.html
+          EOF
+          )
+          actual="$(git diff --name-only | sort)"
+          test "$actual" = "$(printf '%s\n' "$expected" | sed 's/^          //' | sort)"
+          git diff --exit-code -- "$b/_headers" "$b/assets/analytics.v643.js" "$b/assets/app.v632.js" "$b/assets/menu.v642.js"
+          grep -q "script-src-attr 'none'" "$b/_headers"
+          ! grep -q "'unsafe-inline'" "$b/_headers"
+          grep -q 'Presencial en Las Condes, Vitacura, Providencia, Lo Barnechea, Ñuñoa, La Reina y Peñalolén · Híbrido en estas comunas · Online desde cualquier lugar.' "$b/index.html"
+          grep -q 'Quiero empezar presencial' "$b/presencial/index.html"
+          grep -q 'Entrenamos presencialmente en estas comunas.' "$b/presencial/index.html"
+          grep -q 'Presencial en Las Condes, Vitacura, Providencia, Lo Barnechea, Ñuñoa, La Reina y Peñalolén · Seguimiento a distancia entre sesiones' "$b/hibrido/index.html"
+          grep -q 'Presencial en Las Condes, Vitacura, Providencia, Lo Barnechea, Ñuñoa, La Reina y Peñalolén · Online desde cualquier lugar.' "$b/contacto/index.html"
+          grep -q 'I want to start in person' "$b/en/in-person/index.html"
+          grep -q 'We provide in-person training in these areas.' "$b/en/in-person/index.html"
+          grep -q 'Disponible desde cualquier lugar' "$b/online/index.html"
+          grep -q 'Available worldwide' "$b/en/online/index.html"
+          ! grep -Eqi 'Quiero saber si hay cobertura para mí|Híbrido según cobertura|Presencial según cobertura|Consulta la disponibilidad según comuna|La disponibilidad se confirma siempre de manera individual|Si no existe cobertura presencial|Consulta disponibilidad, cobertura' "$b/index.html" "$b/presencial/index.html" "$b/hibrido/index.html" "$b/contacto/index.html"
+          ! grep -Eqi 'Check whether I am in the coverage area|Hybrid where coverage allows|In person by service area|Explore availability by area|Availability is always confirmed individually|Where in-person coverage is unavailable|Ask about availability, coverage' "$b/en/index.html" "$b/en/in-person/index.html" "$b/en/hybrid/index.html" "$b/en/contact/index.html"
+      - name: Validate JSON-LD and local route integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,re
+          root=Path('candidate/v628')
+          htmls=sorted(root.rglob('*.html'))
+          assert len(htmls)==33
+          for p in htmls:
+              text=p.read_text(encoding='utf-8')
+              for raw in re.findall(r'<script type="application/ld\+json">(.*?)</script>',text,re.S):
+                  json.loads(raw)
+              for href in re.findall(r'href="(/[^"]*)"',text):
+                  path=href.split('#',1)[0].split('?',1)[0]
+                  if not path or path.startswith('//'):
+                      continue
+                  target=root/path.lstrip('/')
+                  if path.endswith('/'):
+                      target=target/'index.html'
+                  elif target.suffix=='':
+                      target=target/'index.html'
+                  assert target.exists(), f'{p}: broken local href {href} -> {target}'
+          print('JSONLD_AND_LOCAL_LINKS_OK')
+          PY
+      - name: Browser regression 390 768 1440
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright@1.56.1 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v64319-http.log 2>&1 &
+          server=$!
+          trap 'kill $server 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break; sleep 0.5; done
+          mkdir -p /tmp/v64319-screens
+          cat >/tmp/v64319-browser.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const routes=['/','/presencial/','/hibrido/','/online/','/contacto/','/en/','/en/in-person/','/en/hybrid/','/en/online/','/en/contact/'];
+          const widths=[390,768,1440];
+          const browser=await chromium.launch({headless:true});
+          for(const width of widths){
+            const context=await browser.newContext({viewport:{width,height:1000}});
+            for(const route of routes){
+              const page=await context.newPage();
+              const errors=[];
+              page.on('pageerror',e=>errors.push(String(e)));
+              const res=await page.goto('http://127.0.0.1:4173'+route,{waitUntil:'networkidle'});
+              if(!res || !res.ok()) throw new Error(`HTTP ${route} ${res?.status()}`);
+              const state=await page.evaluate(()=>{
+                const c=document.documentElement;
+                const a=document.querySelector('.hero-actions .btn-primary');
+                const r=a?.getBoundingClientRect();
+                return {overflow:c.scrollWidth-c.clientWidth,ctaW:r?.width||0,ctaH:r?.height||0,h1:(document.querySelector('h1')?.textContent||'').trim(),meta:(document.querySelector('.hero-meta')?.textContent||'').trim()};
+              });
+              if(state.overflow>2) throw new Error(`overflow ${route} ${width}: ${state.overflow}`);
+              if(state.ctaW<44 || state.ctaH<44) throw new Error(`CTA target ${route} ${width}: ${state.ctaW}x${state.ctaH}`);
+              if(!state.h1) throw new Error(`missing h1 ${route}`);
+              if(errors.length) throw new Error(`pageerror ${route}: ${errors.join(' | ')}`);
+              if(route==='/presencial/' && !state.meta.includes('Las Condes')) throw new Error('ES in-person certainty missing');
+              if(route==='/en/in-person/' && !state.meta.includes('Las Condes')) throw new Error('EN in-person certainty missing');
+              const slug=route==='/'?'home':route.replace(/^\/+|\/+$/g,'').replaceAll('/','-');
+              if(width===390 || width===1440) await page.screenshot({path:`/tmp/v64319-screens/${slug}-${width}.png`,fullPage:true});
+              await page.close();
+            }
+            await context.close();
+          }
+          await browser.close();
+          console.log('BROWSER_QA_OK');
+          JS
+          node /tmp/v64319-browser.mjs
+      - name: Commit certified candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'IBERFIT Release Bot'
+          git config user.email 'iberfit-release@users.noreply.github.com'
+          git add candidate/v628
+          git commit -m 'refactor(web): make service availability explicit in V6.43.19'
+          git push origin HEAD:work/web-v6-43-19-service-certainty
+          echo "CERTIFIED_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-v64319-service-certainty-evidence
+          path: |
+            /tmp/v64319-screens
+            /tmp/v64319-http.log
+          retention-days: 30
