@@ -58,8 +58,18 @@ jobs:
             ('en/personal-trainer-vitacura/index.html','Vitacura','en'),
             ('en/personal-training-providencia/index.html','Providencia','en'),
           ]
-          banned_es=['Cobertura local','según cobertura','sujeto a cobertura','si tienen cobertura','Primero confirmamos si','No damos por hecha la cobertura','cobertura local se confirma','Antes de confirmar se revisa','Cobertura real']
-          banned_en=['Local coverage','depending on coverage','subject to coverage','whether you cover my area','First we confirm whether','coverage is confirmed','Before confirming, we review','Real coverage']
+          banned_es=[
+            'Cobertura local','según cobertura','sujeto a cobertura','si tienen cobertura',
+            'Primero confirmamos si','No damos por hecha la cobertura','cobertura local se confirma',
+            'Antes de confirmar se revisa','Cobertura real','si la cobertura','si podemos acompañarte',
+            'comprobamos que podamos prestar','antes de recomendar presencial'
+          ]
+          banned_en=[
+            'Local coverage','depending on coverage','subject to coverage','subject to area',
+            'whether you cover my area','First we confirm whether','coverage is confirmed',
+            'Before confirming, we review','Real coverage','if coverage','whether we can support you',
+            'we first check that the service can be delivered','before recommending in-person'
+          ]
           wa_re=re.compile(r'https://wa\.me/56944040032\?text=([^"&]*)')
           for rel,loc,lang in pages:
               s=(root/rel).read_text()
@@ -76,9 +86,11 @@ jobs:
                   assert all('whether you cover my area' not in m.lower() for m in msgs)
                   assert any("i'd like to start" in m.lower() for m in msgs)
           lr=(root/'entrenador-personal-la-reina/index.html').read_text()
+          lren=(root/'en/personal-trainer-la-reina/index.html').read_text()
           assert 'IBERFIT ofrece entrenamiento personal en La Reina.' in lr
           assert 'Entrenamiento personal en La Reina, con una forma de trabajo clara desde el principio.' in lr
-          assert 'Primero confirmamos' not in lr
+          assert 'IBERFIT provides personal training in La Reina.' in lren
+          assert 'Personal training in La Reina, with a clear way to get started.' in lren
           print('Local confidence contracts passed for 14 pages')
           PY
           changed="$(git diff --name-only b9a6710dc1657be56f1e74587efe4c12e40aaf98 -- candidate/v628 | sort)"
