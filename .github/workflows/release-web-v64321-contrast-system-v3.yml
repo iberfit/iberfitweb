@@ -1,0 +1,68 @@
+name: Release WEB IBERFIT V6.43.21 contrast system v3
+
+on:
+  push:
+    branches: [work/web-v6-43-21-contrast-system]
+    paths: [.github/workflows/release-web-v64321-contrast-system-v3.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+
+      - name: Rebuild reproducibly from exact V6.43.20 baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=a9af3b52d67332f323f5e648613e609661f31639
+          git merge-base --is-ancestor "$BASE" HEAD
+          test "$(git show "$BASE":candidate/v628/VERSION | tr -d '\r\n ')" = '6.43.20'
+          mapfile -t base_html < <(git ls-tree -r --name-only "$BASE" candidate/v628 | grep -E '\.html$')
+          test "${#base_html[@]}" -eq 33
+          for f in "${base_html[@]}"; do git show "$BASE:$f" > "$f"; done
+          git show "$BASE:candidate/v628/VERSION" > candidate/v628/VERSION
+          git show "$BASE:candidate/v628/CHANGELOG.md" > candidate/v628/CHANGELOG.md
+          python3 .github/scripts/build_v64321_final.py
+
+      - name: Static contracts and semantic QA
+        run: python3 .github/scripts/qa_v64321_static.py
+
+      - name: Browser QA 390 768 1440 and visual evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright@1.56.1 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/http.log 2>&1 &
+          pid=$!; trap 'kill $pid 2>/dev/null || true' EXIT
+          ok=0
+          for i in $(seq 1 20); do if curl -fsS http://127.0.0.1:4173/ >/dev/null; then ok=1; break; fi; sleep .5; done
+          test "$ok" -eq 1
+          QA_OUT=/tmp/v64321-screens node .github/scripts/qa_v64321_browser.mjs
+
+      - name: Commit certified V6.43.21 product
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'IBERFIT Release Bot'
+          git config user.email 'iberfit-release@users.noreply.github.com'
+          git add candidate/v628
+          git diff --cached --quiet && { echo 'Expected certified product changes but found none'; exit 1; }
+          git commit -m 'fix(web): certify V6.43.21 contrast and hybrid semantics'
+          git push origin HEAD:work/web-v6-43-21-contrast-system
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-v64321-contrast-evidence-v3
+          path: /tmp/v64321-screens
+          if-no-files-found: warn
+          retention-days: 30
