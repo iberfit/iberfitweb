@@ -30,7 +30,7 @@ for text, rel in [(es, 'index.html'), (en, 'en/index.html')]:
     assert 'report-profile-v2' in text, rel
     assert 'bioimped' in low, rel
 
-assert 'no resume dimensiones diferentes en una sola cifra' in es.lower()
+assert 'sin resumir dimensiones distintas en una sola cifra' in es.lower()
 assert 'does not compress different dimensions into a synthetic global score' in en.lower()
 
 # Hybrid: proposition -> product proof, no repeated photo-story layer.
