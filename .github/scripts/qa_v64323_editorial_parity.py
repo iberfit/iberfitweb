@@ -17,19 +17,21 @@ assert 'Online · Desde cualquier lugar' in es
 assert 'A distancia desde cualquier lugar' not in es
 assert 'Online · From anywhere' in en
 
-# Product truth parity: IRI remains multidimensional in both languages.
+# Product truth parity: both current Homes expose the same new IRI report model
+# and explicitly reject a synthetic global score. Do not couple this contract to
+# translated dimension labels, which may legitimately differ linguistically.
 for text, rel in [(es, 'index.html'), (en, 'en/index.html')]:
     low = text.lower()
     assert '64 overall' not in low, rel
     assert 'overall index' not in low, rel
     assert 'overall score' not in low, rel
     assert 'report-status' in text, rel
-    for marker in ['physical', 'motor', 'functional', 'lifestyle', 'biological'] if rel.startswith('en/') else ['físic', 'motor', 'funcional', 'estilo', 'biológ']:
-        assert marker in low, (rel, marker)
+    assert 'report-preview-v2' in text, rel
+    assert 'report-profile-v2' in text, rel
+    assert 'bioimped' in low, rel
 
 assert 'no resume dimensiones diferentes en una sola cifra' in es.lower()
 assert 'does not compress different dimensions into a synthetic global score' in en.lower()
-assert 'bioimped' in es.lower() and 'bioimped' in en.lower()
 
 # Hybrid: proposition -> product proof, no repeated photo-story layer.
 for rel in ['hibrido/index.html', 'en/hybrid/index.html']:
