@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/release-web-v64324-local-opportunity.yml
       - .github/scripts/build_v64324_local_opportunity.py
+      - .github/scripts/patch_v64324_positive_scope_notes.py
       - .github/scripts/qa_v64324_local_opportunity.py
       - .github/scripts/qa_v64324_browser.mjs
       - .github/data/v64324-local-opportunity-sources.md
@@ -38,6 +39,7 @@ jobs:
           python3 .github/scripts/qa_v64323_editorial_parity.py
           node .github/scripts/qa_bilingual_architecture.cjs
           python3 .github/scripts/build_v64324_local_opportunity.py
+          python3 .github/scripts/patch_v64324_positive_scope_notes.py
 
       - name: Static local opportunity and bilingual contracts
         shell: bash
@@ -76,7 +78,6 @@ jobs:
             cat /tmp/outside
             exit 1
           fi
-          # Only the 14 local pages, VERSION and CHANGELOG may change in the product tree.
           python3 - <<'PY'
           import subprocess
           expected={
