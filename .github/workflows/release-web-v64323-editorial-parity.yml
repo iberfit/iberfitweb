@@ -3,7 +3,11 @@ name: Release WEB IBERFIT V6.43.23 editorial parity
 on:
   push:
     branches: [work/web-v6-43-23-editorial-parity]
-    paths: [.github/workflows/release-web-v64323-editorial-parity.yml]
+    paths:
+      - .github/workflows/release-web-v64323-editorial-parity.yml
+      - .github/scripts/build_v64323_editorial_parity.py
+      - .github/scripts/qa_v64323_editorial_parity.py
+      - .github/scripts/qa_v64323_browser.mjs
 
 permissions:
   contents: write
@@ -72,5 +76,3 @@ jobs:
             /tmp/v64321-regression/metrics.json
           if-no-files-found: warn
           retention-days: 30
-
-# retry 2: bind Spanish IRI assertion to exact certified wording
