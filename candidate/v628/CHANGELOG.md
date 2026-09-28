@@ -263,3 +263,10 @@
 - Capturas reales de la app online ganan escala útil en móvil.
 - Corregida la semántica de “otra opción puede ser mejor” en Online ES/EN.
 - Prevención de copy de incertidumbre en chips locales generados por JS.
+
+## 6.43.23 — Editorial parity & compression (2026-09-28)
+- Home ES/EN: nomenclatura Online normalizada sin cambiar la propuesta editorial.
+- Paridad IRI ES↔EN convertida en contrato de QA: sin índice sintético global en ninguno de los dos idiomas.
+- Híbrido ES/EN: eliminada una explicación redundante para pasar de proposición a evidencia real de app.
+- Presencial ES/EN: retirado el segundo recorrido Antes/Durante/Después; se conservan supervisión, entornos e inclusiones.
+- La Reina ES/EN: eliminada la cuadrícula 01–04 redundante; se conservan hero, tres decisiones operativas y respuestas directas.
