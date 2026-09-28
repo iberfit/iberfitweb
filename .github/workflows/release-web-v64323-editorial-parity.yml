@@ -72,3 +72,5 @@ jobs:
             /tmp/v64321-regression/metrics.json
           if-no-files-found: warn
           retention-days: 30
+
+# retry: parity contract follows product semantics rather than translated label stems
