@@ -73,4 +73,4 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-# retry: parity contract follows product semantics rather than translated label stems
+# retry 2: bind Spanish IRI assertion to exact certified wording
