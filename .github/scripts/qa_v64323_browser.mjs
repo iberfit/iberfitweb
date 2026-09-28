@@ -59,7 +59,11 @@ for(const width of [390,768,1440]){
       if(state.weekFlows!==0||state.photoStories<1||state.localStrips<1) throw Error(`INPERSON_STRUCTURE ${route} ${JSON.stringify(state)}`);
     }
     if(route.includes('la-reina')){
-      if(state.localStrips!==0||state.principles!==3||state.answers<2) throw Error(`LA_REINA_STRUCTURE ${route} ${JSON.stringify(state)}`);
+      if(state.localStrips!==0||state.principles!==3) throw Error(`LA_REINA_STRUCTURE ${route} ${JSON.stringify(state)}`);
+      const markers=route.startsWith('/en/')
+        ? ['Does IBERFIT offer personal training in La Reina?','Can I combine in-person and online training in La Reina?']
+        : ['¿IBERFIT ofrece entrenamiento personal en La Reina?','¿Puedo combinar presencial y online en La Reina?'];
+      for(const marker of markers) if(!state.text.includes(marker)) throw Error(`LA_REINA_ANSWER ${route} ${marker}`);
     }
 
     metrics.push({route,width,overflow:state.overflow,height:state.height,onlineLabel:state.onlineLabel,photoStories:state.photoStories,weekFlows:state.weekFlows,localStrips:state.localStrips,principles:state.principles,answers:state.answers,appPoints:state.appPoints,whatsapp:state.whatsapp});
