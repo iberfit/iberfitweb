@@ -82,25 +82,12 @@ for rel in ['presencial/index.html', 'en/in-person/index.html']:
     write(rel, text)
 
 # 4) La Reina: hero + one operational 3-decision block + direct answers.
-# The previous shared experience JS recreated the generic 01–04 strip when it
-# was absent. Version that behaviour and explicitly suppress the strip only on
-# La Reina so the editorial reduction survives runtime hydration.
-experience = read('assets/experience.v64322.js')
-old_guard = "if (meta && !heroText.querySelector('.local-service-strip')) {"
-new_guard = "if (meta && !heroText.querySelector('.local-service-strip') && document.body.dataset.localStrip !== 'off') {"
-assert experience.count(old_guard) == 1
-experience = experience.replace(old_guard, new_guard, 1)
-write('assets/experience.v64323.js', experience)
-
+# Remove the duplicated 01–04 local strip only; keep all real coverage answers.
 for rel in ['entrenador-personal-la-reina/index.html', 'en/personal-trainer-la-reina/index.html']:
     text = read(rel)
     wa_before = text.count('wa.me/56944040032')
     assert text.count('class="local-service-strip"') == 1, rel
-    assert text.count('/assets/experience.v64322.js') == 1, rel
     text = remove_div_by_class(text, 'local-service-strip', rel)
-    text = text.replace('<body class="" data-page="local">', '<body class="" data-page="local" data-local-strip="off">', 1) if rel.startswith('entrenador-') else text.replace('<body class="" data-page="local_en">', '<body class="" data-page="local_en" data-local-strip="off">', 1)
-    assert 'data-local-strip="off"' in text, rel
-    text = text.replace('/assets/experience.v64322.js', '/assets/experience.v64323.js', 1)
     text = update_modified(text)
     assert text.count('wa.me/56944040032') == wa_before
     write(rel, text)
@@ -108,7 +95,7 @@ for rel in ['entrenador-personal-la-reina/index.html', 'en/personal-trainer-la-r
 # Release note.
 changelog = ROOT / 'CHANGELOG.md'
 text = changelog.read_text(encoding='utf-8')
-entry = '''\n## 6.43.23 — Editorial parity & compression (2026-09-28)\n- Home ES/EN: nomenclatura Online normalizada sin cambiar la propuesta editorial.\n- Paridad IRI ES↔EN convertida en contrato de QA: sin índice sintético global en ninguno de los dos idiomas.\n- Híbrido ES/EN: eliminada una explicación redundante para pasar de proposición a evidencia real de app.\n- Presencial ES/EN: retirado el segundo recorrido Antes/Durante/Después; se conservan supervisión, entornos e inclusiones.\n- La Reina ES/EN: eliminada la cuadrícula 01–04 redundante y bloqueada su reinyección dinámica; se conservan hero, tres decisiones operativas y respuestas directas.\n'''
+entry = '''\n## 6.43.23 — Editorial parity & compression (2026-09-28)\n- Home ES/EN: nomenclatura Online normalizada sin cambiar la propuesta editorial.\n- Paridad IRI ES↔EN convertida en contrato de QA: sin índice sintético global en ninguno de los dos idiomas.\n- Híbrido ES/EN: eliminada una explicación redundante para pasar de proposición a evidencia real de app.\n- Presencial ES/EN: retirado el segundo recorrido Antes/Durante/Después; se conservan supervisión, entornos e inclusiones.\n- La Reina ES/EN: eliminada la cuadrícula 01–04 redundante; se conservan hero, tres decisiones operativas y respuestas directas.\n'''
 if '## 6.43.23 — Editorial parity & compression' not in text:
     text += entry
 changelog.write_text(text, encoding='utf-8')

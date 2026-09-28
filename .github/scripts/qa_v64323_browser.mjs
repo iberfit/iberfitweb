@@ -36,8 +36,7 @@ for(const width of [390,768,1440]){
         whatsapp:document.querySelectorAll('a[href*="wa.me/56944040032"]').length,
         skip:!!document.querySelector('.skip'),
         header:!!document.querySelector('.site-header'),
-        footer:!!document.querySelector('.site-footer'),
-        localStripOff:document.body.dataset.localStrip==='off'
+        footer:!!document.querySelector('.site-footer')
       };
     });
     if(errors.length) throw Error(`PAGEERROR ${route} ${width} ${errors.join(' | ')}`);
@@ -60,7 +59,7 @@ for(const width of [390,768,1440]){
       if(state.weekFlows!==0||state.photoStories<1||state.localStrips<1) throw Error(`INPERSON_STRUCTURE ${route} ${JSON.stringify(state)}`);
     }
     if(route.includes('la-reina')){
-      if(!state.localStripOff||state.localStrips!==0||state.principles!==3||state.answers<2) throw Error(`LA_REINA_STRUCTURE ${route} ${JSON.stringify(state)}`);
+      if(state.localStrips!==0||state.principles!==3||state.answers<2) throw Error(`LA_REINA_STRUCTURE ${route} ${JSON.stringify(state)}`);
     }
 
     metrics.push({route,width,overflow:state.overflow,height:state.height,onlineLabel:state.onlineLabel,photoStories:state.photoStories,weekFlows:state.weekFlows,localStrips:state.localStrips,principles:state.principles,answers:state.answers,appPoints:state.appPoints,whatsapp:state.whatsapp});
