@@ -29,7 +29,7 @@ for(const width of [390,768,1440]){
         principles:document.querySelectorAll('.principle-row').length,
         answers:document.querySelectorAll('.answer-item').length,
         appHybrid:!!document.querySelector('img[src*="app-hybrid-feedback.webp"]'),
-        appPoints:document.querySelectorAll('.app-story-point').length,
+        appPoints:document.querySelectorAll('.app-story-points > article').length,
         reportStatus:document.querySelectorAll('.report-status').length,
         whatsapp:document.querySelectorAll('a[href*="wa.me/56944040032"]').length,
         skip:!!document.querySelector('.skip'),
@@ -49,7 +49,9 @@ for(const width of [390,768,1440]){
       if(route==='/en/'&&!state.text.includes('Online · From anywhere')) throw Error('HOME_ONLINE_EN');
     }
     if(route==='/hibrido/'||route==='/en/hybrid/'){
-      if(state.photoStories!==0||!state.appHybrid||state.appPoints<3) throw Error(`HYBRID_PROOF ${route} ${JSON.stringify(state)}`);
+      if(state.photoStories!==0||!state.appHybrid||state.appPoints!==3) throw Error(`HYBRID_PROOF ${route} ${JSON.stringify(state)}`);
+      const markers=route==='/hibrido/'?['Supervisión directa','Trabajo guiado','Feedback y ajuste']:['Direct supervision','Guided work','Feedback and adjustment'];
+      for(const marker of markers) if(!state.text.includes(marker)) throw Error(`HYBRID_MARKER ${route} ${marker}`);
     }
     if(route==='/presencial/'||route==='/en/in-person/'){
       if(state.weekFlows!==0||state.photoStories<1||state.localStrips<1) throw Error(`INPERSON_STRUCTURE ${route} ${JSON.stringify(state)}`);

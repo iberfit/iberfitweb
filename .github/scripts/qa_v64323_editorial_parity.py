@@ -32,13 +32,20 @@ for text, rel in [(es, 'index.html'), (en, 'en/index.html')]:
 assert 'sin resumir dimensiones distintas en una sola cifra' in es.lower()
 assert 'keeping distinct dimensions separate' in en.lower()
 
-# Hybrid: proposition -> product proof, no repeated photo-story layer.
-for rel in ['hibrido/index.html', 'en/hybrid/index.html']:
+# Hybrid: proposition -> product proof. Bind the contract to the actual evidence
+# container and its three semantic steps, not to an invented per-item class.
+hybrid_contracts = {
+    'hibrido/index.html': ['Supervisión directa', 'Trabajo guiado', 'Feedback y ajuste'],
+    'en/hybrid/index.html': ['Direct supervision', 'Guided work', 'Feedback and adjustment'],
+}
+for rel, markers in hybrid_contracts.items():
     text = page(rel)
     assert 'class="section photo-story-section"' not in text, rel
     assert 'app-hybrid-feedback.webp' in text, rel
-    assert text.count('class="app-story-point"') >= 3, rel
+    assert 'class="app-story-points"' in text, rel
     assert 'hybrid-continuity-section' in text, rel
+    for marker in markers:
+        assert marker in text, (rel, marker)
 
 # In-person: retain concrete service evidence; remove duplicate Before/During/After journey.
 for rel in ['presencial/index.html', 'en/in-person/index.html']:
