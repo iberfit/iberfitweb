@@ -47,7 +47,7 @@ for(const width of [390,768,1440]){
         h1:document.querySelector('h1')?.textContent?.trim()||'',
         context:document.querySelector('.local-context-note')?.textContent?.trim()||'',
         principles:document.querySelectorAll('.principle-row').length,
-        answers:document.querySelectorAll('.answer-item').length,
+        answers:document.querySelectorAll('.answer-item,.answer-disclosure-v6437').length,
         strips:document.querySelectorAll('.local-service-strip').length,
         whatsapp:document.querySelectorAll('a[href*="wa.me/56944040032"]').length,
         skip:!!document.querySelector('.skip'),
@@ -77,7 +77,6 @@ for(const width of [390,768,1440]){
     const expectedBadge=route.startsWith('/en/')?'Training available':'Entrenamiento disponible';
     if(state.serviceBadge!==expectedBadge) throw Error(`SERVICE_CERTAINTY ${route} ${width} ${state.serviceBadge}`);
 
-    // Lo Barnechea outdoor context is only valid when explicitly conditional.
     if(route==='/entrenador-personal-lo-barnechea/'&&!state.text.includes('Si la montaña, la bicicleta, el trekking o el movimiento exterior ya están en tu vida')) throw Error('LO_BARNECHEA_CONDITIONAL_ES');
     if(route==='/en/personal-trainer-lo-barnechea/'&&!state.text.includes('If mountains, cycling, hiking or outdoor movement are already part of your life')) throw Error('LO_BARNECHEA_CONDITIONAL_EN');
 
