@@ -270,3 +270,14 @@
 - Híbrido ES/EN: eliminada una explicación redundante para pasar de proposición a evidencia real de app.
 - Presencial ES/EN: retirado el segundo recorrido Antes/Durante/Después; se conservan supervisión, entornos e inclusiones.
 - La Reina ES/EN: eliminada la cuadrícula 01–04 redundante; se conservan hero, tres decisiones operativas y respuestas directas.
+
+## 6.43.24 — Local opportunity layer (2026-09-28)
+- Rebuilt all seven local landing-page pairs (ES/EN) around verified local opportunities rather than deficits or logistical friction.
+- Peñalolén: neighbourhood life, parks, sport spaces and foothill context become optional planning assets.
+- La Reina: residential/green scale and foothill context become ways to keep training close to real life.
+- Las Condes: parks, sport infrastructure and mobility variety become a broader set of training options.
+- Vitacura: green residential setting, walking and cycling become useful total-activity context.
+- Providencia: human-scale walking/cycling and everyday movement are explicitly recognised inside planning.
+- Ñuñoa: neighbourhood life, plazas and parks support a closer, more recognisable training experience.
+- Lo Barnechea: mountain/outdoor activity is conditionally integrated when it is already part of the client’s life.
+- Service availability stays affirmative; WhatsApp URLs, canonical/hreflang architecture and IBERFIT modality truth are preserved.
