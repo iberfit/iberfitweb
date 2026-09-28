@@ -19,10 +19,12 @@ for(const width of [390,768,1440]){
     if(!response?.ok()) throw Error(`HTTP ${route} ${response?.status()}`);
     const state=await page.evaluate(()=>{
       const d=document.documentElement;
+      const onlineLabel=document.querySelector('.modality-list .modality-row:last-child > div > span')?.textContent?.trim()||'';
       return {
         overflow:d.scrollWidth-d.clientWidth,
         height:document.body.scrollHeight,
-        text:document.body.innerText,
+        text:document.body.textContent||'',
+        onlineLabel,
         photoStories:document.querySelectorAll('.photo-story-section').length,
         weekFlows:document.querySelectorAll('.week-flow').length,
         localStrips:document.querySelectorAll('.local-service-strip').length,
@@ -34,7 +36,8 @@ for(const width of [390,768,1440]){
         whatsapp:document.querySelectorAll('a[href*="wa.me/56944040032"]').length,
         skip:!!document.querySelector('.skip'),
         header:!!document.querySelector('.site-header'),
-        footer:!!document.querySelector('.site-footer')
+        footer:!!document.querySelector('.site-footer'),
+        localStripOff:document.body.dataset.localStrip==='off'
       };
     });
     if(errors.length) throw Error(`PAGEERROR ${route} ${width} ${errors.join(' | ')}`);
@@ -45,8 +48,8 @@ for(const width of [390,768,1440]){
       if(state.reportStatus<1) throw Error(`IRI_REPORT ${route}`);
       const low=state.text.toLowerCase();
       if(low.includes('64 overall')||low.includes('overall index')||low.includes('overall score')) throw Error(`IRI_OLD_SCORE ${route}`);
-      if(route==='/'&&!state.text.includes('Online · Desde cualquier lugar')) throw Error('HOME_ONLINE_ES');
-      if(route==='/en/'&&!state.text.includes('Online · From anywhere')) throw Error('HOME_ONLINE_EN');
+      if(route==='/'&&state.onlineLabel!=='Online · Desde cualquier lugar') throw Error(`HOME_ONLINE_ES ${state.onlineLabel}`);
+      if(route==='/en/'&&state.onlineLabel!=='Online · From anywhere') throw Error(`HOME_ONLINE_EN ${state.onlineLabel}`);
     }
     if(route==='/hibrido/'||route==='/en/hybrid/'){
       if(state.photoStories!==0||!state.appHybrid||state.appPoints!==3) throw Error(`HYBRID_PROOF ${route} ${JSON.stringify(state)}`);
@@ -57,10 +60,10 @@ for(const width of [390,768,1440]){
       if(state.weekFlows!==0||state.photoStories<1||state.localStrips<1) throw Error(`INPERSON_STRUCTURE ${route} ${JSON.stringify(state)}`);
     }
     if(route.includes('la-reina')){
-      if(state.localStrips!==0||state.principles!==3||state.answers<2) throw Error(`LA_REINA_STRUCTURE ${route} ${JSON.stringify(state)}`);
+      if(!state.localStripOff||state.localStrips!==0||state.principles!==3||state.answers<2) throw Error(`LA_REINA_STRUCTURE ${route} ${JSON.stringify(state)}`);
     }
 
-    metrics.push({route,width,overflow:state.overflow,height:state.height,photoStories:state.photoStories,weekFlows:state.weekFlows,localStrips:state.localStrips,principles:state.principles,answers:state.answers,appPoints:state.appPoints,whatsapp:state.whatsapp});
+    metrics.push({route,width,overflow:state.overflow,height:state.height,onlineLabel:state.onlineLabel,photoStories:state.photoStories,weekFlows:state.weekFlows,localStrips:state.localStrips,principles:state.principles,answers:state.answers,appPoints:state.appPoints,whatsapp:state.whatsapp});
     if((width===390||width===1440)&&['/','/en/','/hibrido/','/presencial/','/entrenador-personal-la-reina/'].includes(route)){
       const slug=route==='/'?'home-es':route==='/en/'?'home-en':route.split('/').filter(Boolean).pop();
       await page.screenshot({path:`${out}/${slug}-${width}.png`,fullPage:true});

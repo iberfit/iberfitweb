@@ -32,8 +32,7 @@ for text, rel in [(es, 'index.html'), (en, 'en/index.html')]:
 assert 'sin resumir dimensiones distintas en una sola cifra' in es.lower()
 assert 'keeping distinct dimensions separate' in en.lower()
 
-# Hybrid: proposition -> product proof. Bind the contract to the actual evidence
-# container and its three semantic steps, not to an invented per-item class.
+# Hybrid: proposition -> product proof. Bind to the real evidence structure and semantics.
 hybrid_contracts = {
     'hibrido/index.html': ['Supervisión directa', 'Trabajo guiado', 'Feedback y ajuste'],
     'en/hybrid/index.html': ['Direct supervision', 'Guided work', 'Feedback and adjustment'],
@@ -55,10 +54,16 @@ for rel in ['presencial/index.html', 'en/in-person/index.html']:
     assert 'deliverable-grid' in text, rel
     assert 'local-service-strip' in text, rel
 
-# La Reina: one operational layer plus direct answers, not two parameterized grids.
+# La Reina: one operational layer plus direct answers. Runtime reinjection must be disabled.
+assert (ROOT / 'assets/experience.v64323.js').is_file()
+experience = (ROOT / 'assets/experience.v64323.js').read_text(encoding='utf-8')
+assert "document.body.dataset.localStrip !== 'off'" in experience
 for rel in ['entrenador-personal-la-reina/index.html', 'en/personal-trainer-la-reina/index.html']:
     text = page(rel)
     assert 'class="local-service-strip"' not in text, rel
+    assert 'data-local-strip="off"' in text, rel
+    assert '/assets/experience.v64323.js' in text, rel
+    assert '/assets/experience.v64322.js' not in text, rel
     assert text.count('class="principle-row reveal"') == 3, rel
     assert text.count('class="answer-item"') >= 2, rel
     assert 'La Reina' in text, rel
