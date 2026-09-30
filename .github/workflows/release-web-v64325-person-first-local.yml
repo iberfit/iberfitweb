@@ -1,0 +1,122 @@
+name: Release WEB IBERFIT V6.43.25 person-first local
+
+on:
+  push:
+    branches: [work/web-v6-43-25-person-first-local]
+    paths:
+      - .github/workflows/release-web-v64325-person-first-local.yml
+      - .github/scripts/build_v64325_person_first_local.py
+      - .github/scripts/qa_v64325_person_first_local.py
+      - .github/scripts/qa_v64325_browser.mjs
+      - .github/data/v64325-local-editorial-rule.md
+
+permissions:
+  contents: write
+
+concurrency:
+  group: web-v64325-person-first-local
+  cancel-in-progress: false
+
+env:
+  BASE_SHA: '668c2678dd63a048878abb623699381d70c0763e'
+  VERSION: '6.43.25'
+
+jobs:
+  certify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+
+      - name: Rebuild from exact V6.43.24 production checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$BASE_SHA" HEAD
+          test "$(git show "$BASE_SHA":candidate/v628/VERSION | tr -d '\r\n ')" = '6.43.24'
+          git restore --source="$BASE_SHA" --staged --worktree candidate/v628
+          python3 .github/scripts/qa_v64323_editorial_parity.py
+          node .github/scripts/qa_bilingual_architecture.cjs
+          python3 .github/scripts/build_v64325_person_first_local.py
+
+      - name: Static person-first and bilingual contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/qa_v64325_person_first_local.py
+          node .github/scripts/qa_bilingual_architecture.cjs
+          test "$(find candidate/v628 -type f -name '*.html' | wc -l | tr -d ' ')" = '33'
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = "$VERSION"
+          git diff --check
+
+      - name: Browser regression and V6.43.25 local QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright@1.56.1 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/http.log 2>&1 &
+          pid=$!; trap 'kill $pid 2>/dev/null || true' EXIT
+          ok=0
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then ok=1; break; fi
+            sleep .5
+          done
+          test "$ok" -eq 1
+          QA_OUT=/tmp/v64321-regression node .github/scripts/qa_v64321_browser.mjs
+          QA_OUT=/tmp/v64322-regression node .github/scripts/qa_v64322_browser.mjs
+          QA_OUT=/tmp/v64323-regression node .github/scripts/qa_v64323_browser.mjs
+          QA_OUT=/tmp/v64325-screens node .github/scripts/qa_v64325_browser.mjs
+
+      - name: Verify exact product scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed="$(git diff --name-only | sort)"
+          printf '%s\n' "$changed"
+          test -n "$changed"
+          if printf '%s\n' "$changed" | grep -Ev '^candidate/v628/' >/tmp/outside; then
+            echo 'Unexpected non-product changes during build:'
+            cat /tmp/outside
+            exit 1
+          fi
+          python3 - <<'PY'
+          import subprocess
+          expected={
+            'candidate/v628/VERSION','candidate/v628/CHANGELOG.md',
+            'candidate/v628/entrenador-personal-la-reina/index.html','candidate/v628/en/personal-trainer-la-reina/index.html',
+            'candidate/v628/personal-trainer-nunoa/index.html','candidate/v628/en/personal-trainer-nunoa/index.html',
+            'candidate/v628/entrenador-personal-penalolen/index.html','candidate/v628/en/personal-trainer-penalolen/index.html',
+          }
+          actual=set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())
+          assert actual==expected, {'missing':sorted(expected-actual),'extra':sorted(actual-expected)}
+          print('SCOPE_V64325_OK',len(actual))
+          PY
+
+      - name: Commit certified V6.43.25 product
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'IBERFIT Release Bot'
+          git config user.email 'iberfit-release@users.noreply.github.com'
+          git add candidate/v628
+          git diff --cached --quiet && { echo 'Expected certified product changes but found none'; exit 1; }
+          git commit -m 'feat(web): certify V6.43.25 person-first local experience'
+          git push origin HEAD:work/web-v6-43-25-person-first-local
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-v64325-person-first-local-evidence
+          path: |
+            /tmp/v64325-screens
+            /tmp/v64323-regression/metrics.json
+            /tmp/v64322-regression/metrics.json
+            /tmp/v64321-regression/metrics.json
+            /tmp/http.log
+          if-no-files-found: warn
+          retention-days: 30
