@@ -1,3 +1,11 @@
+## 6.43.25 — Person-first local editorial rule
+
+- Corrects the systemic local-page pattern that inferred lifestyle or preferred activity from the commune.
+- La Reina, Ñuñoa and Peñalolén now use the commune to state service coverage while sector, space, schedule, frequency, goals and the person’s real activity drive training decisions.
+- Real walking, running, cycling, sport or outdoor activity can still inform planning when the client actually does it; it is never inferred from address alone.
+- Spanish and English are updated as structural pairs, while contextual WhatsApp intent, canonical/hreflang architecture, direct service answers and modality truth are preserved.
+- Adds explicit regression guards so neighbourhood/territorial storytelling cannot silently return to these pages.
+
 ## 6.43.21 — Contrast & visual hierarchy
 
 - Strengthens secondary text contrast on cream/light surfaces.
