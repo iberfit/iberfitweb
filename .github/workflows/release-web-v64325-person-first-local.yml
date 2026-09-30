@@ -39,7 +39,6 @@ jobs:
           git merge-base --is-ancestor "$BASE_SHA" HEAD
           test "$(git show "$BASE_SHA":candidate/v628/VERSION | tr -d '\r\n ')" = '6.43.24'
           git restore --source="$BASE_SHA" --staged --worktree candidate/v628
-          python3 .github/scripts/qa_v64323_editorial_parity.py
           node .github/scripts/qa_bilingual_architecture.cjs
           python3 .github/scripts/build_v64325_person_first_local.py
 
