@@ -1,3 +1,10 @@
+## 6.43.26 — Local editorial policy
+
+- Applies the person-first local editorial rule to all seven commune landing pages.
+- Removes territorial lifestyle storytelling from Las Condes, Vitacura, Providencia and Lo Barnechea in ES/EN.
+- Preserves local coverage, canonical/hreflang, direct answers, WhatsApp context and operational service variables.
+- Adds a global QA contract so commune → assumed lifestyle copy cannot return.
+
 ## 6.43.25 — Person-first local editorial rule
 
 - Corrects the systemic local-page pattern that inferred lifestyle or preferred activity from the commune.
