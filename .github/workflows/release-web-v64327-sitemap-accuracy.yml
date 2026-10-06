@@ -1,0 +1,127 @@
+name: Release WEB IBERFIT V6.43.27 accurate sitemap lastmod
+
+on:
+  push:
+    branches: [work/web-v6-43-27-sitemap-accuracy]
+    paths:
+      - '.github/workflows/release-web-v64327-sitemap-accuracy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: web-v64327-sitemap-accuracy
+  cancel-in-progress: false
+
+env:
+  BASE_SHA: '04c414f0faacb7466576f6a105aa82d042445d3c'
+  VERSION: '6.43.27'
+
+jobs:
+  certify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+
+      - name: Restore immutable certified V6.43.26 baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$BASE_SHA" HEAD
+          test "$(git show "$BASE_SHA":candidate/v628/VERSION | tr -d '\r\n ')" = '6.43.26'
+          git restore --source="$BASE_SHA" --staged --worktree candidate/v628
+          node .github/scripts/qa_bilingual_architecture.cjs
+          test "$(find candidate/v628 -type f -name '*.html' | wc -l | tr -d ' ')" = '33'
+
+      - name: Regenerate only sitemap dates using per-page Git history
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/sitemap_lastmod.py
+          python3 .github/scripts/sitemap_lastmod.py --check
+          printf '%s\n' "$VERSION" > candidate/v628/VERSION
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('candidate/v628/CHANGELOG.md')
+          previous=p.read_text()
+          marker='## 6.43.27 — Sitemap lastmod integrity'
+          if marker in previous:
+              raise SystemExit('Duplicate changelog entry')
+          insert=(
+              marker+'\n\n'
+              '- Rebuilds lastmod from each page’s last actual HTML change in Git history.\n'
+              '- Preserves every existing URL, priority, frequency and page content.\n'
+              '- Adds validation preventing future sitemap/HTML date divergence.\n\n'
+          )
+          p.write_text(insert+previous)
+          PY
+
+      - name: Verify strict metadata scope and historic dates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/qa_v64327_sitemap_contract.py
+          python3 .github/scripts/sitemap_lastmod.py --check
+          node .github/scripts/qa_bilingual_architecture.cjs
+          git diff --check
+          test "$(find candidate/v628 -type f -name '*.html' | wc -l | tr -d ' ')" = '33'
+          # No HTML/CSS/JS, tracking, navigation, or editorial copy changes.
+          ! git diff --name-only "$BASE_SHA" -- candidate/v628 | grep -Ev '^candidate/v628/(sitemap\.xml|VERSION|CHANGELOG\.md)$'
+
+      - name: Verify 33 static pages and mobile/tablet/desktop editorial regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright@1.56.1 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/v64327-http.log 2>&1 &
+          pid=$!; trap 'kill $pid 2>/dev/null || true' EXIT
+          ready=0
+          for i in $(seq 1 25); do
+            curl -fsS http://127.0.0.1:4173/VERSION >/dev/null && { ready=1; break; }
+            sleep .5
+          done
+          test "$ready" = 1
+          python3 - <<'PY'
+          from pathlib import Path
+          from urllib.request import urlopen
+          r=Path('candidate/v628')
+          pages=sorted(r.rglob('*.html'))
+          assert len(pages)==33
+          for page in pages:
+              route=page.relative_to(r).as_posix()
+              route='/' if route=='index.html' else ('/'+route if route=='404.html' else '/'+route.removesuffix('index.html'))
+              with urlopen('http://127.0.0.1:4173'+route,timeout=8) as response:
+                  assert response.status==200,route
+          print('LOCAL_33_ROUTES_OK')
+          PY
+          QA_OUT=/tmp/v64327-local node .github/scripts/qa_v64326_browser.mjs
+
+      - name: Commit only certified sitemap product files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'IBERFIT Release Bot'
+          git config user.email 'iberfit-release@users.noreply.github.com'
+          git add candidate/v628/sitemap.xml candidate/v628/VERSION candidate/v628/CHANGELOG.md
+          git diff --cached --quiet && { echo 'No sitemap improvement generated'; exit 1; }
+          test "$(git diff --cached --name-only | wc -l | tr -d ' ')" = '3'
+          git commit -m 'fix(seo): certify V6.43.27 per-page sitemap lastmod'
+          python3 .github/scripts/sitemap_lastmod.py --check
+          git push origin HEAD:work/web-v6-43-27-sitemap-accuracy
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-v64327-sitemap-evidence
+          path: |
+            /tmp/v64327-local/metrics.json
+            /tmp/v64327-http.log
+          if-no-files-found: warn
+          retention-days: 30
