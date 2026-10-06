@@ -1,3 +1,9 @@
+## 6.43.27 — Sitemap lastmod integrity
+
+- Rebuilds lastmod from each page’s last actual HTML change in Git history.
+- Preserves every existing URL, priority, frequency and page content.
+- Adds validation preventing future sitemap/HTML date divergence.
+
 ## 6.43.26 — Local editorial policy
 
 - Applies the person-first local editorial rule to all seven commune landing pages.
