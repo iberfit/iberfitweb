@@ -27,7 +27,11 @@ jobs:
       - name: Verify all lastmod dates against page commits
         run: |
           set -euo pipefail
-          python3 -m py_compile .github/scripts/sitemap_lastmod.py
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          ast.parse(Path('.github/scripts/sitemap_lastmod.py').read_text())
+          PY
           python3 .github/scripts/sitemap_lastmod.py --check
 
       - name: Prove stale lastmod is detected and repair is deterministic
