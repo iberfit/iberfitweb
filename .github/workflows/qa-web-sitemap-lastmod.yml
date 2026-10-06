@@ -1,0 +1,71 @@
+name: WEB IBERFIT sitemap lastmod integrity
+
+on:
+  push:
+    branches:
+      - work/web-v6-43-27-sitemap-lastmod
+  pull_request:
+    paths:
+      - candidate/v628/sitemap.xml
+      - candidate/v628/**/*.html
+      - .github/scripts/sitemap_lastmod.py
+      - .github/workflows/qa-web-sitemap-lastmod.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sitemap-truth:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify all lastmod dates against page commits
+        run: |
+          set -euo pipefail
+          python3 -m py_compile .github/scripts/sitemap_lastmod.py
+          python3 .github/scripts/sitemap_lastmod.py --check
+
+      - name: Prove stale lastmod is detected and repair is deterministic
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          import xml.etree.ElementTree as ET
+
+          sitemap = Path('candidate/v628/sitemap.xml')
+          original = sitemap.read_text(encoding='utf-8')
+          root = ET.fromstring(original)
+          ns = '{http://www.sitemaps.org/schemas/sitemap/0.9}'
+          assert len(root.findall(f'{ns}url')) == 32
+          assert '<lastmod>2026-09-28</lastmod>' in original
+          sitemap.write_text(
+              original.replace('<lastmod>2026-09-28</lastmod>',
+                               '<lastmod>2026-09-19</lastmod>', 1),
+              encoding='utf-8',
+          )
+          attempt = subprocess.run([
+              'python3', '.github/scripts/sitemap_lastmod.py', '--check'
+          ], capture_output=True, text=True)
+          assert attempt.returncode == 1, attempt.stdout + attempt.stderr
+          subprocess.run([
+              'python3', '.github/scripts/sitemap_lastmod.py', '--write'
+          ], check=True)
+          assert sitemap.read_text(encoding='utf-8') == original
+          PY
+
+      - name: Confirm narrow product scope
+        run: |
+          set -euo pipefail
+          git diff --check
+          if git diff --name-only 04c414f0faacb7466576f6a105aa82d042445d3c HEAD -- candidate/v628 \
+             | grep -v '^candidate/v628/sitemap.xml$'; then
+            echo 'Unexpected product-content change'
+            exit 1
+          fi
+          test -z "$(git status --porcelain)"
