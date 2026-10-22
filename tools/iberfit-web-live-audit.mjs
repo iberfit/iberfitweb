@@ -61,10 +61,25 @@ async function auditOne(path) {
     const canonical = canonicalLinks[0]?.href ?? null;
     if (canonicalLinks.length !== 1) failures.push(`${path}: expected exactly one canonical; got ${canonicalLinks.length}`);
     if (canonical !== new URL(path, canonicalOrigin).href) failures.push(`${path}: canonical ${canonical || 'missing'} does not match expected`);
-    const alternateCount = [...body.matchAll(/<link\b[^>]*\bhreflang\s*=/gi)].length;
-    if (!alternateCount) warnings.push(`${path}: no hreflang alternatives detected (review ES/EN pair)`);
+    const alternateLinks = [...body.matchAll(/<link\b[^>]*>/gi)]
+      .map(m => attributes(m[0]))
+      .filter(a => (a.rel || '').toLowerCase().split(/\s+/).includes('alternate') && a.hreflang);
+    const alternates = Object.fromEntries(alternateLinks.map(a => [a.hreflang.toLowerCase(), a.href]));
+    const pairIndex = expected.indexOf(path) % ES.length;
+    const esHref = new URL(ES[pairIndex], canonicalOrigin).href;
+    const enHref = new URL(EN[pairIndex], canonicalOrigin).href;
+    const foundEs = alternates['es-cl'] || alternates.es;
+    const foundEn = alternates.en;
+    if (foundEs !== esHref) failures.push(`${path}: hreflang es-CL points to ${foundEs || 'missing'} instead of ${esHref}`);
+    if (foundEn !== enHref) failures.push(`${path}: hreflang en points to ${foundEn || 'missing'} instead of ${enHref}`);
+    if (alternates['x-default'] && ![esHref, enHref].includes(alternates['x-default']))
+      warnings.push(`${path}: x-default points outside corresponding translation pair`);
+    const title = body.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1].replace(/\s+/g, ' ').trim() || '';
+    if (!title) failures.push(`${path}: missing title`);
+    const description = metaTags.find(a => a.name?.toLowerCase() === 'description')?.content || '';
+    if (!description) warnings.push(`${path}: missing meta description`);
     if (!/<h1\b/i.test(body)) failures.push(`${path}: missing H1`);
-    return { path, status, lang, canonical, alternateCount };
+    return { path, status, lang, canonical, alternateCount: alternateLinks.length, title, descriptionLength: description.length, esHref: foundEs, enHref: foundEn };
   } catch (error) {
     failures.push(`${path}: request failed (${error.name || 'Error'}: ${error.message})`);
     return { path, error: String(error.message) };
