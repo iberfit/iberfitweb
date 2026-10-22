@@ -1,0 +1,48 @@
+name: IBERFIT WEB | Public-site 32-route audit (read-only)
+
+on:
+  pull_request:
+    paths:
+      - "tools/iberfit-web-live-audit.mjs"
+      - "docs/PRODUCTION_SOURCE_OF_TRUTH_GUARDRAILS_20261022.md"
+      - ".github/workflows/web-production-readonly-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-audit-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  public-site-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout audit code only (never deploy)
+        uses: actions/checkout@v4
+      - name: Node runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Audit live IBERFIT commercial site
+        id: audit
+        continue-on-error: true
+        shell: bash
+        run: |
+          node tools/iberfit-web-live-audit.mjs --base=https://iberfit.cl --timeout=15000 > iberfit-web-live-audit.json
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+      - name: Upload JSON audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iberfit-web-readonly-audit-${{ github.run_id }}
+          path: iberfit-web-live-audit.json
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Fail when actual audited routes regress
+        if: steps.audit.outcome != 'success'
+        run: |
+          echo "Read-only production route audit reported errors. Download audit artifact to distinguish HTTP/SEO failures from network blocks."
+          exit 1
