@@ -72,14 +72,15 @@ async function auditOne(path) {
     const foundEn = alternates.en;
     if (foundEs !== esHref) failures.push(`${path}: hreflang es-CL points to ${foundEs || 'missing'} instead of ${esHref}`);
     if (foundEn !== enHref) failures.push(`${path}: hreflang en points to ${foundEn || 'missing'} instead of ${enHref}`);
-    if (alternates['x-default'] && ![esHref, enHref].includes(alternates['x-default']))
-      warnings.push(`${path}: x-default points outside corresponding translation pair`);
+    const xDefault = alternates['x-default'] || null;
+    if (xDefault && !expected.some(route => new URL(route, canonicalOrigin).href === xDefault))
+      warnings.push(`${path}: x-default does not point to a known public route (${xDefault})`);
     const title = body.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1].replace(/\s+/g, ' ').trim() || '';
     if (!title) failures.push(`${path}: missing title`);
     const description = metaTags.find(a => a.name?.toLowerCase() === 'description')?.content || '';
     if (!description) warnings.push(`${path}: missing meta description`);
     if (!/<h1\b/i.test(body)) failures.push(`${path}: missing H1`);
-    return { path, status, lang, canonical, alternateCount: alternateLinks.length, title, descriptionLength: description.length, esHref: foundEs, enHref: foundEn };
+    return { path, status, lang, canonical, alternateCount: alternateLinks.length, title, descriptionLength: description.length, esHref: foundEs, enHref: foundEn, xDefault };
   } catch (error) {
     failures.push(`${path}: request failed (${error.name || 'Error'}: ${error.message})`);
     return { path, error: String(error.message) };
