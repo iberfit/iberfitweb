@@ -1,0 +1,32 @@
+name: IBERFIT WEB | Content and links observational audit
+
+on:
+  pull_request:
+    paths:
+      - "tools/iberfit-content-opportunity-audit.cjs"
+      - ".github/workflows/web-content-observational-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality-observations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Inspect public website without writes
+        shell: bash
+        run: node tools/iberfit-content-opportunity-audit.cjs > iberfit-content-opportunities.json
+      - name: Save observations for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iberfit-content-observations
+          path: iberfit-content-opportunities.json
+          retention-days: 14
+          if-no-files-found: error
