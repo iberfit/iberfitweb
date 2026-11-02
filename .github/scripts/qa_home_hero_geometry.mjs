@@ -109,6 +109,8 @@ try{
       if(m.media.width<v.width*.32) failures.push("PHOTO_TOO_NARROW");
     }else{
       if(m.media.top<m.text.bottom-1) failures.push("STACK_OVERLAP");
+      const stackGap=m.media.top-m.text.bottom;
+      if(stackGap>32) failures.push("STACK_GAP_TOO_LARGE:"+stackGap.toFixed(1));
       const gutter=v.width<=420?16:24;
       if(m.h1.left<gutter-1) failures.push("CONTENT_GUTTER_LEFT:"+m.h1.left.toFixed(1));
       if(m.actions.left<gutter-1) failures.push("CTA_GUTTER_LEFT:"+m.actions.left.toFixed(1));
