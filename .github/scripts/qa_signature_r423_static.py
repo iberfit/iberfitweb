@@ -54,6 +54,9 @@ for rel in PAGES:
     if rel.endswith("v628/index.html"):
         checks["home_hero_product"]='class="editorial-hero-media signature-product-proof"' in cur and 'src="/assets/app-online-progress.webp"' in cur
         checks["home_old_hero_removed"]='Escena ilustrativa · Entrenamiento presencial</figcaption>' not in cur
+        checks["home_human_media_removed"]='photo-initial-eval-1448.webp' not in cur and 'photo-trainer-session-1448.webp' not in cur
+    if rel.endswith("diagnostico-iri/index.html"):
+        checks["iri_human_media_removed"]='photo-initial-eval-1448.webp' not in cur
     failed=[k for k,v in checks.items() if not v]
     if failed: raise AssertionError(f"{rel} FAILED {failed}")
     results.append({"page":rel,"checks":checks,"sha256":hashlib.sha256(cur.encode()).hexdigest()})
