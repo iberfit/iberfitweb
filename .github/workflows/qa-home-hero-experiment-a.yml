@@ -1,0 +1,75 @@
+name: IBERFIT Home · Header Hero Experiment A
+
+on:
+  push:
+    branches:
+      - design/web-zero-cost-master-20261102
+    paths:
+      - '.github/workflows/qa-home-hero-experiment-a.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify visual-only scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='424700ae15c6138c8a07f15f82f5b34d62c51a9f'
+          python3 - <<'PY'
+          import subprocess
+          p='candidate/v628/index.html'
+          base=subprocess.check_output(['git','show','424700ae15c6138c8a07f15f82f5b34d62c51a9f:'+p],text=True)
+          head=open(p).read()
+          link='<link href="/assets/hero-experiment-a.css" rel="stylesheet"/>'
+          assert head.count(link)==1
+          assert head.replace(link,'')==base
+          print('EXPERIMENT_A_HTML_TRUTH_LOCK_OK')
+          PY
+          test -s candidate/v628/assets/hero-experiment-a.css
+      - name: Prepare exact baseline and servers
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/iberfit-baseline /tmp/hero-a
+          git archive 424700ae15c6138c8a07f15f82f5b34d62c51a9f candidate/v628 | tar -x -C /tmp/iberfit-baseline
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/hero-a-candidate.log 2>&1 &
+          python3 -m http.server 4174 --directory /tmp/iberfit-baseline/candidate/v628 >/tmp/hero-a-baseline.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4173/ >/dev/null && curl -fsS http://127.0.0.1:4174/ >/dev/null && break
+            sleep 1
+          done
+      - name: Locate system Chrome
+        id: chrome
+        shell: bash
+        run: |
+          if command -v google-chrome >/dev/null; then BROWSER="$(command -v google-chrome)";
+          elif command -v google-chrome-stable >/dev/null; then BROWSER="$(command -v google-chrome-stable)";
+          elif command -v chromium >/dev/null; then BROWSER="$(command -v chromium)";
+          else exit 1; fi
+          echo "browser=$BROWSER" >> "$GITHUB_OUTPUT"
+      - name: Render baseline and experiment
+        shell: bash
+        env:
+          BROWSER: ${{ steps.chrome.outputs.browser }}
+        run: |
+          set -euo pipefail
+          common=(--headless=new --disable-gpu --no-sandbox --hide-scrollbars --disable-dev-shm-usage --virtual-time-budget=2500)
+          "$BROWSER" "${common[@]}" --force-device-scale-factor=2 --window-size=1440,1000 --screenshot=/tmp/hero-a/baseline-desktop.png http://127.0.0.1:4174/
+          "$BROWSER" "${common[@]}" --force-device-scale-factor=2 --window-size=1440,1000 --screenshot=/tmp/hero-a/candidate-desktop.png http://127.0.0.1:4173/
+          "$BROWSER" "${common[@]}" --force-device-scale-factor=2 --window-size=820,1180 --screenshot=/tmp/hero-a/candidate-tablet.png http://127.0.0.1:4173/
+          "$BROWSER" "${common[@]}" --force-device-scale-factor=3 --window-size=390,844 --screenshot=/tmp/hero-a/candidate-mobile.png http://127.0.0.1:4173/
+      - name: Upload proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: iberfit-home-hero-a-${{ github.run_id }}
+          path: /tmp/hero-a/
+          if-no-files-found: error
+          retention-days: 14
