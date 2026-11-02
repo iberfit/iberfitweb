@@ -23,7 +23,7 @@ body[data-page="home"] .site-header{
   position:sticky;
   top:0;
   z-index:100;
-  background:rgba(8,20,15,.965);
+  background:rgba(8,20,15,.97)!important;
   border-bottom:1px solid rgba(223,198,142,.16);
   box-shadow:none;
   backdrop-filter:blur(18px) saturate(120%);
@@ -585,4 +585,59 @@ body[data-page="home"] .site-footer{
 }
 @media(prefers-reduced-motion:reduce){
   body[data-page="home"] *{scroll-behavior:auto!important}
+}
+
+/* Final chrome corrections over older global styles. */
+body[data-page="home"] .site-header,
+body[data-page="home"] .site-header.scrolled{
+  background:rgba(8,20,15,.97)!important;
+  border-bottom-color:rgba(223,198,142,.16)!important;
+}
+@media(max-width:560px){
+  body[data-page="home"] .site-header,
+  body[data-page="home"] .site-header.scrolled{
+    background:#08140f!important;
+  }
+  body[data-page="home"] .consent-banner{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:.38rem!important;
+    padding:.52rem .58rem!important;
+    max-height:285px!important;
+    overflow:auto!important;
+    border-radius:12px!important;
+  }
+  body[data-page="home"] .consent-banner>div:first-child{
+    min-width:0!important;
+  }
+  body[data-page="home"] .consent-banner strong{
+    font-size:.82rem!important;
+    line-height:1.1!important;
+  }
+  body[data-page="home"] .consent-banner p{
+    margin:.12rem 0 0!important;
+    font-size:.58rem!important;
+    line-height:1.24!important;
+  }
+  body[data-page="home"] .consent-actions{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:.28rem!important;
+    width:100%!important;
+  }
+  body[data-page="home"] .consent-actions [data-consent-all],
+  body[data-page="home"] .consent-actions [data-consent-audience],
+  body[data-page="home"] .consent-actions [data-consent-necessary],
+  body[data-page="home"] .consent-actions [data-consent-settings]{
+    grid-column:auto!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:44px!important;
+    padding:.35rem .32rem!important;
+    font-size:.62rem!important;
+    line-height:1.05!important;
+    white-space:normal!important;
+    justify-content:center!important;
+    text-align:center!important;
+  }
 }
