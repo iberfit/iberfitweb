@@ -193,7 +193,7 @@ body[data-page="home"] .hero-meta{
 body[data-page="home"] .editorial-hero-media{
   position:absolute;
   z-index:0;
-  inset:0 0 0 42%;
+  inset:0 0 0 46%;
   min-height:0;
   margin:0;
   overflow:hidden;
@@ -213,19 +213,18 @@ body[data-page="home"] .editorial-hero-media img{
   object-position:center 48%;
   border-radius:0!important;
   box-shadow:none!important;
-  filter:saturate(.88) contrast(1.025) sepia(.025);
+  filter:saturate(.94) contrast(1.015);
 }
 body[data-page="home"] .editorial-hero-media:before{
   content:"";
   position:absolute;
   z-index:2;
   inset:0 auto 0 0;
-  width:36%;
+  width:13%;
   background:linear-gradient(90deg,
-    #f3eadc 0%,
-    rgba(243,234,220,.96) 24%,
-    rgba(243,234,220,.72) 48%,
-    rgba(243,234,220,.18) 78%,
+    rgba(243,234,220,.82) 0%,
+    rgba(243,234,220,.36) 34%,
+    rgba(243,234,220,.08) 66%,
     rgba(243,234,220,0) 100%);
   pointer-events:none;
 }
@@ -235,8 +234,7 @@ body[data-page="home"] .editorial-hero-media:after{
   z-index:2;
   inset:0;
   background:
-    linear-gradient(180deg,rgba(23,49,35,.035),transparent 36%,rgba(23,49,35,.09)),
-    linear-gradient(90deg,transparent 75%,rgba(23,49,35,.08));
+    linear-gradient(180deg,rgba(23,49,35,.018),transparent 42%,rgba(23,49,35,.045));
   pointer-events:none;
 }
 body[data-page="home"] .editorial-hero-media figcaption{
