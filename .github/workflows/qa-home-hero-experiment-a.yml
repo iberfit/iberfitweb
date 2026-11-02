@@ -40,6 +40,35 @@ jobs:
           print('EXPERIMENT_A_HTML_TRUTH_LOCK_OK')
           PY
           test -s candidate/v628/assets/hero-experiment-a.css
+          python3 - <<'PY'
+          import re
+          css=open('candidate/v628/assets/hero-experiment-a.css').read()
+
+          def one(pattern, label):
+              m=re.search(pattern, css, re.S)
+              assert m, f'{label}_MISSING'
+              return m
+
+          media=one(r'body\[data-page="home"\] \.editorial-hero-media\{(.*?)\n\}', 'MEDIA').group(1)
+          fade=one(r'body\[data-page="home"\] \.editorial-hero-media:before\{(.*?)\n\}', 'FADE').group(1)
+          image=one(r'body\[data-page="home"\] \.editorial-hero-media img\{(.*?)\n\}', 'IMAGE').group(1)
+
+          inset=one(r'inset:\s*0\s+0\s+0\s+(\d+(?:\.\d+)?)%;', 'PHOTO_INSET')
+          inset=float(inset.group(1))
+          assert inset >= 45, f'PHOTO_START_TOO_EARLY:{inset}'
+
+          width=one(r'\.editorial-hero-media:before\{.*?width:(\d+(?:\.\d+)?)%;', 'FADE_WIDTH')
+          width=float(width.group(1))
+          assert width <= 14, f'FADE_TOO_WIDE:{width}'
+
+          sat=one(r'filter:saturate\((\d+(?:\.\d+)?)\)', 'PHOTO_SATURATION')
+          sat=float(sat.group(1))
+          assert sat >= .92, f'PHOTO_TOO_DESATURATED:{sat}'
+
+          assert 'rgba(243,234,220,.82)' in fade, 'FADE_OPACITY_CONTRACT_CHANGED'
+          assert 'linear-gradient(90deg,transparent 75%' not in css, 'RIGHT_VIGNETTE_REINTRODUCED'
+          print({'photoInsetPct':inset,'fadeWidthPct':width,'saturation':sat,'visualGuard':'PASS'})
+          PY
       - name: Prepare exact baseline and servers
         shell: bash
         run: |
