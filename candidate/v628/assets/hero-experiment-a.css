@@ -39,6 +39,10 @@ body[data-page="home"] .site-header .brand-mark{
   height:44px!important;
   flex:0 0 auto;
 }
+body[data-page="home"] .brand-text{
+  border-left:1px solid rgba(185,152,72,.34);
+  padding-left:.72rem;
+}
 body[data-page="home"] .brand-text span{
   color:var(--hw-green-deep);
   font-size:1.38rem;
@@ -108,19 +112,7 @@ body[data-page="home"] .hero-text{
   max-width:650px;
   padding:82px 0 88px;
 }
-body[data-page="home"] .hero-text:after{
-  content:"";
-  position:absolute;
-  z-index:0;
-  top:142px;
-  right:-72px;
-  width:168px;
-  height:186px;
-  background:url('/assets/iberfit-isotipo-oficial.png') center/contain no-repeat;
-  opacity:.085;
-  filter:saturate(.65) sepia(.08);
-  pointer-events:none;
-}
+body[data-page="home"] .hero-text:after{display:none;}
 body[data-page="home"] .hero-text > *{
   position:relative;
   z-index:1;
@@ -319,24 +311,27 @@ body[data-page="home"] .hero + .evidence-process-section{
     padding:.55rem 0;
   }
   body[data-page="home"] .site-header .brand-mark{
-    width:36px!important;
-    height:36px!important;
+    width:32px!important;
+    height:32px!important;
   }
-  body[data-page="home"] .brand-text span{font-size:1.2rem}
-  body[data-page="home"] .brand-text small{font-size:.55rem}
+  body[data-page="home"] .brand-text{
+    padding-left:.58rem;
+  }
+  body[data-page="home"] .brand-text span{font-size:1.1rem}
+  body[data-page="home"] .brand-text small{font-size:.52rem}
   body[data-page="home"] .menu-toggle{
-    min-width:68px;
+    min-width:62px;
     min-height:44px;
     width:auto!important;
     padding:.55rem .72rem;
     border-radius:999px;
   }
   body[data-page="home"] .hero-text{
-    padding:3rem 16px 2.55rem;
+    padding:2.7rem 16px 2.25rem;
   }
   body[data-page="home"] .hero h1{
     max-width:9ch;
-    font-size:clamp(3.45rem,14.2vw,4.7rem);
+    font-size:clamp(3.05rem,12.6vw,4.05rem);
     line-height:.94;
   }
   body[data-page="home"] .hero .lead{
