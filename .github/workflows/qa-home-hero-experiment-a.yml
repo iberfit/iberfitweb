@@ -54,7 +54,7 @@ jobs:
           fade=one(r'body\[data-page="home"\] \.editorial-hero-media:before\{(.*?)\n\}', 'FADE').group(1)
           image=one(r'body\[data-page="home"\] \.editorial-hero-media img\{(.*?)\n\}', 'IMAGE').group(1)
 
-          assert 'inset:0 0 0 max(53%, 722px);' in media, 'PHOTO_BOUNDARY_CONTRACT_CHANGED'
+          assert 'inset:0 0 0 max(56%, 770px);' in media, 'PHOTO_BOUNDARY_CONTRACT_CHANGED'
 
           width=one(r'\.editorial-hero-media:before\{.*?width:(\d+(?:\.\d+)?)%;', 'FADE_WIDTH')
           width=float(width.group(1))
@@ -67,7 +67,7 @@ jobs:
           assert 'rgba(243,234,220,.68)' in fade, 'FADE_OPACITY_CONTRACT_CHANGED'
           assert 'linear-gradient(90deg,transparent 75%' not in css, 'RIGHT_VIGNETTE_REINTRODUCED'
           assert '@media(max-width:1180px)' in css, 'RESPONSIVE_RECOMPOSITION_CONTRACT_CHANGED'
-          print({'photoBoundary':'max(53%,722px)','fadeWidthPct':width,'saturation':sat,'visualGuard':'PASS'})
+          print({'photoBoundary':'max(56%,770px)','fadeWidthPct':width,'saturation':sat,'visualGuard':'PASS'})
           PY
       - name: Prepare exact baseline and servers
         shell: bash
