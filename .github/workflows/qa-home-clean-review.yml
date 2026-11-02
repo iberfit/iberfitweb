@@ -6,6 +6,7 @@ on:
       - design/web-zero-cost-master-20261102
     paths:
       - '.github/workflows/qa-home-clean-review.yml'
+      - 'candidate/v628/__review__/home-hero.html'
 
 permissions:
   contents: read
