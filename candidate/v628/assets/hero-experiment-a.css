@@ -308,6 +308,10 @@ body[data-page="home"] .hero + .evidence-process-section{
     min-height:68px;
     padding:.55rem 0;
   }
+  body[data-page="home"] .brand{
+    min-height:44px;
+    align-items:center;
+  }
   body[data-page="home"] .site-header .brand-mark{
     width:32px!important;
     height:32px!important;
