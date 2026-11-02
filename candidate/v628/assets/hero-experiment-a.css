@@ -112,16 +112,20 @@ body[data-page="home"] .hero-text{
 body[data-page="home"] .hero-text:after{
   content:"";
   position:absolute;
-  z-index:-1;
-  top:136px;
+  z-index:0;
+  top:132px;
   right:-42px;
   width:184px;
   height:204px;
   background:linear-gradient(160deg,var(--hw-gold),var(--hw-green));
-  opacity:.055;
+  opacity:.072;
   -webkit-mask:url('/assets/iberfit-isotipo-oficial.png') center/contain no-repeat;
   mask:url('/assets/iberfit-isotipo-oficial.png') center/contain no-repeat;
   pointer-events:none;
+}
+body[data-page="home"] .hero-text > *{
+  position:relative;
+  z-index:1;
 }
 body[data-page="home"] .hero-text:before{
   content:"";
