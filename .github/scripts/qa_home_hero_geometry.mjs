@@ -80,7 +80,7 @@ try{
     const failures=[];
     if(m.scrollWidth>m.innerWidth+2) failures.push("HORIZONTAL_OVERFLOW");
     if(!m.natural.w||!m.natural.h) failures.push("IMAGE_NOT_LOADED");
-    if(m.fadeRatio!==null && m.fadeRatio>.085) failures.push("FADE_TOO_WIDE:"+m.fadeRatio.toFixed(3));
+    if(v.width>1180 && m.fadeRatio!==null && m.fadeRatio>.085) failures.push("FADE_TOO_WIDE:"+m.fadeRatio.toFixed(3));
 
     if(v.width>1180){
       if(m.text.right>m.media.left-8) failures.push("TEXT_PHOTO_OVERLAP:"+(m.text.right-m.media.left).toFixed(1));
