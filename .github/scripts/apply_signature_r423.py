@@ -27,10 +27,6 @@ def apply_common(text,path):
     return text
 
 def patch_home(text):
-    pattern=re.compile(
-        r'<figure class="editorial-hero-media"><picture><img\b[^>]*src="/assets/photo-park-training-1448\.webp"[^>]*></picture><figcaption>Escena ilustrativa · Entrenamiento presencial</figcaption></figure>',
-        re.I
-    )
     replacement=(
         '<figure class="editorial-hero-media signature-product-proof">'
         '<img alt="Vista real de seguimiento y evolución en la app IBERFIT con datos de demostración." '
@@ -39,11 +35,38 @@ def patch_home(text):
         '<figcaption>Vista real de seguimiento y evolución en la app IBERFIT · datos de demostración.</figcaption>'
         '</figure>'
     )
-    if replacement in text:
-        return text
-    text,n=pattern.subn(replacement,text,count=1)
-    if n!=1:
-        raise SystemExit("HOME_HERO_MEDIA_ANCHOR_MISSING")
+    if replacement not in text:
+        pattern=re.compile(
+            r'<figure class="editorial-hero-media"><picture><img\b[^>]*src="/assets/photo-park-training-1448\.webp"[^>]*></picture><figcaption>Escena ilustrativa · Entrenamiento presencial</figcaption></figure>',
+            re.I
+        )
+        text,n=pattern.subn(replacement,text,count=1)
+        if n!=1:
+            raise SystemExit("HOME_HERO_MEDIA_ANCHOR_MISSING")
+
+    # Signature identity is product/method-led: keep the real captions, remove hidden human photography and its requests.
+    for klass,asset in [
+        ("evidence-shot--eval","photo-initial-eval-1448.webp"),
+        ("evidence-shot--training","photo-trainer-session-1448.webp"),
+    ]:
+        pat=re.compile(
+            rf'(<figure class="evidence-shot {re.escape(klass)}">)<picture><img\b[^>]*src="/assets/{re.escape(asset)}"[^>]*></picture>',
+            re.I
+        )
+        text,n=pat.subn(r'\1',text,count=1)
+        if n==0 and asset in text:
+            raise SystemExit(f"HOME_EVIDENCE_MEDIA_ANCHOR_MISSING:{asset}")
+    return text
+
+def patch_iri(text):
+    # The explanation remains; only the decorative human-photo figure is removed.
+    pat=re.compile(
+        r'<figure class="photo-story-media reveal"><picture><img\b[^>]*src="/assets/photo-initial-eval-1448\.webp"[^>]*></picture></figure>',
+        re.I
+    )
+    text,n=pat.subn('',text,count=1)
+    if n==0 and "photo-initial-eval-1448.webp" in text:
+        raise SystemExit("IRI_PHOTO_MEDIA_ANCHOR_MISSING")
     return text
 
 for path in PAGES:
@@ -51,5 +74,7 @@ for path in PAGES:
     text=apply_common(text,path)
     if path.name=="index.html" and path.parent.name=="v628":
         text=patch_home(text)
+    elif path.parent.name=="diagnostico-iri":
+        text=patch_iri(text)
     path.write_text(text,encoding="utf-8")
     print("SIGNATURE_R423_APPLIED",path.relative_to(ROOT))
