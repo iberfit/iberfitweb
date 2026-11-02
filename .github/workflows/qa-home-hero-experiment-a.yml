@@ -6,9 +6,15 @@ on:
       - design/web-zero-cost-master-20261102
     paths:
       - '.github/workflows/qa-home-hero-experiment-a.yml'
+      - 'candidate/v628/assets/hero-experiment-a.css'
+      - 'candidate/v628/index.html'
 
 permissions:
   contents: read
+
+concurrency:
+  group: iberfit-home-hero-experiment-a
+  cancel-in-progress: true
 
 jobs:
   render:
