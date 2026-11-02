@@ -366,3 +366,165 @@ body[data-signature="r423"] .review-source-link{
     object-fit:contain!important;
   }
 }
+
+
+/* R4.2.3 art-direction closeout */
+body[data-signature="r423"] .site-header.scrolled{
+  background:rgba(7,16,12,.975)!important;
+  border-bottom-color:var(--sig-line)!important;
+  box-shadow:0 10px 30px rgba(0,0,0,.20)!important;
+}
+body[data-signature="r423"][data-page="home"] .evidence-process-media--v6435{
+  display:grid!important;
+  grid-template-columns:minmax(0,.72fr) minmax(0,.72fr) minmax(0,1.25fr)!important;
+  grid-template-rows:1fr!important;
+  grid-auto-flow:row!important;
+  grid-auto-columns:unset!important;
+  gap:0!important;
+  width:100%!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:visible!important;
+  border-block:1px solid var(--sig-line)!important;
+}
+body[data-signature="r423"][data-page="home"] .evidence-process-media--v6435 .evidence-shot{
+  grid-column:auto!important;
+  grid-row:auto!important;
+  min-width:0!important;
+  min-height:240px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:flex-end!important;
+  margin:0!important;
+  padding:1.45rem!important;
+  border:0!important;
+  border-right:1px solid var(--sig-line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  transform:none!important;
+}
+body[data-signature="r423"][data-page="home"] .evidence-process-media--v6435 .evidence-shot:last-child{
+  border-right:0!important;
+}
+body[data-signature="r423"][data-page="home"] .evidence-shot--eval:before,
+body[data-signature="r423"][data-page="home"] .evidence-shot--training:before{
+  display:block;
+  margin-bottom:auto;
+  color:rgba(215,186,124,.55);
+  font-family:"Source Serif 4","Iowan Old Style",Baskerville,Georgia,serif;
+  font-size:clamp(3rem,5vw,4.8rem);
+  line-height:1;
+  letter-spacing:-.05em;
+}
+body[data-signature="r423"][data-page="home"] .evidence-shot--eval:before{content:"01";}
+body[data-signature="r423"][data-page="home"] .evidence-shot--training:before{content:"02";}
+body[data-signature="r423"][data-page="home"] .evidence-process-media--v6435 .evidence-shot figcaption{
+  min-height:0!important;
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:.35rem!important;
+  padding:0!important;
+}
+body[data-signature="r423"][data-page="home"] .evidence-process-media--v6435 .evidence-shot figcaption b{
+  color:var(--sig-gold-2)!important;
+  font-size:.66rem!important;
+  letter-spacing:.14em!important;
+}
+body[data-signature="r423"][data-page="home"] .evidence-process-media--v6435 .evidence-shot figcaption span{
+  color:#D4DCD6!important;
+  font-size:.92rem!important;
+  line-height:1.55!important;
+}
+body[data-signature="r423"][data-page="home"] .evidence-shot--product{
+  padding:.85rem!important;
+  background:var(--sig-surface)!important;
+}
+body[data-signature="r423"][data-page="home"] .evidence-shot--product img{
+  width:100%!important;
+  max-width:100%!important;
+  height:auto!important;
+  margin:auto 0 .8rem!important;
+  object-fit:contain!important;
+}
+
+/* Privacy first impression: same controls, quieter Signature presentation. */
+body[data-signature="r423"] .consent-banner{
+  left:50%!important;
+  right:auto!important;
+  bottom:1rem!important;
+  width:min(900px,calc(100% - 2rem))!important;
+  max-width:900px!important;
+  transform:translateX(-50%)!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:1rem!important;
+  padding:.9rem 1rem!important;
+  border:1px solid var(--sig-line-gold)!important;
+  border-radius:8px!important;
+  background:rgba(19,34,28,.985)!important;
+  color:var(--sig-text)!important;
+  box-shadow:0 24px 60px rgba(0,0,0,.34)!important;
+  backdrop-filter:blur(18px)!important;
+}
+body[data-signature="r423"] .consent-banner strong{color:#fff!important;}
+body[data-signature="r423"] .consent-banner p{color:#B8C2BA!important;}
+body[data-signature="r423"] .consent-actions{gap:.45rem!important;}
+body[data-signature="r423"] .consent-banner .btn,
+body[data-signature="r423"] .consent-banner .consent-link{
+  min-height:44px!important;
+  border-radius:2px!important;
+  font-size:.73rem!important;
+}
+body[data-signature="r423"] .consent-banner [data-consent-all]{
+  background:var(--sig-gold)!important;
+  border-color:var(--sig-gold)!important;
+  color:#101912!important;
+}
+body[data-signature="r423"] .consent-banner [data-consent-audience],
+body[data-signature="r423"] .consent-banner [data-consent-necessary]{
+  background:transparent!important;
+  color:#EEF2EF!important;
+  border-color:rgba(245,245,240,.26)!important;
+}
+body[data-signature="r423"] .consent-banner [data-consent-settings]{
+  color:var(--sig-gold-2)!important;
+}
+
+@media (max-width:760px){
+  body[data-signature="r423"][data-page="home"] .evidence-process-media--v6435{
+    grid-template-columns:1fr!important;
+    grid-template-rows:auto!important;
+  }
+  body[data-signature="r423"][data-page="home"] .evidence-process-media--v6435 .evidence-shot{
+    min-height:0!important;
+    padding:1.25rem 0!important;
+    border-right:0!important;
+    border-bottom:1px solid var(--sig-line)!important;
+  }
+  body[data-signature="r423"][data-page="home"] .evidence-shot--eval:before,
+  body[data-signature="r423"][data-page="home"] .evidence-shot--training:before{
+    margin-bottom:1.2rem!important;
+    font-size:3rem!important;
+  }
+  body[data-signature="r423"][data-page="home"] .evidence-shot--product{
+    padding:1rem 0!important;
+  }
+  body[data-signature="r423"] .consent-banner{
+    bottom:calc(.7rem + env(safe-area-inset-bottom,0px))!important;
+    width:calc(100% - 1.4rem)!important;
+    grid-template-columns:1fr!important;
+    gap:.65rem!important;
+    padding:.8rem!important;
+  }
+  body[data-signature="r423"] .consent-actions{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    width:100%!important;
+  }
+  body[data-signature="r423"] .consent-actions [data-consent-all],
+  body[data-signature="r423"] .consent-actions [data-consent-settings]{
+    grid-column:1/-1!important;
+  }
+}
