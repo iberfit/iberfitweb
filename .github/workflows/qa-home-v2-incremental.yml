@@ -1,0 +1,81 @@
+name: IBERFIT Home V2 · Incremental visual candidate
+
+on:
+  push:
+    branches:
+      - feat/signature-web-r423-20261102
+    paths:
+      - '.github/workflows/qa-home-v2-incremental.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: iberfit-home-v2-incremental
+  cancel-in-progress: true
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify candidate scope against certified production
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='424700ae15c6138c8a07f15f82f5b34d62c51a9f'
+          git cat-file -e "$BASE^{commit}"
+          git merge-base --is-ancestor "$BASE" HEAD
+          changed="$(git diff --name-only "$BASE" -- candidate/v628 | sort)"
+          printf '%s\n' "$changed"
+          test "$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l | tr -d ' ')" = '2'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/assets/signature-home.v644.css'
+          printf '%s\n' "$changed" | grep -qx 'candidate/v628/index.html'
+          python3 - <<'PY'
+          import subprocess
+          p='candidate/v628/index.html'
+          base=subprocess.check_output(['git','show','424700ae15c6138c8a07f15f82f5b34d62c51a9f:'+p],text=True)
+          head=open(p).read()
+          link='<link href="/assets/signature-home.v644.css" rel="stylesheet"/>'
+          assert head.count(link)==1
+          assert head.replace(link,'')==base
+          print('HOME_V2_HTML_ONLY_CSS_LINK_OK')
+          PY
+          git diff --check "$BASE" -- candidate/v628
+      - name: Prepare exact baseline
+        shell: bash
+        run: |
+          mkdir -p /tmp/iberfit-baseline
+          git archive 424700ae15c6138c8a07f15f82f5b34d62c51a9f candidate/v628 | tar -x -C /tmp/iberfit-baseline
+      - name: Install free local browser QA
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.58.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Start local baseline and candidate
+        shell: bash
+        run: |
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/home-v2-candidate.log 2>&1 &
+          python3 -m http.server 4174 --directory /tmp/iberfit-baseline/candidate/v628 >/tmp/home-v2-baseline.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4173/ >/dev/null && curl -fsS http://127.0.0.1:4174/ >/dev/null && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4173/ >/dev/null
+          curl -fsS http://127.0.0.1:4174/ >/dev/null
+      - name: Compare semantic truth and render 3 responsive views
+        run: node .github/scripts/qa_home_v2_incremental.cjs
+      - name: Upload private comparison evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iberfit-home-v2-incremental-${{ github.run_id }}
+          path: |
+            /tmp/iberfit-home-v2/
+            /tmp/home-v2-candidate.log
+            /tmp/home-v2-baseline.log
+          if-no-files-found: warn
+          retention-days: 14
