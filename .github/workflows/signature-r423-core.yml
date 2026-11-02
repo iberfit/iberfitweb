@@ -1,6 +1,7 @@
 name: IBERFIT Web Signature R4.2.3 · Integrate core pages safely
 # retry-v2-mobile-hardening
 # retry-v3-safe-media-clipping
+# evidence-v4
 
 on:
   push:
@@ -88,3 +89,4 @@ jobs:
             /tmp/signature-http.log
           if-no-files-found: warn
           retention-days: 14
+          include-hidden-files: true
