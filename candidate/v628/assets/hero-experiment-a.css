@@ -276,7 +276,7 @@ body[data-page="home"] .hero + .evidence-process-section{
     width:100%!important;
     max-width:100%!important;
     box-sizing:border-box;
-    padding:3.55rem max(24px, calc((100vw - 720px)/2)) 3rem!important;
+    padding:3.35rem max(24px, calc((100vw - 720px)/2)) 2.25rem!important;
   }
   body[data-page="home"] .editorial-hero h1{
     max-width:10ch!important;
@@ -340,7 +340,7 @@ body[data-page="home"] .hero + .evidence-process-section{
     border-radius:999px;
   }
   body[data-page="home"] .editorial-hero .hero-text{
-    padding:2.55rem 20px 2.3rem!important;
+    padding:2.45rem 20px 1.7rem!important;
   }
   body[data-page="home"] .editorial-hero h1{
     max-width:10ch!important;
