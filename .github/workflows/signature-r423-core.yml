@@ -1,0 +1,88 @@
+name: IBERFIT Web Signature R4.2.3 · Integrate core pages safely
+
+on:
+  push:
+    branches:
+      - feat/signature-web-r423-20261102
+    paths:
+      - '.github/workflows/signature-r423-core.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: iberfit-web-signature-r423-core-single-shot
+  cancel-in-progress: true
+
+jobs:
+  integrate-and-certify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Confirm exact certified baseline ancestry
+        run: |
+          git cat-file -e 424700ae15c6138c8a07f15f82f5b34d62c51a9f^{commit}
+          test -f candidate/v628/assets/signature-r423.css
+          test -f .github/scripts/apply_signature_r423.py
+          test -f .github/scripts/qa_signature_r423_static.py
+          test -f .github/scripts/qa_signature_r423_render.mjs
+
+      - name: Apply reversible Signature layer
+        run: python3 .github/scripts/apply_signature_r423.py
+
+      - name: Verify SEO semantics and real destinations remain identical
+        run: python3 .github/scripts/qa_signature_r423_static.py | tee /tmp/signature-static.json
+
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          ./node_modules/.bin/playwright install --with-deps chromium
+
+      - name: Serve candidate v628
+        run: |
+          python3 -m http.server 8787 --directory candidate/v628 >/tmp/signature-http.log 2>&1 &
+          echo $! >/tmp/signature-http.pid
+          for i in {1..30}; do
+            curl -fsS http://127.0.0.1:8787/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/signature-http.log
+          exit 1
+
+      - name: Render 9 real responsive viewports
+        run: node .github/scripts/qa_signature_r423_render.mjs
+
+      - name: Commit only certified core-page integration
+        run: |
+          git config user.name 'iberfit-web-signature[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- candidate/v628/index.html candidate/v628/diagnostico-iri/index.html candidate/v628/online/index.html
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "SIGNATURE_R423_NO_PAGE_DIFF"
+            exit 0
+          fi
+          git commit -m 'design(web): integrate Signature R4.2.3 on Home IRI Online'
+          git fetch origin "$GITHUB_REF_NAME"
+          git rebase "origin/$GITHUB_REF_NAME"
+          git push origin HEAD:"$GITHUB_REF_NAME"
+
+      - name: Upload visual certification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iberfit-web-signature-r423-core-${{ github.run_id }}
+          path: |
+            .signature-r423-evidence/
+            /tmp/signature-static.json
+            /tmp/signature-http.log
+          if-no-files-found: warn
+          retention-days: 14
