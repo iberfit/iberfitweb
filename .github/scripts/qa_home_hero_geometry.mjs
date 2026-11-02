@@ -109,6 +109,10 @@ try{
       if(m.media.width<v.width*.32) failures.push("PHOTO_TOO_NARROW");
     }else{
       if(m.media.top<m.text.bottom-1) failures.push("STACK_OVERLAP");
+      const gutter=v.width<=420?16:24;
+      if(m.h1.left<gutter-1) failures.push("CONTENT_GUTTER_LEFT:"+m.h1.left.toFixed(1));
+      if(m.actions.left<gutter-1) failures.push("CTA_GUTTER_LEFT:"+m.actions.left.toFixed(1));
+      if(m.innerWidth-m.media.right>22) failures.push("PHOTO_NOT_FULL_BLEED:"+(m.innerWidth-m.media.right).toFixed(1));
     }
 
     if(v.width<=420){
