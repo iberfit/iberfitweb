@@ -307,3 +307,62 @@ body[data-signature="r423"] .footer-bottom{border-top-color:var(--sig-line);}
   body[data-signature="r423"] *:before,
   body[data-signature="r423"] *:after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;}
 }
+
+
+/* R4.2.3 integration hardening · real mobile DOM */
+body[data-signature="r423"] .review-source-link{
+  display:inline-flex;
+  align-items:center;
+  min-height:44px;
+  padding-block:.65rem;
+}
+@media (max-width:640px){
+  body[data-signature="r423"] .signature-product-proof{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    overflow:hidden;
+  }
+  body[data-signature="r423"] .signature-product-proof img{
+    display:block;
+    width:100%!important;
+    max-width:100%!important;
+    height:auto!important;
+    aspect-ratio:auto!important;
+    object-fit:contain!important;
+  }
+  body[data-signature="r423"] .app-story,
+  body[data-signature="r423"] .app-story-stage,
+  body[data-signature="r423"] .app-screen{
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  body[data-signature="r423"] .app-story-stage{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-auto-flow:row!important;
+    grid-auto-columns:unset!important;
+    gap:1rem!important;
+    width:100%!important;
+    overflow:visible!important;
+    padding:0!important;
+  }
+  body[data-signature="r423"] .app-story-stage .app-screen{
+    position:relative!important;
+    inset:auto!important;
+    width:100%!important;
+    right:auto!important;
+    left:auto!important;
+    top:auto!important;
+    bottom:auto!important;
+    margin:0!important;
+    overflow:hidden!important;
+  }
+  body[data-signature="r423"] .app-story-stage .app-screen img{
+    display:block;
+    width:100%!important;
+    max-width:100%!important;
+    height:auto!important;
+    object-fit:contain!important;
+  }
+}
