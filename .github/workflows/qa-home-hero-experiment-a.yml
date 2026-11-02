@@ -60,7 +60,7 @@ jobs:
           width=float(width.group(1))
           assert width <= 8, f'FADE_TOO_WIDE:{width}'
 
-          sat=one(r'filter:saturate\((\d+(?:\.\d+)?)\)', 'PHOTO_SATURATION')
+          sat=one(r'filter:saturate\(((?:\d+(?:\.\d+)?)|(?:\.\d+))\)', 'PHOTO_SATURATION')
           sat=float(sat.group(1))
           assert sat >= .94, f'PHOTO_TOO_DESATURATED:{sat}'
 
