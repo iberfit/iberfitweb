@@ -25,7 +25,7 @@ try{
    const x=await p.evaluate(()=>{
     const visible=e=>{const r=e.getBoundingClientRect(),s=getComputedStyle(e);return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden"&&Number(s.opacity)!==0};
     const imgs=[...document.images].filter(visible).map(i=>{const r=i.getBoundingClientRect();return {src:i.getAttribute("src")||"",ok:i.complete&&i.naturalWidth>0,left:r.left,right:r.right}});
-    const targets=[...document.querySelectorAll("a,button,[role=button]")].filter(visible).map(e=>{const r=e.getBoundingClientRect();return {text:(e.textContent||"").trim().replace(/\s+/g," ").slice(0,60),w:r.width,h:r.height}});
+    const targets=[...document.querySelectorAll("a,button,[role=button]")].filter(e=>!e.classList.contains("skip")).filter(visible).map(e=>{const r=e.getBoundingClientRect();return {text:(e.textContent||"").trim().replace(/\s+/g," ").slice(0,60),w:r.width,h:r.height}});
     return {
       signature:document.body.dataset.signature||"",
       h1:[...document.querySelectorAll("h1")].filter(visible).map(e=>(e.textContent||"").trim()),
