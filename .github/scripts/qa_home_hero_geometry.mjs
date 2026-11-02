@@ -1,4 +1,5 @@
 import {spawn} from "node:child_process";
+import {readFile,rm,mkdir} from "node:fs/promises";
 
 const browser=process.env.BROWSER;
 if(!browser) throw new Error("BROWSER_REQUIRED");
@@ -13,14 +14,33 @@ async function waitJson(url,tries=60){
   throw new Error("CDP_NOT_READY");
 }
 
+const profile="/tmp/iberfit-hero-cdp";
+await rm(profile,{recursive:true,force:true});
+await mkdir(profile,{recursive:true});
 const proc=spawn(browser,[
   "--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage",
-  "--remote-debugging-port=9222","--user-data-dir=/tmp/iberfit-hero-cdp","about:blank"
+  "--no-first-run","--no-default-browser-check",
+  "--remote-debugging-address=127.0.0.1","--remote-debugging-port=0",
+  "--user-data-dir="+profile,"about:blank"
 ],{stdio:"ignore"});
 
+async function devtoolsPort(){
+  for(let i=0;i<100;i++){
+    try{
+      const s=await readFile(profile+"/DevToolsActivePort","utf8");
+      const p=Number(s.split(/\r?\n/)[0]);
+      if(Number.isFinite(p)&&p>0)return p;
+    }catch{}
+    if(proc.exitCode!==null)throw new Error("CHROME_EXITED_BEFORE_CDP:"+proc.exitCode);
+    await sleep(100);
+  }
+  throw new Error("DEVTOOLS_ACTIVE_PORT_NOT_FOUND");
+}
+
 try{
-  await waitJson("http://127.0.0.1:9222/json/version");
-  const target=await fetch("http://127.0.0.1:9222/json/new?about:blank",{method:"PUT"}).then(r=>r.json());
+  const port=await devtoolsPort();
+  await waitJson("http://127.0.0.1:"+port+"/json/version");
+  const target=await fetch("http://127.0.0.1:"+port+"/json/new?about:blank",{method:"PUT"}).then(r=>r.json());
   const ws=new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((resolve,reject)=>{ws.addEventListener("open",resolve,{once:true});ws.addEventListener("error",reject,{once:true});});
   let seq=0;
