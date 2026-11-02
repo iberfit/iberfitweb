@@ -89,21 +89,7 @@ body[data-page="home"] .hero:before{
   background:
     radial-gradient(circle at 78% 34%,rgba(210,182,118,.10),transparent 25rem);
 }
-body[data-page="home"] .hero:after{
-  content:"";
-  position:absolute;
-  z-index:0;
-  left:max(3.5vw,40px);
-  bottom:-42px;
-  width:168px;
-  height:188px;
-  background:var(--hw-green);
-  opacity:.035;
-  -webkit-mask:url('/assets/iberfit-isotipo-oficial.png') center/contain no-repeat;
-  mask:url('/assets/iberfit-isotipo-oficial.png') center/contain no-repeat;
-  transform:rotate(-5deg);
-  pointer-events:none;
-}
+body[data-page="home"] .hero:after{display:none;}
 body[data-page="home"] .hero-grid{
   position:relative;
   z-index:1;
@@ -122,6 +108,20 @@ body[data-page="home"] .hero-text{
   align-self:center;
   max-width:650px;
   padding:78px 0 84px;
+}
+body[data-page="home"] .hero-text:after{
+  content:"";
+  position:absolute;
+  z-index:-1;
+  top:136px;
+  right:-42px;
+  width:184px;
+  height:204px;
+  background:linear-gradient(160deg,var(--hw-gold),var(--hw-green));
+  opacity:.055;
+  -webkit-mask:url('/assets/iberfit-isotipo-oficial.png') center/contain no-repeat;
+  mask:url('/assets/iberfit-isotipo-oficial.png') center/contain no-repeat;
+  pointer-events:none;
 }
 body[data-page="home"] .hero-text:before{
   content:"";
@@ -207,10 +207,13 @@ body[data-page="home"] .hero-meta{
 body[data-page="home"] .editorial-hero-media{
   position:relative;
   align-self:stretch;
-  min-height:704px;
-  margin:0;
+  min-height:664px;
+  margin:20px 0;
   overflow:hidden;
   background:#d9cfbf;
+  border-left:1px solid rgba(185,152,72,.24);
+  border-radius:34px 0 0 34px;
+  box-shadow:-24px 0 60px rgba(31,61,43,.055);
 }
 body[data-page="home"] .editorial-hero-media picture,
 body[data-page="home"] .editorial-hero-media img{
@@ -230,8 +233,8 @@ body[data-page="home"] .editorial-hero-media:before{
   position:absolute;
   z-index:2;
   inset:0 auto 0 0;
-  width:17%;
-  background:linear-gradient(90deg,#f2e8d9 0%,rgba(242,232,217,.80) 28%,rgba(242,232,217,0) 100%);
+  width:13%;
+  background:linear-gradient(90deg,#f2e8d9 0%,rgba(242,232,217,.62) 26%,rgba(242,232,217,0) 100%);
   pointer-events:none;
 }
 body[data-page="home"] .editorial-hero-media:after{
@@ -278,17 +281,22 @@ body[data-page="home"] .hero + .evidence-process-section{
     padding:3.7rem 24px 3rem;
   }
   body[data-page="home"] .hero-text:before{display:none}
-  body[data-page="home"] .hero:after{
-    left:auto;
-    right:-12px;
-    bottom:300px;
-    width:122px;
-    height:136px;
-    opacity:.032;
+  body[data-page="home"] .hero-text:after{
+    top:auto;
+    right:18px;
+    bottom:38px;
+    width:126px;
+    height:140px;
+    opacity:.045;
   }
   body[data-page="home"] .editorial-hero-media{
     min-height:0;
+    margin:0;
     aspect-ratio:16/10;
+    border-left:0;
+    border-top:1px solid rgba(185,152,72,.18);
+    border-radius:24px 24px 0 0;
+    box-shadow:none;
   }
   body[data-page="home"] .editorial-hero-media:before{
     inset:0;
