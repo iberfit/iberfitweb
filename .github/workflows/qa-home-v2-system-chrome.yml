@@ -1,4 +1,5 @@
-name: IBERFIT Home V2 · System Chrome visual proof\n# rerun: mobile privacy/menu polish
+name: IBERFIT Home V2 · System Chrome visual proof
+# rerun: mobile privacy/menu polish
 
 on:
   push:
