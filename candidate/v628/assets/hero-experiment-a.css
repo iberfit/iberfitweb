@@ -260,19 +260,29 @@ body[data-page="home"] .hero + .evidence-process-section{
 
 /* Mobile: preserve website character and real photo. */
 @media(max-width:1180px){
-  body[data-page="home"] .hero-grid{
-    display:flex;
-    flex-direction:column;
+  body[data-page="home"] .editorial-hero{
+    display:flex!important;
+    flex-direction:column!important;
+    width:100%!important;
+    max-width:none!important;
     min-height:0;
-    padding:0;
+    margin:0!important;
+    padding:0!important;
     overflow:visible;
   }
-  body[data-page="home"] .hero-text{
+  body[data-page="home"] .editorial-hero .hero-text{
     position:relative;
     order:1;
-    width:auto;
-    max-width:none;
-    padding:3.7rem 24px 3rem;
+    width:100%!important;
+    max-width:100%!important;
+    box-sizing:border-box;
+    padding:3.55rem max(24px, calc((100vw - 720px)/2)) 3rem!important;
+  }
+  body[data-page="home"] .editorial-hero h1{
+    max-width:10ch!important;
+    font-size:clamp(3rem,6.4vw,4.2rem)!important;
+    line-height:.98!important;
+    margin:1.15rem 0 1.35rem!important;
   }
   body[data-page="home"] .hero-text:before{display:none}
   body[data-page="home"] .hero-text:after{
@@ -287,13 +297,14 @@ body[data-page="home"] .hero + .evidence-process-section{
     position:relative;
     order:2;
     inset:auto;
-    width:100%;
+    width:100%!important;
+    max-width:none!important;
     min-height:0;
-    margin:0;
+    margin:0!important;
     aspect-ratio:16/10;
     border:0;
     border-top:1px solid rgba(185,152,72,.16);
-    border-radius:0;
+    border-radius:0!important;
     box-shadow:none;
   }
   body[data-page="home"] .editorial-hero-media:before{
@@ -328,13 +339,14 @@ body[data-page="home"] .hero + .evidence-process-section{
     padding:.55rem .72rem;
     border-radius:999px;
   }
-  body[data-page="home"] .hero-text{
-    padding:2.7rem 16px 2.25rem;
+  body[data-page="home"] .editorial-hero .hero-text{
+    padding:2.55rem 20px 2.3rem!important;
   }
-  body[data-page="home"] .hero h1{
-    max-width:9ch;
-    font-size:clamp(3.05rem,12.6vw,4.05rem);
-    line-height:.94;
+  body[data-page="home"] .editorial-hero h1{
+    max-width:10ch!important;
+    font-size:clamp(2.65rem,11.3vw,3.4rem)!important;
+    line-height:.98!important;
+    margin:1.05rem 0 1.25rem!important;
   }
   body[data-page="home"] .hero .lead{
     font-size:1.05rem;
