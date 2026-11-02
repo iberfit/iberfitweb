@@ -445,6 +445,49 @@ body[data-page="home"] .site-footer a:hover{
     border-radius:16px;
   }
 }
+
+/* First-visit chrome: retain all privacy choices but reduce visual obstruction. */
+@media(max-width:560px){
+  body[data-page="home"] .menu-toggle{
+    min-width:68px;
+    min-height:44px;
+    width:auto!important;
+    padding:.55rem .78rem;
+    border-radius:12px;
+    font-size:.86rem;
+    line-height:1;
+  }
+  body[data-page="home"] .consent-banner{
+    left:.7rem;
+    right:.7rem;
+    bottom:calc(.7rem + env(safe-area-inset-bottom,0px));
+    gap:.45rem;
+    padding:.62rem .7rem;
+    border-radius:16px;
+    max-height:38dvh;
+    box-shadow:0 16px 42px rgba(5,18,12,.28);
+  }
+  body[data-page="home"] .consent-banner strong{
+    font-size:.88rem;
+    line-height:1.12;
+  }
+  body[data-page="home"] .consent-banner p{
+    margin:.18rem 0 0;
+    font-size:.64rem;
+    line-height:1.32;
+  }
+  body[data-page="home"] .consent-actions{
+    gap:.3rem;
+  }
+  body[data-page="home"] .consent-banner .btn,
+  body[data-page="home"] .consent-banner .consent-link{
+    min-height:44px;
+    padding:.45rem .5rem;
+    font-size:.69rem;
+    border-radius:12px;
+  }
+}
+
 @media(prefers-reduced-motion:reduce){
   body[data-page="home"] .site-header,
   body[data-page="home"] .btn,
