@@ -116,10 +116,9 @@ body[data-page="home"] .hero-text:after{
   right:-72px;
   width:168px;
   height:186px;
-  background:var(--hw-gold);
-  opacity:.065;
-  -webkit-mask:url('/assets/iberfit-isotipo-oficial.png') center/contain no-repeat;
-  mask:url('/assets/iberfit-isotipo-oficial.png') center/contain no-repeat;
+  background:url('/assets/iberfit-isotipo-oficial.png') center/contain no-repeat;
+  opacity:.085;
+  filter:saturate(.65) sepia(.08);
   pointer-events:none;
 }
 body[data-page="home"] .hero-text > *{
