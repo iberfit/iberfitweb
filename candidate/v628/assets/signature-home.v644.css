@@ -1,0 +1,454 @@
+/* IBERFIT WEB · HOME V2 — incremental art-direction layer.
+   Scope: public Home only. No product/app redesign. No content changes. */
+
+body[data-page="home"]{
+  --sig-forest:#0b1712;
+  --sig-forest-2:#11251c;
+  --sig-forest-3:#183326;
+  --sig-cream:#f4f0e8;
+  --sig-paper:#fbf8f2;
+  --sig-stone:#e9e2d5;
+  --sig-gold:#b9964a;
+  --sig-gold-soft:#d7bd82;
+  --sig-ink:#132119;
+  --sig-muted:#526158;
+  --sig-line:rgba(19,33,25,.13);
+  --sig-line-gold:rgba(185,150,74,.28);
+  background:var(--sig-cream);
+  color:var(--sig-ink);
+}
+
+/* Header: lighter, quieter, less template-like. */
+body[data-page="home"] .site-header{
+  background:rgba(244,240,232,.94);
+  border-bottom:1px solid rgba(19,33,25,.09);
+  backdrop-filter:blur(16px) saturate(135%);
+  -webkit-backdrop-filter:blur(16px) saturate(135%);
+  box-shadow:none;
+}
+body[data-page="home"] .site-header.scrolled{
+  box-shadow:0 10px 28px rgba(11,23,18,.07);
+}
+body[data-page="home"] .nav{
+  min-height:74px;
+  gap:1.1rem;
+}
+body[data-page="home"] .site-header .brand-mark{
+  width:40px!important;
+  height:40px!important;
+}
+body[data-page="home"] .brand-text span{
+  font-size:1.42rem;
+  letter-spacing:.015em;
+}
+body[data-page="home"] .brand-text small{
+  margin-top:.12rem;
+  font-size:.65rem;
+  letter-spacing:.12em;
+}
+body[data-page="home"] .navlinks{
+  gap:1.18rem;
+  font-size:.88rem;
+  color:#425047;
+}
+body[data-page="home"] .navlinks a:after{
+  height:1px;
+  bottom:-.25rem;
+  background:var(--sig-gold);
+}
+body[data-page="home"] .site-header .btn-primary{
+  background:var(--sig-forest-2)!important;
+  color:#fff!important;
+  border:1px solid rgba(185,150,74,.22)!important;
+  box-shadow:none!important;
+}
+@media(hover:hover) and (pointer:fine){
+  body[data-page="home"] .site-header .btn-primary:hover{
+    transform:translateY(-1px);
+    background:var(--sig-forest-3)!important;
+    box-shadow:0 10px 24px rgba(11,23,18,.12)!important;
+  }
+}
+
+/* Hero: preserve the current website composition and photography; improve scale and editorial authority. */
+body[data-page="home"] .hero{
+  padding:clamp(72px,8vw,112px) 0 clamp(64px,7vw,96px);
+  background:
+    radial-gradient(circle at 78% 26%,rgba(185,150,74,.075),transparent 24rem),
+    linear-gradient(180deg,#f6f2ea 0%,#f3eee5 100%);
+}
+body[data-page="home"] .hero:before,
+body[data-page="home"] .hero:after{
+  opacity:.45;
+}
+body[data-page="home"] .hero-grid{
+  grid-template-columns:minmax(0,.94fr) minmax(420px,1.06fr);
+  gap:clamp(3.25rem,6vw,6.25rem);
+  align-items:center;
+}
+body[data-page="home"] .hero-text{
+  max-width:650px;
+}
+body[data-page="home"] .eyebrow{
+  margin-bottom:1.15rem;
+  color:#8a6b29;
+  letter-spacing:.17em;
+  font-size:.68rem;
+}
+body[data-page="home"] .hero h1{
+  max-width:11.4ch;
+  margin-bottom:1.45rem;
+  color:var(--sig-forest);
+  font-size:clamp(3.85rem,6.2vw,6.25rem);
+  font-weight:600;
+  line-height:.98;
+  letter-spacing:-.048em;
+  text-wrap:balance;
+}
+body[data-page="home"] .hero .lead{
+  max-width:37rem;
+  color:#33443a;
+  font-size:clamp(1.09rem,1.45vw,1.24rem);
+  line-height:1.7;
+}
+body[data-page="home"] .hero-support{
+  max-width:35rem;
+  margin-top:.7rem;
+  color:#55645b;
+  line-height:1.7;
+}
+body[data-page="home"] .hero-actions{
+  gap:.8rem;
+  margin:2.15rem 0 1.35rem;
+}
+body[data-page="home"] .hero-actions .btn{
+  min-height:50px;
+  padding:1rem 1.35rem;
+  border-radius:13px;
+  font-size:.9rem;
+  letter-spacing:.005em;
+}
+body[data-page="home"] .hero-actions .btn-primary{
+  background:var(--sig-forest-2)!important;
+  border:1px solid var(--sig-forest-2)!important;
+  color:#fff!important;
+  box-shadow:0 10px 24px rgba(11,23,18,.12)!important;
+}
+body[data-page="home"] .hero-actions .btn-secondary{
+  background:rgba(251,248,242,.66)!important;
+  border:1px solid var(--sig-line-gold)!important;
+  color:var(--sig-forest)!important;
+  box-shadow:none!important;
+}
+body[data-page="home"] .hero-meta{
+  max-width:37rem;
+  color:#657067;
+  font-size:.82rem;
+  line-height:1.6;
+}
+body[data-page="home"] .editorial-hero-media{
+  position:relative;
+  margin:0;
+}
+body[data-page="home"] .editorial-hero-media:before{
+  content:"";
+  position:absolute;
+  z-index:-1;
+  inset:-22px 26px 22px -18px;
+  border:1px solid rgba(185,150,74,.22);
+  border-radius:30px;
+}
+body[data-page="home"] .editorial-hero-media img{
+  width:100%;
+  aspect-ratio:4/5;
+  object-fit:cover;
+  border-radius:24px;
+  box-shadow:0 28px 70px rgba(11,23,18,.15);
+}
+body[data-page="home"] .editorial-hero-media figcaption{
+  padding:.7rem .1rem 0;
+  color:#6f786f;
+  font-size:.68rem;
+  letter-spacing:.02em;
+}
+
+/* Global rhythm on Home. */
+body[data-page="home"] .section{
+  padding-block:clamp(72px,8vw,112px);
+}
+body[data-page="home"] .section-intro,
+body[data-page="home"] .section-head{
+  max-width:760px;
+  margin-bottom:clamp(2.4rem,4vw,3.7rem);
+}
+body[data-page="home"] .section h2{
+  color:var(--sig-forest);
+  font-weight:600;
+  letter-spacing:-.04em;
+  line-height:1.02;
+}
+body[data-page="home"] .section .lead{
+  color:#46564c;
+}
+
+/* Practice block: keep human photography as the hero evidence. */
+body[data-page="home"] .evidence-process-section{
+  background:
+    radial-gradient(circle at 84% 20%,rgba(185,150,74,.09),transparent 26rem),
+    linear-gradient(150deg,#0a1711 0%,#10271d 58%,#0a1711 100%);
+}
+body[data-page="home"] .evidence-process{
+  gap:clamp(2.5rem,5vw,5.5rem);
+}
+body[data-page="home"] .evidence-process-copy h2{
+  color:#f6f1e7;
+  max-width:13ch;
+  font-size:clamp(2.4rem,4vw,4.2rem);
+}
+body[data-page="home"] .evidence-process-copy .lead{
+  color:rgba(246,241,231,.72);
+}
+body[data-page="home"] .evidence-shot{
+  border:1px solid rgba(215,189,130,.16);
+  border-radius:18px;
+  box-shadow:none;
+  overflow:hidden;
+}
+body[data-page="home"] .evidence-shot figcaption{
+  background:rgba(7,19,13,.93);
+  border-top:1px solid rgba(215,189,130,.11);
+}
+body[data-page="home"] .evidence-shot img{
+  filter:saturate(.9) contrast(1.045);
+}
+
+/* System: editorial rail on desktop, not a SaaS card grid. */
+@media(min-width:721px){
+  body[data-page="home"] .system-rail{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:0;
+    border-top:1px solid var(--sig-line-gold);
+    border-bottom:1px solid var(--sig-line);
+  }
+  body[data-page="home"] .system-stage{
+    min-height:210px;
+    padding:2rem 1.6rem 2.2rem;
+    border:0!important;
+    border-right:1px solid var(--sig-line)!important;
+    border-radius:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+  }
+  body[data-page="home"] .system-stage:last-child{
+    border-right:0!important;
+  }
+  body[data-page="home"] .system-stage>span{
+    display:block;
+    margin-bottom:2.8rem;
+    color:#9b7a34;
+    font-size:.72rem;
+    letter-spacing:.12em;
+  }
+  body[data-page="home"] .system-stage h3{
+    margin-bottom:.7rem;
+    color:var(--sig-forest);
+    font-size:1.12rem;
+    font-weight:600;
+  }
+}
+
+/* IRI: warm paper, less card-heavy, more editorial. */
+body[data-page="home"] .section-cream{
+  background:linear-gradient(180deg,#e9e1d4 0%,#f1ebe1 56%,#f4f0e8 100%);
+  border-block:1px solid rgba(139,107,41,.12);
+}
+body[data-page="home"] .report-preview{
+  background:#fffdf8;
+  border:1px solid rgba(19,33,25,.14);
+  border-radius:20px;
+  box-shadow:0 24px 65px rgba(11,23,18,.10);
+}
+body[data-page="home"] .report-head{
+  border-bottom-color:rgba(19,33,25,.11);
+}
+body[data-page="home"] .report-profile,
+body[data-page="home"] .report-metric,
+body[data-page="home"] .report-bio,
+body[data-page="home"] .report-actions>div{
+  border-color:rgba(19,33,25,.11);
+}
+
+/* Modalities: strong rows rather than floating cards. */
+body[data-page="home"] .modality-list{
+  border-top:1px solid var(--sig-line-gold);
+}
+body[data-page="home"] .modality-row{
+  padding-block:2rem;
+  border-bottom:1px solid var(--sig-line);
+}
+body[data-page="home"] .modality-row h3{
+  font-size:clamp(1.65rem,2.5vw,2.4rem);
+  font-weight:600;
+  letter-spacing:-.035em;
+}
+body[data-page="home"] .modality-row .text-link{
+  font-weight:650;
+}
+
+/* Intent routes: quieter and more premium. */
+body[data-page="home"] .intent-route{
+  padding:1.4rem 1.5rem;
+  border:1px solid var(--sig-line-gold);
+  border-radius:16px;
+  background:rgba(251,248,242,.64);
+  box-shadow:none;
+}
+body[data-page="home"] .intent-route strong{
+  color:var(--sig-forest);
+}
+
+/* Philosophy / authenticity: calm institutional block. */
+body[data-page="home"] .authenticity-editorial{
+  background:var(--sig-paper);
+}
+body[data-page="home"] .authenticity-grid{
+  gap:clamp(2.4rem,5vw,5rem);
+}
+body[data-page="home"] .authenticity-ledger{
+  border-top:1px solid var(--sig-line-gold);
+}
+body[data-page="home"] .authenticity-line{
+  padding-block:1.35rem;
+  border-bottom:1px solid var(--sig-line);
+}
+
+/* Reviews: less floating-card feel. */
+body[data-page="home"] .review-proof{
+  background:linear-gradient(160deg,#0d1d16,#12291e);
+}
+body[data-page="home"] .review-proof h2{
+  color:#f6f1e7;
+}
+body[data-page="home"] .review-proof .lead{
+  color:rgba(246,241,231,.69);
+}
+body[data-page="home"] .client-review{
+  border:1px solid rgba(215,189,130,.18);
+  border-radius:18px;
+  background:rgba(255,255,255,.045);
+  box-shadow:none;
+}
+body[data-page="home"] .client-review blockquote{
+  color:#f6f1e7;
+}
+body[data-page="home"] .client-review footer,
+body[data-page="home"] .review-source-row{
+  color:rgba(246,241,231,.66);
+}
+
+/* AEO answers: readable, web-like, understated. */
+body[data-page="home"] .answer-shell{
+  max-width:980px;
+}
+body[data-page="home"] .answer-item{
+  padding:1.45rem 0;
+  border-top:1px solid var(--sig-line);
+}
+body[data-page="home"] .answer-item h3{
+  font-weight:600;
+}
+
+/* Final conversion: one decisive institutional surface. */
+body[data-page="home"] .cta-panel-inner{
+  border-radius:22px!important;
+  background:
+    linear-gradient(145deg,rgba(11,23,18,.98),rgba(18,48,34,.98))!important;
+  border:1px solid rgba(215,189,130,.18)!important;
+  box-shadow:0 20px 55px rgba(11,23,18,.12)!important;
+}
+body[data-page="home"] .cta-panel-inner>.btn{
+  border-radius:12px!important;
+  background:var(--sig-gold-soft)!important;
+  color:#122019!important;
+  box-shadow:none!important;
+}
+
+/* Footer: editorial and restrained. */
+body[data-page="home"] .site-footer{
+  background:#08120e;
+  margin-top:56px;
+}
+body[data-page="home"] .site-footer .brand-mark{
+  width:40px!important;
+  height:40px!important;
+}
+body[data-page="home"] .site-footer a:hover{
+  color:var(--sig-gold-soft);
+}
+
+/* Mobile: preserve the existing proven interactions; only refine hierarchy. */
+@media(max-width:860px){
+  body[data-page="home"] .nav{
+    min-height:68px;
+    padding:.65rem 0;
+  }
+  body[data-page="home"] .site-header .brand-mark{
+    width:36px!important;
+    height:36px!important;
+  }
+  body[data-page="home"] .hero-grid{
+    grid-template-columns:1fr;
+    gap:2.1rem;
+  }
+  body[data-page="home"] .hero{
+    padding-top:3.5rem;
+  }
+  body[data-page="home"] .hero h1{
+    max-width:10ch;
+    font-size:clamp(3.1rem,12vw,4.35rem);
+  }
+  body[data-page="home"] .editorial-hero-media:before{
+    inset:-10px 16px 12px -8px;
+    border-radius:24px;
+  }
+}
+@media(max-width:560px){
+  body[data-page="home"] .container{
+    width:min(var(--container),calc(100% - 32px));
+  }
+  body[data-page="home"] .hero{
+    padding:3rem 0 2.7rem;
+  }
+  body[data-page="home"] .hero .lead,
+  body[data-page="home"] .hero-support{
+    font-size:1rem;
+    line-height:1.62;
+  }
+  body[data-page="home"] .hero-actions{
+    margin-top:1.55rem;
+  }
+  body[data-page="home"] .hero-actions .btn{
+    border-radius:12px;
+  }
+  body[data-page="home"] .editorial-hero-media img{
+    border-radius:18px;
+    box-shadow:0 20px 46px rgba(11,23,18,.13);
+  }
+  body[data-page="home"] .section{
+    padding-block:3.75rem;
+  }
+  body[data-page="home"] .intent-route{
+    border-radius:14px;
+  }
+  body[data-page="home"] .client-review{
+    border-radius:16px;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  body[data-page="home"] .site-header,
+  body[data-page="home"] .btn,
+  body[data-page="home"] .navlinks a:after{
+    transition:none!important;
+  }
+}
