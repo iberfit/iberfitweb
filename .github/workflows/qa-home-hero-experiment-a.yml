@@ -54,7 +54,7 @@ jobs:
           image=one(r'body\[data-page="home"\] \.editorial-hero-media img\{(.*?)\n\}', 'IMAGE').group(1)
 
           assert 'inset:0 0 0 max(56%, 770px);' in media, 'PHOTO_BOUNDARY_CONTRACT_CHANGED'
-          assert 'border-left:1px solid rgba(11,40,27,.18);' in media, 'PHOTO_DIVIDER_CONTRACT_CHANGED'
+          assert 'border-left:2px solid var(--hw-gold-soft);' in media, 'PHOTO_DIVIDER_CONTRACT_CHANGED'
           assert '.editorial-hero-media:before{display:none;}' in css, 'PHOTO_FADE_REINTRODUCED'
 
           sat=one(r'filter:saturate\(((?:\d+(?:\.\d+)?)|(?:\.\d+))\)', 'PHOTO_SATURATION')
@@ -91,12 +91,13 @@ jobs:
           paper=hx('hw-paper')
           checks={
               'headline':(hx('hw-green-deep'),paper,7.0),
-              'body':('#26392f',paper,7.0),
-              'support':('#3e5147',paper,6.0),
-              'meta':(hx('hw-muted'),paper,6.0),
-              'eyebrow':('#6f5017',paper,5.0),
-              'nav':('#263b30',paper,7.0),
-              'header-small':('#354a3e',paper,7.0),
+              'body':('#1c3026',paper,7.0),
+              'support':('#30463a',paper,7.0),
+              'meta':('#405147',paper,7.0),
+              'eyebrow':('#684a12',paper,7.0),
+              'nav':('#edf1ec',hx('hw-header'),7.0),
+              'header-small':(hx('hw-header-muted'),hx('hw-header'),7.0),
+              'header-cta':(hx('hw-green-deep'),'#f8f3e8',7.0),
               'primary-button':('#ffffff',hx('hw-green-deep'),7.0),
               'secondary-button':(hx('hw-green-deep'),'#fffdf8',7.0),
           }
