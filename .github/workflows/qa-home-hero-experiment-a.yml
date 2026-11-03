@@ -51,23 +51,61 @@ jobs:
               return m
 
           media=one(r'body\[data-page="home"\] \.editorial-hero-media\{(.*?)\n\}', 'MEDIA').group(1)
-          fade=one(r'body\[data-page="home"\] \.editorial-hero-media:before\{(.*?)\n\}', 'FADE').group(1)
           image=one(r'body\[data-page="home"\] \.editorial-hero-media img\{(.*?)\n\}', 'IMAGE').group(1)
 
           assert 'inset:0 0 0 max(56%, 770px);' in media, 'PHOTO_BOUNDARY_CONTRACT_CHANGED'
-
-          width=one(r'\.editorial-hero-media:before\{.*?width:(\d+(?:\.\d+)?)%;', 'FADE_WIDTH')
-          width=float(width.group(1))
-          assert width <= 8, f'FADE_TOO_WIDE:{width}'
+          assert 'border-left:1px solid rgba(11,40,27,.18);' in media, 'PHOTO_DIVIDER_CONTRACT_CHANGED'
+          assert '.editorial-hero-media:before{display:none;}' in css, 'PHOTO_FADE_REINTRODUCED'
 
           sat=one(r'filter:saturate\(((?:\d+(?:\.\d+)?)|(?:\.\d+))\)', 'PHOTO_SATURATION')
           sat=float(sat.group(1))
-          assert sat >= .94, f'PHOTO_TOO_DESATURATED:{sat}'
+          assert sat >= 1.0, f'PHOTO_TOO_DESATURATED:{sat}'
 
-          assert 'rgba(243,234,220,.68)' in fade, 'FADE_OPACITY_CONTRACT_CHANGED'
+          assert 'background:var(--hw-paper);' in css, 'HERO_SOLID_BACKGROUND_CONTRACT_CHANGED'
           assert 'linear-gradient(90deg,transparent 75%' not in css, 'RIGHT_VIGNETTE_REINTRODUCED'
           assert '@media(max-width:1180px)' in css, 'RESPONSIVE_RECOMPOSITION_CONTRACT_CHANGED'
-          print({'photoBoundary':'max(56%,770px)','fadeWidthPct':width,'saturation':sat,'visualGuard':'PASS'})
+          print({'photoBoundary':'max(56%,770px)','fade':'none','saturation':sat,'visualGuard':'PASS'})
+          PY
+      - name: Verify WCAG contrast floor for the hero system
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import re
+          css=open('candidate/v628/assets/hero-experiment-a.css').read()
+
+          def hx(name):
+              m=re.search(r'--'+re.escape(name)+r':(#[0-9a-fA-F]{6});',css)
+              assert m, name+'_COLOR_MISSING'
+              return m.group(1)
+
+          def lum(h):
+              rgb=[int(h[i:i+2],16)/255 for i in (1,3,5)]
+              def f(c): return c/12.92 if c<=.04045 else ((c+.055)/1.055)**2.4
+              r,g,b=map(f,rgb)
+              return .2126*r+.7152*g+.0722*b
+
+          def cr(a,b):
+              x,y=sorted((lum(a),lum(b)),reverse=True)
+              return (x+.05)/(y+.05)
+
+          paper=hx('hw-paper')
+          checks={
+              'headline':(hx('hw-green-deep'),paper,7.0),
+              'body':('#26392f',paper,7.0),
+              'support':('#3e5147',paper,6.0),
+              'meta':(hx('hw-muted'),paper,6.0),
+              'eyebrow':('#6f5017',paper,5.0),
+              'nav':('#263b30',paper,7.0),
+              'header-small':('#354a3e',paper,7.0),
+              'primary-button':('#ffffff',hx('hw-green-deep'),7.0),
+              'secondary-button':(hx('hw-green-deep'),'#fffdf8',7.0),
+          }
+          out={}
+          for name,(fg,bg,min_ratio) in checks.items():
+              ratio=cr(fg,bg)
+              assert ratio>=min_ratio, f'{name}_CONTRAST_TOO_LOW:{ratio:.2f}<{min_ratio}'
+              out[name]=round(ratio,2)
+          print(out)
           PY
       - name: Prepare exact baseline and servers
         shell: bash
