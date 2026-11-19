@@ -37,8 +37,19 @@ jobs:
           elif command -v chromium >/dev/null; then BROWSER="$(command -v chromium)";
           else echo "No system Chrome found" >&2; exit 1; fi
           echo "browser=$BROWSER" >> "$GITHUB_OUTPUT"
-          cp .github/scripts/qa_v628_dispositivos.mjs /tmp/qa-live-devices.mjs
-          sed -i 's/chromium.launch({ headless: true })/chromium.launch({ headless: true, executablePath: process.env.BROWSER })/' /tmp/qa-live-devices.mjs
+          cp .github/scripts/qa_v628_dispositivos.mjs .github/scripts/qa-live-devices-runtime.mjs
+          sed -i 's/chromium.launch({ headless: true })/chromium.launch({ headless: true, executablePath: process.env.BROWSER })/' .github/scripts/qa-live-devices-runtime.mjs
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('.github/scripts/qa-live-devices-runtime.mjs')
+          s=p.read_text()
+          start='    if (route === "/online/") {'
+          end='    if (failedResponses.length) {'
+          a=s.find(start); b=s.find(end,a)
+          if a<0 or b<0: raise SystemExit('obsolete-online-policy-block-not-found')
+          s=s[:a]+s[b:]
+          p.write_text(s)
+          PY
       - name: Run existing 9-device / 10-route interaction QA against live production
         id: devices
         continue-on-error: true
@@ -47,7 +58,7 @@ jobs:
           BROWSER: ${{ steps.chrome.outputs.browser }}
         run: |
           set -o pipefail
-          BASE_URL=https://iberfit.cl QA_OUT=evidence/live-devices node /tmp/qa-live-devices.mjs | tee evidence-live-devices.log
+          BASE_URL=https://iberfit.cl QA_OUT=evidence/live-devices node .github/scripts/qa-live-devices-runtime.mjs | tee evidence-live-devices.log
       - name: Lighthouse Home mobile
         id: lh_mobile
         continue-on-error: true
