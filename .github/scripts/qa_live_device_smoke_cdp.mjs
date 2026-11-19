@@ -66,6 +66,17 @@ for(const v of views){
   })()`;
   const r=await call("Runtime.evaluate",{expression:expr,returnByValue:true});
   const m=r.result.value, failures=[];
+  // A click starts the CSS visibility/opacity transition; sample the finished state,
+  // not the zero-opacity first animation frame.
+  if(v.width<=1024 && m.menu.toggleVisible){
+    await sleep(360);
+    const state=await call("Runtime.evaluate",{expression:`(()=>{const n=document.querySelector('.navlinks'),t=document.querySelector('.menu-toggle'); if(!n||!t)return {visible:false,rect:null,expanded:null,open:false}; const r=n.getBoundingClientRect(),c=getComputedStyle(n);return {visible:r.width>0&&r.height>0&&c.display!=='none'&&c.visibility!=='hidden'&&Number(c.opacity||1)>.05,rect:{x:r.x,y:r.y,w:r.width,h:r.height,right:r.right,bottom:r.bottom},expanded:t.getAttribute('aria-expanded'),open:n.classList.contains('open')}})()`,returnByValue:true});
+    const updated=state.result.value;
+    m.menu.navAfter=updated.visible;
+    m.menu.navRect=updated.rect;
+    m.menu.ariaExpanded=updated.expanded;
+    m.menu.hasOpenClass=updated.open;
+  }
   const overflow=Math.max(m.bodyWidth,m.htmlWidth)-m.innerWidth;
   if(overflow>2)failures.push("HORIZONTAL_OVERFLOW:"+overflow);
   if(m.h1!==1)failures.push("H1_COUNT:"+m.h1);
@@ -76,7 +87,7 @@ for(const v of views){
   if(v.width<=1024){
     if(!m.menu.toggleVisible)failures.push("COMPACT_MENU_TOGGLE_MISSING");
     if(m.menu.navBefore)failures.push("COMPACT_MENU_OPEN_ON_LOAD");
-    if(!m.menu.navAfter)failures.push("COMPACT_MENU_DID_NOT_OPEN");
+    if(!m.menu.navAfter||!m.menu.hasOpenClass||m.menu.ariaExpanded!=="true")failures.push("COMPACT_MENU_DID_NOT_OPEN");
     if(m.menu.navRect&&(m.menu.navRect.x<-1||m.menu.navRect.right>m.innerWidth+1))failures.push("MENU_OUT_OF_VIEWPORT");
     if(m.menu.ariaControls!==m.menu.navId)failures.push("MENU_ARIA_CONTROLS");
   }else{

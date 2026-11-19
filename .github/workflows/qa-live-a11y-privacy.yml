@@ -6,6 +6,7 @@ on:
       - audit/prod-source-trace-20261119
     paths:
       - '.github/workflows/qa-live-a11y-privacy.yml'
+      - '.github/scripts/qa_v628_accesibilidad.mjs'
   workflow_dispatch:
 
 permissions:
@@ -65,3 +66,9 @@ jobs:
           name: iberfit-live-a11y-privacy-${{ github.run_id }}
           path: evidence/live-a11y-privacy/
           retention-days: 30
+      - name: Enforce successful accessibility and privacy tests
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.a11y.outcome }}" = "success"
+          test "${{ steps.privacy.outcome }}" = "success"
