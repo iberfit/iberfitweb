@@ -10,6 +10,8 @@ const findings = [];
 
 for (const route of routes) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'es-CL' });
+  // Install axe through the browser automation context without weakening the site's CSP.
+  await context.addInitScript({ path: axePath });
   const page = await context.newPage();
   const response = await page.goto(base + route, { waitUntil: 'networkidle', timeout: 30000 });
 
@@ -20,7 +22,6 @@ for (const route of routes) {
     continue;
   }
 
-  await page.addScriptTag({ path: axePath });
   const results = await page.evaluate(async () => window.axe.run(document, {
     runOnly: {
       type: 'tag',

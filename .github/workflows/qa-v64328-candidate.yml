@@ -1,0 +1,53 @@
+name: IBERFIT WEB | V6.43.28 candidate certification (no deployment)
+on:
+  push:
+    branches:
+      - audit/prod-source-trace-20261119
+    paths:
+      - 'candidate/v628/**'
+      - '.github/scripts/qa_v64328_candidate.mjs'
+      - '.github/workflows/qa-v64328-candidate.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install read-only browser QA dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install --no-save --package-lock=false playwright@1.56.1 axe-core@4.11.0 >/dev/null
+          if command -v google-chrome >/dev/null; then BROWSER="$(command -v google-chrome)";
+          elif command -v google-chrome-stable >/dev/null; then BROWSER="$(command -v google-chrome-stable)";
+          elif command -v chromium >/dev/null; then BROWSER="$(command -v chromium)";
+          else echo 'No Chrome'; exit 1; fi
+          echo "BROWSER=$BROWSER" >> "$GITHUB_ENV"
+      - name: Serve ONLY the staged candidate locally and certify
+        shell: bash
+        env:
+          BASE_URL: http://127.0.0.1:4173
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --bind 127.0.0.1 --directory candidate/v628 >/tmp/iberfit-candidate-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do
+            if curl --silent --fail http://127.0.0.1:4173/ >/dev/null; then break; fi
+            sleep 1
+          done
+          node .github/scripts/qa_v64328_candidate.mjs
+      - name: Upload certification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iberfit-v64328-candidate-certification
+          path: evidence/v64328-candidate/report.json
+          retention-days: 30
+          if-no-files-found: warn

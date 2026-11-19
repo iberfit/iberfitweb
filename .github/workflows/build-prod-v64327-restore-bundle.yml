@@ -1,0 +1,64 @@
+name: IBERFIT WEB · Build V6.43.27 restore bundle
+
+on:
+  push:
+    branches:
+      - audit/prod-source-trace-20261119
+    paths:
+      - '.github/workflows/build-prod-v64327-restore-bundle.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reconstruct exact certified package from immutable source SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC=424700ae15c6138c8a07f15f82f5b34d62c51a9f
+          mkdir -p /tmp/iberfit-restore/source /tmp/iberfit-restore/meta
+          git archive "$SRC" candidate/v628 | tar -x -C /tmp/iberfit-restore/source
+          test "$(find /tmp/iberfit-restore/source/candidate/v628 -type f | wc -l | tr -d ' ')" = "117"
+          test "$(cat /tmp/iberfit-restore/source/candidate/v628/VERSION | tr -d '\r\n ')" = "6.43.27"
+          (
+            cd /tmp/iberfit-restore/source/candidate/v628
+            find . -type f -print0 | sort -z | xargs -0 sha256sum
+          ) > /tmp/iberfit-restore/meta/SHA256SUMS.txt
+          cat > /tmp/iberfit-restore/meta/RESTORE_META.json <<'JSON'
+          {
+            "schema": "iberfit.web.restore.v1",
+            "version": "6.43.27",
+            "sourceSha": "424700ae15c6138c8a07f15f82f5b34d62c51a9f",
+            "sourceBranch": "checkpoint/v64327-sitemap-accuracy-production-2026-10-06",
+            "backupBranch": "backup/prod-v64327-d18cb0e7-20261119",
+            "pagesProject": "web-iberfit",
+            "deploymentId": "d18cb0e7-b8aa-4255-968d-7ad2a4576ce8",
+            "deploymentUrl": "https://d18cb0e7.web-iberfit.pages.dev/",
+            "deployDirectory": "candidate/v628",
+            "packageFiles": 117,
+            "publishedAssets": 115,
+            "cloudflareConfigFiles": ["_headers","_redirects"],
+            "productionDomains": ["iberfit.cl","web.iberfit.cl"],
+            "note": "No production mutation performed. Direct deployment method (Wrangler vs dashboard drag/drop) must be read from Cloudflare deployment metadata before automating a future production upload."
+          }
+          JSON
+          tar -C /tmp/iberfit-restore -czf /tmp/IBERFIT_WEB_V6.43.27_RESTORE_BUNDLE.tar.gz source meta
+          sha256sum /tmp/IBERFIT_WEB_V6.43.27_RESTORE_BUNDLE.tar.gz > /tmp/IBERFIT_WEB_V6.43.27_RESTORE_BUNDLE.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: IBERFIT_WEB_V6.43.27_RESTORE_BUNDLE
+          path: |
+            /tmp/IBERFIT_WEB_V6.43.27_RESTORE_BUNDLE.tar.gz
+            /tmp/IBERFIT_WEB_V6.43.27_RESTORE_BUNDLE.tar.gz.sha256
+            /tmp/iberfit-restore/meta/RESTORE_META.json
+            /tmp/iberfit-restore/meta/SHA256SUMS.txt
+          retention-days: 90
+          if-no-files-found: error
