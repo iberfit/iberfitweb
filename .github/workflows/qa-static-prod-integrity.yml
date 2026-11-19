@@ -1,0 +1,31 @@
+name: IBERFIT WEB · Static production integrity audit
+
+on:
+  push:
+    branches:
+      - audit/prod-source-trace-20261119
+    paths:
+      - '.github/scripts/qa_static_prod_integrity.mjs'
+      - '.github/workflows/qa-static-prod-integrity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node .github/scripts/qa_static_prod_integrity.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iberfit-static-prod-integrity-${{ github.run_id }}
+          path: evidence/static-prod/report.json
+          retention-days: 30
+          if-no-files-found: error
