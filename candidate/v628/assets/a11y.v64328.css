@@ -1,0 +1,5 @@
+/* IBERFIT WEB V6.43.28: targeted WCAG AA contrast refinements on light surfaces. */
+/* A new URL preserves immutable caching of existing published assets. */
+.modality-row.modality-row--guided > div:first-child > span{color:#72500f}
+.answer-source-note{color:var(--text-secondary,#44564c);opacity:1}
+.page-breadcrumbs ol{color:#45584d}
