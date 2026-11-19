@@ -35,7 +35,8 @@ const routes=["/","/diagnostico-iri/","/metodo/","/presencial/","/online/","/con
 const out=[];
 for(const v of views){
  await call("Emulation.setDeviceMetricsOverride",{width:v.width,height:v.height,deviceScaleFactor:v.dpr,mobile:v.mobile});
- await call("Emulation.setTouchEmulationEnabled",{enabled:v.mobile,maxTouchPoints:v.mobile?5:0});
+ if(v.mobile) await call("Emulation.setTouchEmulationEnabled",{enabled:true,maxTouchPoints:5});
+ else await call("Emulation.setTouchEmulationEnabled",{enabled:false});
  for(const route of routes){
   await call("Page.navigate",{url:"https://iberfit.cl"+route});
   for(let i=0;i<80;i++){
