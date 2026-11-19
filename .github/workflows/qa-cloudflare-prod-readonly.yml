@@ -1,0 +1,74 @@
+name: IBERFIT WEB | Cloudflare Pages production identity (read-only)
+on:
+  push:
+    branches:
+      - audit/prod-source-trace-20261119
+    paths:
+      - '.github/workflows/qa-cloudflare-prod-readonly.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  identity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      CF_ACCOUNT_ID: '5b03d387427d367674b9d05b8bdf7c84'
+      CF_PROJECT: 'web-iberfit'
+      EXPECTED_ID: 'd18cb0e7-b8aa-4255-968d-7ad2a4576ce8'
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Read live Cloudflare Pages metadata without mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo 'CLOUDFLARE_CREDENTIAL_UNAVAILABLE'; exit 41; }
+          mkdir -p evidence/cloudflare-identity
+          curl --fail --silent --show-error --max-time 20 \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H 'Content-Type: application/json' \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/pages/projects/$CF_PROJECT" \
+            -o /tmp/iberfit-cloudflare-project.json
+          curl --fail --silent --show-error --max-time 20 \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H 'Content-Type: application/json' \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/pages/projects/$CF_PROJECT/deployments?per_page=15" \
+            -o /tmp/iberfit-cloudflare-deployments.json
+          node <<'NODE'
+          const fs=require('node:fs');
+          const project=JSON.parse(fs.readFileSync('/tmp/iberfit-cloudflare-project.json'));
+          const list=JSON.parse(fs.readFileSync('/tmp/iberfit-cloudflare-deployments.json'));
+          if(!project.success||!project.result)throw new Error('CLOUDFLARE_PROJECT_READ_FAILED');
+          if(!list.success||!Array.isArray(list.result))throw new Error('CLOUDFLARE_DEPLOYMENTS_READ_FAILED');
+          const p=project.result;
+          const prod=list.result.filter(d=>d.environment==='production');
+          const latest=prod[0]||null;
+          const report={
+            checkedAt:new Date().toISOString(),
+            project:p.name,
+            productionBranch:p.production_branch??null,
+            domains:p.domains??[],
+            subdomain:p.subdomain??null,
+            latestDeployment:p.latest_deployment?.id??null,
+            latestProductionId:latest?.id??null,
+            latestProductionUrl:latest?.url??null,
+            latestProductionCreated:latest?.created_on??null,
+            latestProductionTrigger:latest?.deployment_trigger?.type??null,
+            expectedArchiveId:process.env.EXPECTED_ID,
+            baselineStillLatest:latest?.id===process.env.EXPECTED_ID,
+            sampledDeployments:list.result.length,
+            writesPerformed:0
+          };
+          fs.writeFileSync('evidence/cloudflare-identity/report.json',JSON.stringify(report,null,2)+'\n');
+          console.log(JSON.stringify(report,null,2));
+          if(p.name!==process.env.CF_PROJECT)throw new Error('CLOUDFLARE_PROJECT_IDENTITY_MISMATCH');
+          if(!latest)throw new Error('CLOUDFLARE_NO_PRODUCTION_DEPLOYMENT');
+          NODE
+      - name: Save sanitized identification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iberfit-cloudflare-production-identity
+          path: evidence/cloudflare-identity/report.json
+          retention-days: 14
+          if-no-files-found: warn
