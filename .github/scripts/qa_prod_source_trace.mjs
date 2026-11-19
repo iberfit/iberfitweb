@@ -31,6 +31,18 @@ async function fetchBytes(url){
   const body=Buffer.from(await r.arrayBuffer());
   return {status:r.status,ok:r.ok,finalUrl:r.url,body,headers:Object.fromEntries(r.headers.entries())};
 }
+function textDiffHint(local,remote){
+  const a=local.toString('utf8'), b=remote.toString('utf8');
+  let p=0; while(p<a.length&&p<b.length&&a[p]===b[p])p++;
+  let s=0; while(s<a.length-p&&s<b.length-p&&a[a.length-1-s]===b[b.length-1-s])s++;
+  return {
+    deltaBytes:Buffer.byteLength(b)-Buffer.byteLength(a),
+    commonPrefixChars:p,
+    commonSuffixChars:s,
+    localChanged:a.slice(p,a.length-s).slice(0,1600),
+    remoteChanged:b.slice(p,b.length-s).slice(0,2600)
+  };
+}
 const all=(await walk(ROOT)).map(p=>relative(ROOT,p).split('\\').join('/')).sort();
 const configFiles=['_headers','_redirects'];
 const publishable=all.filter(x=>!configFiles.includes(x));
@@ -54,7 +66,8 @@ for(const rel of publishable){
         contentType:x.headers['content-type']||null,
         etag:x.headers.etag||null,
         xRobotsTag:x.headers['x-robots-tag']||null,
-        cfCacheStatus:x.headers['cf-cache-status']||null
+        cfCacheStatus:x.headers['cf-cache-status']||null,
+        ...(sha(x.body)!==localSha && (/\.html$/.test(rel)||rel==='robots.txt') ? {diffHint:textDiffHint(local,x.body)} : {})
       };
     }catch(e){
       row.origins[origin.name]={error:String(e),match:false};
@@ -102,8 +115,15 @@ console.log(JSON.stringify(summary,null,2));
 
 const prod=summary.origins.production;
 const dep=summary.origins.deployment;
-if(prod.mismatches!==0) throw new Error('PRODUCTION_DOES_NOT_MATCH_CHECKPOINT');
+const expectedProdLayer=new Set([
+  '404.html','robots.txt',
+  ...publishable.filter(x=>x.endsWith('.html'))
+]);
+const prodMismatchSet=new Set(assetRows.filter(r=>!r.origins.production?.match).map(r=>r.path));
+const prodLayerExpected=prodMismatchSet.size===expectedProdLayer.size && [...prodMismatchSet].every(x=>expectedProdLayer.has(x));
+summary.productionLayerClassification=prodLayerExpected ? 'ONLY_HTML_AND_ROBOTS_TRANSFORMED' : 'UNEXPECTED_ASSET_MISMATCHES';
 if(dep.mismatches!==0) throw new Error('DEPLOYMENT_URL_DOES_NOT_MATCH_CHECKPOINT');
+if(!prodLayerExpected) throw new Error('PRODUCTION_HAS_UNEXPECTED_ASSET_MISMATCHES');
 if(summary.configs._headers.servedAsStaticAsset) throw new Error('_headers_SHOULD_NOT_BE_STATIC_ASSET');
 if(summary.configs._redirects.servedAsStaticAsset) throw new Error('_redirects_SHOULD_NOT_BE_STATIC_ASSET');
 console.log('PRODUCTION_SOURCE_EXACT_MATCH_115_OF_115');
