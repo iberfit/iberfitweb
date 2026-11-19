@@ -51,7 +51,12 @@ for(const p of ['/robots.txt','/sitemap.xml','/llms.txt','/assets/styles.v628.cs
  if(p==='/llms.txt'&&r.status!==200)fail.push({code:'LLMS_STATUS',status:r.status});
  if(p.includes('missing_404')&&r.status!==404)fail.push({code:'CUSTOM_404_STATUS',status:r.status});
  if(p==='/assets/styles.v628.css'&&!/immutable/i.test(r.headers['cache-control']||''))fail.push({code:'CSS_CACHE_NOT_IMMUTABLE',value:r.headers['cache-control']});
- if(p.endsWith('.webp')&&!/immutable/i.test(r.headers['cache-control']||''))fail.push({code:'IMAGE_CACHE_NOT_IMMUTABLE',value:r.headers['cache-control']});
+ // Unfingerprinted editorial photographs should have bounded public caching, not immutable lifetime.
+ if(p.endsWith('.webp')){
+  const cache=r.headers['cache-control']||'';
+  const maxAge=Number((cache.match(/(?:^|,)\s*max-age=(\d+)/i)||[])[1]||0);
+  if(r.status!==200||!/\bpublic\b/i.test(cache)||maxAge<604800)fail.push({code:'IMAGE_CACHE_POLICY_INVALID',value:cache,status:r.status,maxAge});
+ }
 }
 const oldEn=await req('/en/contacto/');
 evidence.observations.enContactoLegacy={status:oldEn.status,location:oldEn.location};
