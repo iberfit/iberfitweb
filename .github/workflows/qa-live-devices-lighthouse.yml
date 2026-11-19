@@ -1,0 +1,99 @@
+name: IBERFIT WEB · Live device and Lighthouse audit (read-only)
+
+on:
+  push:
+    branches:
+      - audit/prod-source-trace-20261119
+    paths:
+      - '.github/workflows/qa-live-devices-lighthouse.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: iberfit-live-device-lighthouse
+  cancel-in-progress: true
+
+jobs:
+  live-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser QA tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright@1.56.1 lighthouse@13.0.1 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Run existing 9-device / 10-route interaction QA against live production
+        id: devices
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          BASE_URL=https://iberfit.cl QA_OUT=evidence/live-devices node .github/scripts/qa_v628_dispositivos.mjs | tee evidence-live-devices.log
+      - name: Lighthouse Home mobile
+        id: lh_mobile
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p evidence/lighthouse
+          npx lighthouse https://iberfit.cl/             --quiet             --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage"             --only-categories=performance,accessibility,best-practices,seo             --output=json             --output-path=evidence/lighthouse/home-mobile.json
+      - name: Lighthouse Home desktop
+        id: lh_desktop
+        continue-on-error: true
+        shell: bash
+        run: |
+          npx lighthouse https://iberfit.cl/             --quiet             --preset=desktop             --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage"             --only-categories=performance,accessibility,best-practices,seo             --output=json             --output-path=evidence/lighthouse/home-desktop.json
+      - name: Summarize evidence without hiding test failures
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const out={
+            checkedAt:new Date().toISOString(),
+            deviceJobOutcome:'${{ steps.devices.outcome }}',
+            lighthouseMobileOutcome:'${{ steps.lh_mobile.outcome }}',
+            lighthouseDesktopOutcome:'${{ steps.lh_desktop.outcome }}'
+          };
+          for(const [name,file] of [['mobile','evidence/lighthouse/home-mobile.json'],['desktop','evidence/lighthouse/home-desktop.json']]){
+            if(!fs.existsSync(file))continue;
+            const x=JSON.parse(fs.readFileSync(file,'utf8'));
+            out[name]={
+              performance:Math.round((x.categories.performance?.score??0)*100),
+              accessibility:Math.round((x.categories.accessibility?.score??0)*100),
+              bestPractices:Math.round((x.categories['best-practices']?.score??0)*100),
+              seo:Math.round((x.categories.seo?.score??0)*100),
+              fcp:x.audits['first-contentful-paint']?.displayValue,
+              lcp:x.audits['largest-contentful-paint']?.displayValue,
+              tbt:x.audits['total-blocking-time']?.displayValue,
+              cls:x.audits['cumulative-layout-shift']?.displayValue,
+              speedIndex:x.audits['speed-index']?.displayValue
+            };
+          }
+          if(fs.existsSync('evidence/live-devices/report.json')){
+            const r=JSON.parse(fs.readFileSync('evidence/live-devices/report.json','utf8'));
+            out.devices={ok:r.ok,findings:r.findings?.length||0,details:(r.findings||[]).slice(0,100)};
+          }
+          fs.writeFileSync('evidence/live-audit-summary.json',JSON.stringify(out,null,2)+'\n');
+          console.log(JSON.stringify(out,null,2));
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iberfit-live-quality-${{ github.run_id }}
+          path: |
+            evidence/live-audit-summary.json
+            evidence/live-devices/report.json
+            evidence/lighthouse/home-mobile.json
+            evidence/lighthouse/home-desktop.json
+            evidence-live-devices.log
+          retention-days: 30
+          if-no-files-found: warn
