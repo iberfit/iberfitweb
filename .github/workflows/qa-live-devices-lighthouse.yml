@@ -26,23 +26,34 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install browser QA tools
+      - name: Install QA libraries and locate preinstalled Chrome
+        id: chrome
         shell: bash
         run: |
           set -euo pipefail
-          npm install --no-save --package-lock=false playwright@1.56.1 lighthouse@13.0.1 >/dev/null 2>&1
-          npx playwright install --with-deps chromium >/dev/null
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install --no-save --package-lock=false playwright@1.56.1 lighthouse@13.0.1 >/dev/null 2>&1
+          if command -v google-chrome >/dev/null; then BROWSER="$(command -v google-chrome)";
+          elif command -v google-chrome-stable >/dev/null; then BROWSER="$(command -v google-chrome-stable)";
+          elif command -v chromium >/dev/null; then BROWSER="$(command -v chromium)";
+          else echo "No system Chrome found" >&2; exit 1; fi
+          echo "browser=$BROWSER" >> "$GITHUB_OUTPUT"
+          cp .github/scripts/qa_v628_dispositivos.mjs /tmp/qa-live-devices.mjs
+          sed -i 's/chromium.launch({ headless: true })/chromium.launch({ headless: true, executablePath: process.env.BROWSER })/' /tmp/qa-live-devices.mjs
       - name: Run existing 9-device / 10-route interaction QA against live production
         id: devices
         continue-on-error: true
         shell: bash
+        env:
+          BROWSER: ${{ steps.chrome.outputs.browser }}
         run: |
           set -o pipefail
-          BASE_URL=https://iberfit.cl QA_OUT=evidence/live-devices node .github/scripts/qa_v628_dispositivos.mjs | tee evidence-live-devices.log
+          BASE_URL=https://iberfit.cl QA_OUT=evidence/live-devices node /tmp/qa-live-devices.mjs | tee evidence-live-devices.log
       - name: Lighthouse Home mobile
         id: lh_mobile
         continue-on-error: true
         shell: bash
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.browser }}
         run: |
           mkdir -p evidence/lighthouse
           npx lighthouse https://iberfit.cl/             --quiet             --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage"             --only-categories=performance,accessibility,best-practices,seo             --output=json             --output-path=evidence/lighthouse/home-mobile.json
@@ -50,6 +61,8 @@ jobs:
         id: lh_desktop
         continue-on-error: true
         shell: bash
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.browser }}
         run: |
           npx lighthouse https://iberfit.cl/             --quiet             --preset=desktop             --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage"             --only-categories=performance,accessibility,best-practices,seo             --output=json             --output-path=evidence/lighthouse/home-desktop.json
       - name: Summarize evidence without hiding test failures
