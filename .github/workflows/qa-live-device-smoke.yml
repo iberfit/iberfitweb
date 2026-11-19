@@ -1,0 +1,39 @@
+name: IBERFIT WEB · Fast live device smoke (read-only)
+on:
+  push:
+    branches:
+      - audit/prod-source-trace-20261119
+    paths:
+      - '.github/scripts/qa_live_device_smoke_cdp.mjs'
+      - '.github/workflows/qa-live-device-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Locate system Chrome
+        id: chrome
+        shell: bash
+        run: |
+          if command -v google-chrome >/dev/null; then BROWSER="$(command -v google-chrome)";
+          elif command -v google-chrome-stable >/dev/null; then BROWSER="$(command -v google-chrome-stable)";
+          elif command -v chromium >/dev/null; then BROWSER="$(command -v chromium)";
+          else exit 1; fi
+          echo "browser=$BROWSER" >> "$GITHUB_OUTPUT"
+      - name: Run live smoke
+        env:
+          BROWSER: ${{ steps.chrome.outputs.browser }}
+        run: node .github/scripts/qa_live_device_smoke_cdp.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iberfit-live-device-smoke-${{ github.run_id }}
+          path: evidence/live-device-smoke/report.json
+          retention-days: 30
+          if-no-files-found: error
