@@ -3,7 +3,8 @@
 - Adds bilingual goal-based guidance and links to the existing assessment and contact journey.
 - Makes existing evidence of professional method and client experience easier to inspect, without fabricated claims.
 - Extends the optional contact guide with standalone IRI enquiries while preserving broad training goals.
-- Updates AI-readable navigation and historical sitemap dates; homepage and Las Condes remain unchanged.
+- Updates AI-readable navigation and actual sitemap dates; homepage and all local landing HTML remain byte-identical.
+- Aligns bilingual structured service entities and page types; adds consent-gated coarse acquisition attribution without new third-party providers or raw query/referrer storage.
 
 ## 6.43.29 — SEO, GEO and AEO 360
 
