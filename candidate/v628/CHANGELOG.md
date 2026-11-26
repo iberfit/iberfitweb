@@ -1,3 +1,10 @@
+## 6.43.29 — SEO, GEO and AEO 360
+
+- Integrates the previously prepared local SEO improvements without altering the home or Las Condes pages.
+- Clarifies the online service identity in ES/EN, including visible onboarding guidance and canonical links.
+- Updates llms.txt and the sitemap using the actual dates of changed HTML; redirects the legacy English contact route.
+- Adds a reproducible structural certificate and hashed release package. No application or database changes.
+
 ## 6.43.27 — Sitemap lastmod integrity
 
 - Rebuilds lastmod from each page’s last actual HTML change in Git history.
