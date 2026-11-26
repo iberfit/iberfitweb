@@ -1,3 +1,10 @@
+## 6.43.30 — Commercial Authority 360
+
+- Adds bilingual goal-based guidance and links to the existing assessment and contact journey.
+- Makes existing evidence of professional method and client experience easier to inspect, without fabricated claims.
+- Extends the optional contact guide with running and standalone IRI enquiries.
+- Updates AI-readable navigation and historical sitemap dates; homepage and Las Condes remain unchanged.
+
 ## 6.43.29 — SEO, GEO and AEO 360
 
 - Integrates the previously prepared local SEO improvements without altering the home or Las Condes pages.
