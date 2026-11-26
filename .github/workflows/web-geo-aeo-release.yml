@@ -32,8 +32,10 @@ jobs:
         if: steps.release.outputs.version == '6.43.30'
         run: |
           set -euo pipefail
-          npm install --no-save --package-lock=false playwright@1.56.1 >/dev/null
-          npx playwright install chromium >/dev/null
+          mkdir -p /tmp/iberfit-browser-qa
+          npm install --prefix /tmp/iberfit-browser-qa --no-save --package-lock=false playwright@1.56.1 --loglevel=notice
+          /tmp/iberfit-browser-qa/node_modules/.bin/playwright install chromium
+          cp .github/scripts/qa_v64330_commercial_browser.mjs /tmp/iberfit-browser-qa/qa.mjs
           python3 -m http.server 4173 --directory candidate/v628 >/tmp/authority-http.log 2>&1 &
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true' EXIT
@@ -41,7 +43,7 @@ jobs:
             if curl -fsS http://127.0.0.1:4173/ >/dev/null; then break; fi
             sleep .5
           done
-          QA_OUT=/tmp/authority-qa node .github/scripts/qa_v64330_commercial_browser.mjs
+          QA_OUT=/tmp/authority-qa node /tmp/iberfit-browser-qa/qa.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: IBERFIT-WEB-${{ steps.release.outputs.version }}-certified
