@@ -27,13 +27,16 @@ pairs = [
     ("hibrido/index.html", "en/hybrid/index.html"),
     ("online/index.html", "en/online/index.html"),
 ]
-goals = {"objetivos","fuerza","running","condicion-fisica","retomar"}
+goals = {"objetivos"}
 for lang in (0,1):
     method, about, contact, iri = [ROOT / pairs[i][lang] for i in range(4)]
     assert goals <= set(Doc(method).ids)
+    assert not ({"fuerza","running","condicion-fisica","retomar"} & set(Doc(method).ids)), "Avoid goal catalogue"
+    approved = ("El entrenamiento al servicio de tus objetivos" if lang == 0 else "Training shaped around your goals")
+    assert approved in method.read_text(), (method, approved)
     assert {"evidencia","experiencias-reales"} <= set(Doc(about).ids)
     options = contact.read_text()
-    for phrase in (("Mejorar en running o preparar una carrera","Coordinar solo el Diagnóstico IRI") if lang == 0 else ("Improve my running or prepare for a race","Arrange the IRI Assessment only")):
+    for phrase in (("Desarrollar fuerza o rendimiento","Coordinar solo el Diagnóstico IRI") if lang == 0 else ("Develop strength or performance","Arrange the IRI Assessment only")):
         assert phrase in options, (contact, phrase)
     expected = "/contacto/#orientador" if lang == 0 else "/en/contact/#orientador"
     assert expected in Doc(iri).hrefs

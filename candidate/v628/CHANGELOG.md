@@ -2,7 +2,7 @@
 
 - Adds bilingual goal-based guidance and links to the existing assessment and contact journey.
 - Makes existing evidence of professional method and client experience easier to inspect, without fabricated claims.
-- Extends the optional contact guide with running and standalone IRI enquiries.
+- Extends the optional contact guide with standalone IRI enquiries while preserving broad training goals.
 - Updates AI-readable navigation and historical sitemap dates; homepage and Las Condes remain unchanged.
 
 ## 6.43.29 — SEO, GEO and AEO 360

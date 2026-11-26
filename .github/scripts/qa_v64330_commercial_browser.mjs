@@ -23,7 +23,7 @@ try {
       assert(state.overflow<=2,route+' overflow '+state.overflow);
       assert.equal(state.lang,route.startsWith('/en/')?'en':'es');
       if(route==='/metodo/'||route==='/en/method/'){
-        for(const id of ['objetivos','fuerza','running','condicion-fisica','retomar']) assert.equal(await page.locator('#'+id).count(),1,route+' '+id);
+        for(const id of ['objetivos']) assert.equal(await page.locator('#'+id).count(),1,route+' '+id);
         await page.locator('#objetivos').scrollIntoViewIfNeeded();
       }
       if(route==='/sobre-iberfit/'||route==='/en/about/'){
@@ -32,7 +32,7 @@ try {
       }
       if(route==='/contacto/'||route==='/en/contact/'){
         const en=route.startsWith('/en/');
-        const goals=en?['Improve my running or prepare for a race','Arrange the IRI Assessment only']:['Mejorar en running o preparar una carrera','Coordinar solo el Diagnóstico IRI'];
+        const goals=en?['Develop strength or performance','Arrange the IRI Assessment only']:['Desarrollar fuerza o rendimiento','Coordinar solo el Diagnóstico IRI'];
         for(const goal of goals){
           await page.reload({waitUntil:'load'});
           const chip=page.locator('#objetivo + .choice-grid button').filter({hasText:goal});
