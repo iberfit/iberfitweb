@@ -61,6 +61,8 @@ def main():
     assert "User-agent: OAI-SearchBot\nAllow: /" in robots
     assert "Sitemap: " + ORIGIN + "/sitemap.xml" in robots
     assert (ROOT / "VERSION").read_text().strip() == "6.43.29"
+    subprocess.run(["python3", ".github/scripts/sitemap_lastmod.py"], check=True)
+    subprocess.run(["git", "diff", "--exit-code", "--", str(ROOT / "sitemap.xml")], check=True)
     subprocess.run(["python3", ".github/scripts/sitemap_lastmod.py", "--check"], check=True)
     for path in FROZEN:
         actual = (ROOT / path).read_bytes()
