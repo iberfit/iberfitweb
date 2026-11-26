@@ -1,0 +1,22 @@
+name: Web GEO AEO certification and package
+on:
+  pull_request:
+    branches: [production/web-iberfit]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Certify and package public website only
+        run: python3 scripts/certify_geo_aeo_360.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: IBERFIT-WEB-6.43.29-certified
+          path: release-web/
+          if-no-files-found: error
