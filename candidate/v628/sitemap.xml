@@ -10,7 +10,7 @@
     <loc>https://iberfit.cl/diagnostico-iri/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
-    <lastmod>2026-11-02</lastmod>
+    <lastmod>2026-11-26</lastmod>
   </url>
   <url>
     <loc>https://iberfit.cl/metodo/</loc>
@@ -22,13 +22,13 @@
     <loc>https://iberfit.cl/presencial/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
-    <lastmod>2026-11-02</lastmod>
+    <lastmod>2026-11-26</lastmod>
   </url>
   <url>
     <loc>https://iberfit.cl/hibrido/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
-    <lastmod>2026-11-02</lastmod>
+    <lastmod>2026-11-26</lastmod>
   </url>
   <url>
     <loc>https://iberfit.cl/online/</loc>
@@ -106,7 +106,7 @@
     <loc>https://iberfit.cl/en/iri-assessment/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
-    <lastmod>2026-09-24</lastmod>
+    <lastmod>2026-11-26</lastmod>
   </url>
   <url>
     <loc>https://iberfit.cl/en/method/</loc>
@@ -118,13 +118,13 @@
     <loc>https://iberfit.cl/en/in-person/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-11-26</lastmod>
   </url>
   <url>
     <loc>https://iberfit.cl/en/hybrid/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-11-26</lastmod>
   </url>
   <url>
     <loc>https://iberfit.cl/en/online/</loc>
