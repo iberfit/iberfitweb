@@ -10,7 +10,7 @@ const results=[];
 try {
   for(const width of [390,768,1440]){
     const context=await browser.newContext({viewport:{width,height:1000}});
-    await context.addInitScript(()=>localStorage.setItem('iberfit_consent_v2',JSON.stringify({necessary:true,analytics:false,marketing:false})));
+    await context.addInitScript(()=>localStorage.setItem('iberfit_consent_v2',JSON.stringify({version:'2026-07-12-v2',necessary:true,analytics:false,marketing:false})));
     for(const route of routes){
       const page=await context.newPage();
       const errors=[];
@@ -36,8 +36,8 @@ try {
         for(const goal of goals){
           await page.reload({waitUntil:'load'});
           const chip=page.locator('#objetivo + .choice-grid button').filter({hasText:goal});
-          await chip.waitFor();
-          await chip.click();
+          if(width<=720){await chip.waitFor();await chip.click();}
+          else {await page.locator('#objetivo').selectOption({label:goal});}
           assert.equal(await page.locator('#objetivo').inputValue(),goal);
           await page.locator('[data-step="1"] [data-next-step]').click();
           await page.locator('[data-step="2"] [data-next-step]').click();
