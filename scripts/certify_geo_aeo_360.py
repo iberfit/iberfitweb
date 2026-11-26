@@ -52,7 +52,12 @@ class Page(HTMLParser):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="release-web")
+    ap.add_argument("--version", help="Expected public release version")
     args = ap.parse_args()
+    version = (ROOT / "VERSION").read_text().strip()
+    assert all(x.isdigit() for x in version.split(".")) and len(version.split(".")) >= 3, version
+    assert args.version is None or args.version == version, (args.version, version)
+    package = f"IBERFIT-WEB-{version}.zip"
     out = pathlib.Path(args.out)
     urls = [x.text for x in ET.parse(ROOT / "sitemap.xml").findall("{*}url/{*}loc")]
     assert len(urls) == len(set(urls)) == 32
@@ -60,7 +65,6 @@ def main():
     robots = (ROOT / "robots.txt").read_text()
     assert "User-agent: OAI-SearchBot\nAllow: /" in robots
     assert "Sitemap: " + ORIGIN + "/sitemap.xml" in robots
-    assert (ROOT / "VERSION").read_text().strip() == "6.43.29"
     subprocess.run(["python3", ".github/scripts/sitemap_lastmod.py"], check=True)
     subprocess.run(["git", "diff", "--exit-code", "--", str(ROOT / "sitemap.xml")], check=True)
     subprocess.run(["python3", ".github/scripts/sitemap_lastmod.py", "--check"], check=True)
@@ -99,7 +103,7 @@ def main():
         raise AssertionError("Broken internal references: " + repr(missing))
     out.mkdir(parents=True, exist_ok=True)
     hashes = {}
-    with zipfile.ZipFile(out / "IBERFIT-WEB-6.43.29.zip", "w", zipfile.ZIP_DEFLATED) as z:
+    with zipfile.ZipFile(out / package, "w", zipfile.ZIP_DEFLATED) as z:
         for path in sorted(ROOT.rglob("*")):
             if not path.is_file():
                 continue
@@ -107,7 +111,7 @@ def main():
             data = path.read_bytes()
             hashes[rel] = hashlib.sha256(data).hexdigest()
             z.writestr(rel, data)
-    with zipfile.ZipFile(out / "IBERFIT-WEB-6.43.29.zip") as z:
+    with zipfile.ZipFile(out / package) as z:
         assert z.testzip() is None
         assert set(z.namelist()) == set(hashes)
         for name in z.namelist():

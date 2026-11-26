@@ -8,15 +8,48 @@ permissions:
 jobs:
   certify:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Certify and package public website only
-        run: python3 scripts/certify_geo_aeo_360.py
+        id: release
+        run: |
+          set -euo pipefail
+          version="$(tr -d '\r\n ' < candidate/v628/VERSION)"
+          python3 scripts/certify_geo_aeo_360.py --version "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          node .github/scripts/qa_bilingual_architecture.cjs
+          if [ "$version" = "6.43.30" ]; then
+            python3 .github/scripts/qa_v64330_commercial_authority.py
+          fi
+      - name: Commercial authority browser and contact journey
+        if: steps.release.outputs.version == '6.43.30'
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright@1.56.1 >/dev/null
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4173 --directory candidate/v628 >/tmp/authority-http.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then break; fi
+            sleep .5
+          done
+          QA_OUT=/tmp/authority-qa node .github/scripts/qa_v64330_commercial_browser.mjs
       - uses: actions/upload-artifact@v4
         with:
-          name: IBERFIT-WEB-6.43.29-certified
+          name: IBERFIT-WEB-${{ steps.release.outputs.version }}-certified
           path: release-web/
           if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.release.outputs.version == '6.43.30'
+        with:
+          name: commercial-authority-browser-evidence
+          path: /tmp/authority-qa/
+          if-no-files-found: warn
