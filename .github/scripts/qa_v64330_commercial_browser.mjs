@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 const base = process.env.BASE_URL || 'http://127.0.0.1:4173';
 const out = process.env.QA_OUT || '/tmp/authority-qa';
 fs.mkdirSync(out,{recursive:true});
-const routes=['/metodo/','/en/method/','/sobre-iberfit/','/en/about/','/contacto/','/en/contact/','/diagnostico-iri/','/en/iri-assessment/','/presencial/','/en/in-person/','/hibrido/','/en/hybrid/','/online/','/en/online/'];
+const routes=['/metodo/','/en/method/','/sobre-iberfit/','/en/about/','/contacto/','/en/contact/','/diagnostico-iri/','/en/iri-assessment/','/presencial/','/en/in-person/','/hibrido/','/en/hybrid/','/online/','/en/online/','/privacidad/','/en/privacy/'];
 const browser=await chromium.launch({headless:true});
 const results=[];
 try {
@@ -62,6 +62,31 @@ try {
     }
     await context.close();
   }
+
+  const origin=new URL(base).origin;
+  const ctx=await browser.newContext();
+  await ctx.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
+  const p=await ctx.newPage();
+  await p.goto(base+'/contacto/?utm_source=chatgpt.com&utm_campaign=private_test_value',{waitUntil:'load'});
+  assert.equal(await p.evaluate(()=>sessionStorage.getItem('iberfit_acquisition_v1')),null);
+  await p.locator('[data-consent-audience]').click();
+  const events=()=>p.evaluate(()=>window.dataLayer.map(a=>Array.from(a)).filter(a=>a[0]==='event'));
+  let e=await events();
+  assert.equal(e.filter(a=>a[1]==='acquisition_context').length,1);
+  assert.equal(e.find(a=>a[1]==='acquisition_context')[2].acquisition_source,'chatgpt');
+  assert(!JSON.stringify(e.find(a=>a[1]==='acquisition_context')).includes('private_test_value'));
+  await p.goto(base+'/metodo/',{waitUntil:'load'});
+  await p.evaluate(()=>window.iberfitTrack('whatsapp_click'));
+  e=await events();
+  assert.equal(e.find(a=>a[1]==='contact_intent')[2].acquisition_source,'chatgpt');
+  await p.locator('[data-open-consent]').first().click();
+  await p.locator('[data-consent-analytics]').uncheck();
+  await p.locator('[data-consent-save]').click();
+  assert.equal(await p.evaluate(()=>sessionStorage.getItem('iberfit_acquisition_v1')),null);
+  await p.evaluate(()=>window.iberfitTrack('whatsapp_click'));
+  assert.equal((await events()).filter(a=>a[1]==='contact_intent').length,1);
+  results.push({acquisition:'consent, source category, navigation, contact attribution, revocation verified'});
+  await ctx.close();
 }finally{await browser.close();}
 fs.writeFileSync(out+'/metrics.json',JSON.stringify(results,null,2));
 console.log('COMMERCIAL_BROWSER_OK',results.length);
