@@ -1,7 +1,9 @@
 {
   "schema": 1,
-  "mode": "preview",
+  "mode": "production",
   "source": "4e37bc9d1ff22f4a3ded1a45f36be2de14644f74",
   "version": "6.43.33",
-  "previous_id": "b2417693-6589-4af3-af75-d7b85f362ef7"
+  "previous_id": "b2417693-6589-4af3-af75-d7b85f362ef7",
+  "preview_id": "4e6b9685-7e60-407b-8209-71e895f1f4dc",
+  "approval": "Promoción solicitada tras certificación 360; evidencia Actions 46028625892. Autorización efectiva pendiente de revisión del entorno web-production."
 }
