@@ -87,6 +87,40 @@ try {
   assert.equal((await events()).filter(a=>a[1]==='contact_intent').length,1);
   results.push({acquisition:'consent, source category, navigation, contact attribution, revocation verified'});
   await ctx.close();
+
+  // Google Business Profile is classified only by our explicit public tag;
+  // ordinary Google referrals and arbitrary UTM text are not mislabeled.
+  for(const [tag,expected] of [['google_business_profile','google_business_profile'],['google','google'],['instagram','instagram'],['facebook','facebook'],['unrecognized_private_value','direct']]){
+    const c=await browser.newContext();
+    await c.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
+    const page=await c.newPage();
+    await page.goto(base+'/contacto/?utm_source='+tag+'&utm_campaign=private_campaign_test',{waitUntil:'load'});
+    assert.equal(await page.evaluate(()=>sessionStorage.getItem('iberfit_acquisition_v1')),null);
+    await page.locator('[data-consent-audience]').click();
+    assert.equal(await page.evaluate(()=>sessionStorage.getItem('iberfit_acquisition_v1')),expected);
+    await page.goto(base+'/metodo/',{waitUntil:'load'});
+    await page.evaluate(()=>window.iberfitTrack('whatsapp_click'));
+    const event=await page.evaluate(()=>window.dataLayer.map(x=>Array.from(x)).find(x=>x[0]==='event'&&x[1]==='contact_intent'));
+    assert.equal(event[2].acquisition_source,expected);
+    assert(!JSON.stringify(event).includes('private_campaign_test'));
+    assert(!JSON.stringify(event).includes('unrecognized_private_value'));
+    await page.locator('[data-open-consent]').first().click();
+    await page.locator('[data-consent-analytics]').uncheck();
+    await page.locator('[data-consent-save]').click();
+    assert.equal(await page.evaluate(()=>sessionStorage.getItem('iberfit_acquisition_v1')),null);
+    await c.close();
+    results.push({acquisitionSource:expected,consent:'verified',contact:'verified',revocation:'verified'});
+  }
+  const noAudience=await browser.newContext();
+  await noAudience.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
+  const noAudiencePage=await noAudience.newPage();
+  await noAudiencePage.goto(base+'/contacto/?utm_source=google_business_profile',{waitUntil:'load'});
+  await noAudiencePage.locator('[data-consent-necessary]').click();
+  await noAudiencePage.evaluate(()=>window.iberfitTrack('whatsapp_click'));
+  assert.equal(await noAudiencePage.evaluate(()=>sessionStorage.getItem('iberfit_acquisition_v1')),null);
+  assert.equal(await noAudiencePage.evaluate(()=>window.dataLayer.map(x=>Array.from(x)).filter(x=>x[0]==='event'&&['acquisition_context','contact_intent','generate_lead'].includes(x[1])).length),0);
+  await noAudience.close();
+  results.push({acquisition:'necessary-only consent denies attribution'});
 }finally{await browser.close();}
 fs.writeFileSync(out+'/metrics.json',JSON.stringify(results,null,2));
 console.log('COMMERCIAL_BROWSER_OK',results.length);

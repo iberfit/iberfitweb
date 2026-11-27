@@ -29,3 +29,13 @@ Evaluar semanalmente visibilidad, consultas no marca, país, dispositivo, entrad
  
 ## Puertas de entrega
 Todas las versiones deben ejecutar las regresiones comerciales estáticas y de navegador. El alcance exacto del diff de V6.43.30 permanece como contrato histórico; cambios posteriores requieren alcance nuevo explícito y certificación de integridad. Mantener congelación de páginas del certificador general. Cambios futuros de contenido requieren preview noindex, verificación de SHA, regresión, promoción exacta y recuperación. Si el sitio no cambia, no hay motivo para desplegar de nuevo.
+
+## Consolidación operativa — 26/11/2026
+El Panel operativo de IBERFIT ya dispone de las pestañas 06_LEADS, 18_EMBUDO_COMERCIAL y 20_PUBLICACIONES_RESEÑAS. No crear un CRM paralelo. La medición comercial debe reutilizar este sistema y distinguir contactos recibidos de intenciones GA4; el embudo existente requiere revisión de rangos fijos (filas 5:200) y de etapas que pueden omitirse, porque IRI no es obligatorio. No exportar registros personales al repositorio.
+Metricool: marca 6943596; Instagram, Facebook y GBP conectados. Instagram registra 9 seguidores; los campos de actividad presentan datos faltantes y ceros. No hay posts programados del 27/11 al 27/12. No interpretar nulos como ceros. GA4 sigue sin conexión a Windsor.
+Enlaces etiquetados para utilizar cuando se autorice la edición del canal:
+- GBP ficha: https://iberfit.cl/?utm_source=google_business_profile&utm_medium=organic&utm_campaign=perfil
+- GBP IRI: https://iberfit.cl/diagnostico-iri/?utm_source=google_business_profile&utm_medium=organic&utm_campaign=iri
+- Instagram perfil: https://iberfit.cl/?utm_source=instagram&utm_medium=organic_social&utm_campaign=perfil
+- Facebook perfil: https://iberfit.cl/?utm_source=facebook&utm_medium=organic_social&utm_campaign=perfil
+No enviar nombres, teléfonos, correos ni identificadores individuales en UTM. El parámetro acquisition_source clasifica la fuente; no verifica identidad ni contratación. El cambio de categoría se activa únicamente tras el despliegue de V6.43.31 y el consentimiento de audiencia. No cambiar fichas ni publicar posts sin verificar el destino y la autorización correspondiente.
