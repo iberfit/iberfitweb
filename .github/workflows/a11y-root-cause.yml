@@ -31,7 +31,8 @@ jobs:
           const xml=await (await fetch(base+'/sitemap.xml')).text();
           const routes=[...xml.matchAll(/<loc>(https:\/\/iberfit\.cl\/[^<]*)<\/loc>/g)].map(x=>new URL(x[1]).pathname);
           const b=await chromium.launch({headless:true});
-          const records=[];
+          const records=[],keyboardFailures=[];
+          let keyboardChecks=0;
           try{
             for(const width of [390,768,1440]){
               const ctx=await b.newContext({viewport:{width,height:900}});
@@ -46,6 +47,22 @@ jobs:
                 for(const v of a.violations)for(const n of v.nodes){
                   records.push({route,width,id:v.id,impact:v.impact,target:n.target,html:n.html,summary:n.failureSummary,checks:[...n.any,...n.all,...n.none].map(c=>({id:c.id,data:c.data}))});
                 }
+                const rails=p.locator('[data-a11y-scroll="true"]');
+                for(let i=0;i<await rails.count();i++){
+                  const rail=rails.nth(i);
+                  try{
+                    await rail.focus();
+                    if(!await rail.evaluate(e=>document.activeElement===e && e.tabIndex===0 && !!(e.getAttribute('aria-label')||e.getAttribute('aria-labelledby'))))throw Error('focus or accessible name');
+                    await p.keyboard.press('Home');
+                    await p.keyboard.press('ArrowRight');
+                    await p.waitForFunction(e=>e.scrollLeft>2,await rail.elementHandle(),{timeout:1500});
+                    await p.keyboard.press('End');
+                    await p.waitForFunction(e=>e.scrollWidth-e.clientWidth-e.scrollLeft<=3,await rail.elementHandle(),{timeout:1500});
+                    await p.keyboard.press('Home');
+                    await p.waitForFunction(e=>e.scrollLeft<=3,await rail.elementHandle(),{timeout:1500});
+                    keyboardChecks++;
+                  }catch(e){keyboardFailures.push({route,width,rail:await rail.getAttribute('class'),error:String(e)});}
+                }
                 await p.close();
               }
               await ctx.close();
@@ -58,8 +75,10 @@ jobs:
             if(!groups.has(k))groups.set(k,{count:0,example:r});
             groups.get(k).count++;
           }
-          console.log('A11Y_TOTAL='+records.length+' GROUPS='+groups.size);
+          console.log('A11Y_TOTAL='+records.length+' GROUPS='+groups.size+' KEYBOARD_OK='+keyboardChecks+' KEYBOARD_FAILURES='+keyboardFailures.length);
           for(const g of groups.values())console.log('A11Y_CAUSE '+JSON.stringify(g));
+          for(const k of keyboardFailures)console.log('A11Y_KEYBOARD_FAIL '+JSON.stringify(k));
+          if(records.length||keyboardFailures.length||!keyboardChecks)process.exitCode=1;
           JS
           node "$RUNNER_TEMP/audit/diagnose.mjs"
       - uses: actions/upload-artifact@v4
