@@ -1,0 +1,143 @@
+name: WEB 6.43.32 · Promoción certificada
+on:
+  push:
+    branches: [release/web-v64332-cloudflare]
+    paths: ['.github/workflows/promote-v64332-pages.yml']
+permissions:
+  contents: read
+concurrency:
+  group: web-iberfit-production-pages
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_ACCOUNT_ID: 5b03d387427d367674b9d05b8bdf7c84
+      PROJECT: web-iberfit
+      RELEASE_SHA: 4f5769613f6b724adf6843f9d6588a9833a89f2c
+      REVIEW_SHA: d0fdfc5c4a95fce8198b50355b1cb4387d17415d
+      RELEASE_TREE: 7558011134e357e652196e3e2c867042f6ce56ad
+      PREVIEW: https://2ea6d22f.web-iberfit.pages.dev
+      PREVIOUS_ID: d8e098aa-c16a-447b-a268-da2691929bb2
+      VERSION: 6.43.32
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 4f5769613f6b724adf6843f9d6588a9833a89f2c
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validar candidato y preparar Wrangler
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse HEAD^{tree})" = "$RELEASE_TREE"
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = "$VERSION"
+          test -s candidate/v628/index.html
+          test -s candidate/v628/404.html
+          test "$(git ls-remote origin refs/heads/production/web-iberfit | cut -f1)" = "$RELEASE_SHA"
+          python3 scripts/certify_geo_aeo_360.py --version "$VERSION"
+          node .github/scripts/qa_bilingual_architecture.cjs
+          python3 .github/scripts/qa_v64332_iri_routes.py
+          npm install --prefix "$RUNNER_TEMP/iberfit-wrangler" --no-save --package-lock=false wrangler@4.120.0
+      - name: Promover SHA aprobado y comprobar producción con recuperación
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT"
+          get_project() { curl -fsS --max-time 20 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api"; }
+          get_project > "$RUNNER_TEMP/cf-before.json"
+          curl -fsS --max-time 20 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/deployments?env=preview" > "$RUNNER_TEMP/cf-previews.json"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=Path(os.environ['RUNNER_TEMP'])
+          before=json.loads((p/'cf-before.json').read_text())
+          assert before['success']
+          r=before['result']
+          assert r['name']==os.environ['PROJECT']
+          assert r['production_branch']=='production'
+          assert 'iberfit.cl' in r['domains']
+          old=r['canonical_deployment']
+          assert old['id']==os.environ['PREVIOUS_ID'], 'Unexpected production base; stop'
+          assert old['environment']=='production' and old['latest_stage']['status']=='success'
+          previews=json.loads((p/'cf-previews.json').read_text())
+          assert previews['success']
+          assert any(d['url']==os.environ['PREVIEW'] and d['environment']=='preview' and d['latest_stage']['status']=='success' and d['deployment_trigger']['metadata']['commit_hash']==os.environ['REVIEW_SHA'] for d in previews['result'])
+          print('PRODUCTION_BASE_AND_REVIEW_VERIFIED')
+          PY
+          test "$(curl -fsS --max-time 20 "$PREVIEW/VERSION" | tr -d '\r\n ')" = "$VERSION"
+          test "$(curl -fsS --max-time 20 "https://iberfit.cl/VERSION?check=$GITHUB_RUN_ID" | tr -d '\r\n ')" = "6.43.31"
+          rollback() {
+            rc=$?
+            trap - EXIT
+            if [ "$rc" -eq 0 ]; then exit 0; fi
+            echo "::error::Promotion failed; checking ownership before rollback"
+            if get_project > "$RUNNER_TEMP/cf-failure.json"; then
+              if python3 - <<'PY'
+          import json,os
+          p=json.load(open(os.environ['RUNNER_TEMP']+'/cf-failure.json'))
+          d=p['result']['canonical_deployment']
+          m=d.get('deployment_trigger',{}).get('metadata',{})
+          assert d['id']!=os.environ['PREVIOUS_ID']
+          assert d['environment']=='production' and m.get('commit_hash')==os.environ['RELEASE_SHA']
+          PY
+              then
+                curl -fsS --max-time 30 -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/deployments/$PREVIOUS_ID/rollback" -o "$RUNNER_TEMP/cf-rollback.json" || true
+                get_project > "$RUNNER_TEMP/cf-restored.json" || true
+                python3 - <<'PY'
+          import json,os
+          r=json.load(open(os.environ['RUNNER_TEMP']+'/cf-restored.json'))['result']
+          assert r['canonical_deployment']['id']==os.environ['PREVIOUS_ID']
+          print('ROLLBACK_CONFIRMED')
+          PY
+              else
+                echo "::warning::No rollback attempted: release does not own active production or production unchanged"
+              fi
+            fi
+            exit "$rc"
+          }
+          trap rollback EXIT
+          "$RUNNER_TEMP/iberfit-wrangler/node_modules/.bin/wrangler" pages deploy candidate/v628 --project-name "$PROJECT" --branch production --commit-hash "$RELEASE_SHA" --commit-dirty=false
+          get_project > "$RUNNER_TEMP/cf-after.json"
+          python3 - <<'PY'
+          import json,os,re
+          from pathlib import Path
+          p=Path(os.environ['RUNNER_TEMP'])
+          r=json.loads((p/'cf-after.json').read_text())['result']
+          d=r['canonical_deployment']
+          assert d['id']!=os.environ['PREVIOUS_ID']
+          assert d['environment']=='production' and d['latest_stage']['status']=='success'
+          assert d['deployment_trigger']['metadata']['commit_hash']==os.environ['RELEASE_SHA']
+          assert re.fullmatch(r'https://[a-z0-9-]+\.web-iberfit\.pages\.dev',d['url'])
+          (p/'release-url.txt').write_text(d['url'])
+          print('PRODUCTION_DEPLOYMENT_ID='+d['id'])
+          PY
+          deployed="$(cat "$RUNNER_TEMP/release-url.txt")"
+          smoke() {
+            base="$1"
+            test "$(curl -fsS --max-time 15 "$base/VERSION?check=$GITHUB_RUN_ID" | tr -d '\r\n ')" = "$VERSION" || return 1
+            for route in / /metodo/ /presencial/ /hibrido/ /online/ /diagnostico-iri/ /en/ /en/method/ /en/iri-assessment/; do
+              curl -fsS --max-time 15 "$base$route?check=$GITHUB_RUN_ID" -o "$RUNNER_TEMP/smoke.html" || return 1
+              grep -q IBERFIT "$RUNNER_TEMP/smoke.html" || return 1
+              case "$route" in
+                /|/metodo/) grep -q 'Puedes comenzar a entrenar sin contratar el Diagnóstico IRI' "$RUNNER_TEMP/smoke.html" || return 1 ;;
+                /en/|/en/method/) grep -q 'You can start training without purchasing the IRI Assessment' "$RUNNER_TEMP/smoke.html" || return 1 ;;
+              esac
+            done
+          }
+          smoke "$deployed"
+          ok=0
+          for attempt in 1 2 3 4 5 6; do
+            if smoke "https://iberfit.cl"; then ok=1; break; fi
+            sleep 10
+          done
+          test "$ok" = 1
+          echo "PRODUCTION_VERIFIED=$deployed"
+          echo "Version $VERSION · $RELEASE_SHA · $deployed · rollback $PREVIOUS_ID" >> "$GITHUB_STEP_SUMMARY"
+          trap - EXIT
