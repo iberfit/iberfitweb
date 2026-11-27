@@ -100,9 +100,11 @@ jobs:
           if [ "$VERSION" = 6.43.32 ]; then python3 .github/scripts/qa_v64332_iri_routes.py; fi
           git diff --exit-code -- candidate/v628
       - name: Browser journey on mobile, tablet and desktop
+        env:
+          EXPECTED_VERSION: ${{ steps.request.outputs.version }}
         run: |
           set -euo pipefail
-          npm install --prefix "$RUNNER_TEMP/browser" --no-save --package-lock=false playwright@1.56.1 --loglevel=notice
+          npm install --prefix "$RUNNER_TEMP/browser" --no-save --package-lock=false playwright@1.56.1 axe-core@4.10.3 --loglevel=notice
           "$RUNNER_TEMP/browser/node_modules/.bin/playwright" install chromium
           cp "$RUNNER_TEMP/source/.github/scripts/qa_v64330_commercial_browser.mjs" "$RUNNER_TEMP/browser/qa.mjs"
           python3 -m http.server 4173 --bind 127.0.0.1 --directory "$RUNNER_TEMP/source/candidate/v628" > "$RUNNER_TEMP/http.log" 2>&1 &
@@ -110,6 +112,8 @@ jobs:
           trap 'kill "$pid" 2>/dev/null || true' EXIT
           for i in $(seq 1 20); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break; sleep .5; done
           QA_OUT="$RUNNER_TEMP/browser-evidence" node "$RUNNER_TEMP/browser/qa.mjs"
+          cp "$GITHUB_WORKSPACE/.github/scripts/pages_live_browser_360.mjs" "$RUNNER_TEMP/browser/audit.mjs"
+          QA_OUT="$RUNNER_TEMP/source-audit" node "$RUNNER_TEMP/browser/audit.mjs"
       - uses: actions/upload-artifact@v4
         with:
           name: certified-pages-${{ steps.request.outputs.source }}
@@ -120,6 +124,12 @@ jobs:
         with:
           name: pages-browser-evidence
           path: ${{ runner.temp }}/browser-evidence/
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pages-certified-source-audit
+          path: ${{ runner.temp }}/source-audit/
           if-no-files-found: warn
   publish:
     needs: certify
