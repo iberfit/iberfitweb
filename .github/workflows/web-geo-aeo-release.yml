@@ -25,11 +25,8 @@ jobs:
           python3 scripts/certify_geo_aeo_360.py --version "$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           node .github/scripts/qa_bilingual_architecture.cjs
-          if [ "$version" = "6.43.30" ]; then
-            python3 .github/scripts/qa_v64330_commercial_authority.py
-          fi
+          python3 .github/scripts/qa_v64330_commercial_authority.py
       - name: Commercial authority browser and contact journey
-        if: steps.release.outputs.version == '6.43.30'
         run: |
           set -euo pipefail
           mkdir -p /tmp/iberfit-browser-qa
@@ -50,7 +47,7 @@ jobs:
           path: release-web/
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
-        if: always() && steps.release.outputs.version == '6.43.30'
+        if: always()
         with:
           name: commercial-authority-browser-evidence
           path: /tmp/authority-qa/
