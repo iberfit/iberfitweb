@@ -1,0 +1,37 @@
+name: Pages Release 360 · Environment access verification
+on:
+  push:
+    branches: [production/web-iberfit]
+    paths: ['.github/workflows/pages-environment-verification.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [web-preview, web-production]
+    environment: ${{ matrix.target }}
+    steps:
+      - name: Read-only verification of Cloudflare environment access
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test "$GITHUB_REF" = refs/heads/production/web-iberfit
+          curl -fsS --max-time 20 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/5b03d387427d367674b9d05b8bdf7c84/pages/projects/web-iberfit" -o "$RUNNER_TEMP/project.json"
+          python3 - <<'PY'
+          import json,os
+          data=json.load(open(os.environ["RUNNER_TEMP"]+"/project.json"))
+          assert data["success"]
+          p=data["result"]
+          assert p["name"]=="web-iberfit" and p["production_branch"]=="production"
+          assert "iberfit.cl" in p["domains"]
+          assert p["canonical_deployment"]["id"]=="b2417693-6589-4af3-af75-d7b85f362ef7"
+          print("ENVIRONMENT_READ_ONLY_OK="+os.environ["TARGET"])
+          PY
+          echo "Read-only check passed; no deployment performed." >> "$GITHUB_STEP_SUMMARY"
