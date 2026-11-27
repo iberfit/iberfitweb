@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 5574c8765917b2bc6dca6ad85a5bb880f2e9c89b
+          ref: 1910cbea9ccfb08ef1b83d24aa248641a9d2437d
           persist-credentials: false
       - name: Verify current certified public and immutable preview
         run: |
