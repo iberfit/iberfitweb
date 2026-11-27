@@ -135,6 +135,10 @@ def wait_for(fn, attempts=6, delay=5):
             if i+1<attempts: time.sleep(delay)
     raise RuntimeError("Verification failed") from last
 
+def ready(url, version):
+    # Newly created Pages hostnames can need TLS/edge propagation. Never disable TLS.
+    wait_for(lambda: require(get(url+"/VERSION").decode().strip()==version,"Deployment not ready"),attempts=10,delay=8)
+
 def promote(cf, request, directory, smoke_fn=smoke, public_origin=PUBLIC, nonce=None):
     nonce = nonce or ("iberfit-release-"+os.environ["GITHUB_RUN_ID"]+"-"+os.environ.get("GITHUB_RUN_ATTEMPT","1"))
     require(re.fullmatch(r"iberfit-release-[a-zA-Z0-9-]{1,100}", nonce), "Invalid release attempt identity")
@@ -157,11 +161,13 @@ def promote(cf, request, directory, smoke_fn=smoke, public_origin=PUBLIC, nonce=
             require(bool(valid), "No certified preview")
             return valid[0]
         d=wait_for(find)
+        ready(immutable_url(d,cf.project),version)
         smoke_fn(immutable_url(d,cf.project),directory,version,True)
         require(cf.active()["id"]==previous,"Production changed concurrently")
         return d
     p=cf.call("/deployments/"+request["preview_id"])
     require(p["id"]==request["preview_id"] and verified(p,"preview",source,"review-"+source[:12]),"Preview does not match approved source")
+    ready(immutable_url(p,cf.project),version)
     smoke_fn(immutable_url(p,cf.project),directory,version,True)
     require(cf.active()["id"]==previous,"Production changed during preflight")
     try:
@@ -171,6 +177,7 @@ def promote(cf, request, directory, smoke_fn=smoke, public_origin=PUBLIC, nonce=
             require(owned(d,source,previous,nonce) and verified(d,"production",source,"production"), "Production identity mismatch")
             return d
         d=wait_for(deployed)
+        ready(immutable_url(d,cf.project),version)
         smoke_fn(immutable_url(d,cf.project),directory,version,True)
         wait_for(lambda:smoke_fn(public_origin,directory,version,False),attempts=4,delay=10)
         require(cf.active()["id"]==d["id"],"Production changed during validation")
