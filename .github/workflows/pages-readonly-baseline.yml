@@ -1,0 +1,51 @@
+name: Pages Release 360 · Current production read-only evidence
+on:
+  push:
+    branches: [infra/pages-release-rollback-lab]
+    paths: ['.github/workflows/pages-readonly-baseline.yml']
+permissions:
+  contents: read
+jobs:
+  live:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 5574c8765917b2bc6dca6ad85a5bb880f2e9c89b
+          persist-credentials: false
+      - name: Verify current certified public and immutable preview
+        run: |
+          python3 - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          spec=importlib.util.spec_from_file_location("release",".github/scripts/pages_release_360.py")
+          m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+          m.smoke("https://2ea6d22f.web-iberfit.pages.dev",Path("candidate/v628"),"6.43.32",True)
+          print("IMMUTABLE_PREVIEW_BYTES_OK")
+          m.smoke("https://iberfit.cl",Path("candidate/v628"),"6.43.32",False)
+          print("PUBLIC_ALL_ROUTES_AND_ASSETS_OK")
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Browser audit on actual public website, no credentials
+        env:
+          BASE_URL: https://iberfit.cl
+          EXPECTED_VERSION: 6.43.32
+        run: |
+          npm install --prefix "$RUNNER_TEMP/audit" --no-save --package-lock=false playwright@1.56.1 axe-core@4.10.3 --loglevel=notice
+          "$RUNNER_TEMP/audit/node_modules/.bin/playwright" install chromium
+          cp .github/scripts/pages_live_browser_360.mjs "$RUNNER_TEMP/audit/audit.mjs"
+          QA_OUT="$RUNNER_TEMP/audit-report" node "$RUNNER_TEMP/audit/audit.mjs"
+          python3 - <<'PY'
+          import json,os,collections
+          p=json.load(open(os.environ["RUNNER_TEMP"]+"/audit-report/report.json"))
+          print("AXE_RULES",dict(collections.Counter(v["id"] for v in p["accessibility"])))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: current-production-browser-evidence
+          path: ${{ runner.temp }}/audit-report/
+          if-no-files-found: warn
