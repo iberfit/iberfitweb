@@ -1,3 +1,8 @@
+## 6.43.31 — Commercial acquisition channels
+
+- Adds an explicit consent-gated Google Business Profile source category without misclassifying ordinary Google traffic.
+- Certifies allowlisted campaign sources, navigation, contact attribution, revocation, and necessary-only consent. No raw campaign data storage, new provider, public HTML or visual change.
+
 ## 6.43.30 — Commercial Authority 360
 
 - Adds bilingual goal-based guidance and links to the existing assessment and contact journey.

@@ -20,7 +20,7 @@ window.IBERFIT_ANALYTICS = Object.freeze({
   });
   const tags = Object.freeze({...hosts,chatgpt:'chatgpt',openai:'chatgpt',perplexity:'perplexity',
     gemini:'gemini',copilot:'copilot',claude:'claude',google:'google',bing:'bing',
-    instagram:'instagram',facebook:'facebook'});
+    instagram:'instagram',facebook:'facebook',google_business_profile:'google_business_profile'});
   const allowed = new Set([...Object.values(tags),'direct','other_external','internal_unknown']);
   const permitted = () => {
     try {
