@@ -106,6 +106,13 @@ class ReleaseTests(unittest.TestCase):
             h.write_text(json.dumps({"source":S,"files":{"../escape":m.digest(b"bad")}}))
             with self.assertRaises(RuntimeError):m.unpack(p,h,t/"out",req())
             self.assertFalse((t/"escape").exists())
+    def test_managed_robots_prefix_only_on_public(self):
+        expected=b"User-agent: OAI-SearchBot\nAllow: /\n"
+        actual=b"# managed explanation\n# BEGIN Cloudflare Managed content\nUser-agent: GPTBot\nDisallow: /\n# END Cloudflare Managed Content\n"+expected
+        self.assertTrue(m.robots_match(actual,expected,False))
+        self.assertFalse(m.robots_match(actual,expected,True))
+        self.assertFalse(m.robots_match(actual+b"Disallow: /\n",expected,False))
+        self.assertFalse(m.robots_match(b"User-agent: *\nDisallow: /\n"+actual,expected,False))
     def test_valid_package(self):
         with tempfile.TemporaryDirectory() as t:
             t=Path(t);p=t/"package.zip";h=t/"hashes.json"
