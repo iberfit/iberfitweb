@@ -1,3 +1,10 @@
+## 6.43.32 — Orientación comercial e IRI independiente
+
+- Cabecera y pie orientados al contacto general en 30 rutas ES/EN; se conserva el contexto de WhatsApp de cada modalidad y comuna cuando existe.
+- Portada y Método distinguen explícitamente empezar a entrenar de contratar el IRI, manteniendo ambos recorridos visibles.
+- Las dos páginas IRI permanecen intactas. No se modifican tarifas, oferta, identidad, activos visuales, scripts de analítica ni la aplicación.
+- Protección de alcance exacto sobre la base 6.43.31 y excepción de congelación limitada a los enlaces y textos comerciales aprobados.
+
 ## 6.43.31 — Commercial acquisition channels
 
 - Adds an explicit consent-gated Google Business Profile source category without misclassifying ordinary Google traffic.

@@ -27,6 +27,7 @@ jobs:
           node .github/scripts/qa_bilingual_architecture.cjs
           python3 .github/scripts/qa_v64330_commercial_authority.py
           python3 .github/scripts/qa_v64331_acquisition_scope.py
+          if [ "$version" = "6.43.32" ]; then python3 .github/scripts/qa_v64332_iri_routes.py; fi
       - name: Commercial authority browser and contact journey
         run: |
           set -euo pipefail

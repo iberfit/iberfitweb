@@ -71,7 +71,13 @@ def main():
     for path in FROZEN:
         actual = (ROOT / path).read_bytes()
         original = subprocess.check_output(["git", "show", BASE + ":" + (ROOT/path).as_posix()])
-        assert actual == original, "Frozen page changed: " + path
+        # Preserve the original freeze except for the exact, approved 6.43.32
+        # commercial link/text transformation. Never relax the remaining bytes.
+        if tuple(map(int, version.split("."))) >= (6, 43, 32):
+            import runpy
+            transform = runpy.run_path(".github/scripts/qa_v64332_iri_routes.py")["expected"]
+            original = transform(original.decode("utf-8"), path).encode("utf-8")
+        assert actual == original, "Frozen page changed beyond the approved commercial scope: " + path
     pages = {}
     missing = []
     for url in urls:
