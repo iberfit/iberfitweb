@@ -6,17 +6,19 @@ from unittest.mock import patch
 spec=importlib.util.spec_from_file_location("release",Path(__file__).with_name("pages_release_360.py"))
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 S="a"*40
+NONCE="iberfit-release-test-1"
 OLD="11111111-1111-1111-1111-111111111111"
 NEW="22222222-2222-2222-2222-222222222222"
 PRE="33333333-3333-3333-3333-333333333333"
 OTHER="44444444-4444-4444-4444-444444444444"
-def dep(id, env="production", source=S, branch="production"):
-    return {"id":id,"environment":env,"latest_stage":{"status":"success"},"url":"https://abcdef.web-iberfit.pages.dev","deployment_trigger":{"metadata":{"commit_hash":source,"branch":branch}}}
+def dep(id, env="production", source=S, branch="production", nonce=NONCE):
+    return {"id":id,"environment":env,"latest_stage":{"status":"success"},"url":"https://abcdef.web-iberfit.pages.dev","deployment_trigger":{"metadata":{"commit_hash":source,"branch":branch,"commit_message":nonce}}}
 def req(mode="production"):
     d={"schema":1,"mode":mode,"source":S,"version":"6.43.32","previous_id":OLD}
     if mode=="production":d.update(preview_id=PRE,approval="Reviewed and approved")
     return d
 class Fake:
+    project=m.PROJECT
     def __init__(self):
         self.old=dep(OLD,source="b"*40);self.current=self.old
         self.preview=dep(PRE,"preview",branch="review-"+S[:12])
@@ -26,10 +28,10 @@ class Fake:
     def call(self,path):
         if path.startswith("/deployments?"):return [self.preview]
         return {"/deployments/"+OLD:self.old,"/deployments/"+PRE:self.preview}[path]
-    def deploy(self,directory,branch,source):
+    def deploy(self,directory,branch,source,nonce):
         self.deployments.append(branch)
         if branch=="production":
-            self.current=dep(OTHER,source="c"*40) if self.unrelated else dep(NEW)
+            self.current=dep(OTHER,source="c"*40) if self.unrelated else dep(NEW,nonce=nonce)
         if self.fail:raise RuntimeError("injected deployment failure")
     def rollback(self,id):
         self.rollbacks.append(id);self.current=self.old
@@ -40,7 +42,7 @@ class ReleaseTests(unittest.TestCase):
         self.mock.start();self.addCleanup(self.mock.stop)
         self.wait=patch.object(m.time,"sleep");self.wait.start();self.addCleanup(self.wait.stop)
     def run_release(self,request=None,smoke=None):
-        return m.promote(self.cf,request or req(),Path("."),smoke or (lambda *a:None))
+        return m.promote(self.cf,request or req(),Path("."),smoke or (lambda *a:None),nonce=NONCE)
     def test_preview_no_production_mutation(self):
         self.assertEqual(self.run_release(req("preview"))["id"],PRE)
         self.assertEqual(self.cf.deployments,["review-"+S[:12]])
@@ -74,6 +76,11 @@ class ReleaseTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):self.run_release()
         self.assertEqual(self.cf.rollbacks,[])
         self.assertEqual(self.cf.active()["id"],OTHER)
+    def test_same_sha_different_attempt_never_rolled_back(self):
+        def external(*args):self.cf.current=dep(OTHER,nonce="iberfit-release-other-1")
+        self.cf.deploy=external
+        with self.assertRaises(RuntimeError):self.run_release()
+        self.assertEqual(self.cf.rollbacks,[])
     def test_rollback_target_unavailable(self):
         self.cf.old["latest_stage"]["status"]="failure"
         with self.assertRaises(RuntimeError):self.run_release()
