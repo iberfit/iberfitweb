@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 5574c8765917b2bc6dca6ad85a5bb880f2e9c89b
+          ref: 43fa527e7ff0f858f9ca0079d738d15f5594da75
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -64,17 +64,16 @@ jobs:
                   lab_smoke(public,a,"1.0.0",False)
                   return d
               old=m.wait_for(baseline)
-              preview={"schema":1,"mode":"preview","source":"b"*40,"version":"1.0.1","previous_id":old["id"]}
-              p=m.promote(lab,preview,b,lab_smoke,public,"iberfit-release-lab-preview")
-              approved=dict(preview,mode="production",preview_id=p["id"],approval="Synthetic isolated exercise only")
-              def injected(base,root,version,exact):
-                  lab_smoke(base,root,version,exact)
-                  if base==public:raise RuntimeError("INTENTIONAL_POST_DEPLOY_FAILURE")
-              try:
-                  m.promote(lab,approved,b,injected,public,"iberfit-release-lab-fault")
-                  raise AssertionError("Fault did not trigger")
-              except RuntimeError as exc:
-                  assert "Verification failed" in str(exc), str(exc)
+              nonce="iberfit-release-lab-fault"
+              lab.deploy(b,"production","b"*40,nonce)
+              def activated():
+                  d=lab.active()
+                  assert m.owned(d,"b"*40,old["id"],nonce)
+                  lab_smoke(public,b,"1.0.1",False)
+                  return d
+              m.wait_for(activated,attempts=10,delay=8)
+              print("INTENTIONAL_POST_DEPLOY_FAILURE")
+              assert m.recover_owned(lab,"b"*40,old["id"],nonce,"1.0.0",public)
               assert lab.active()["id"]==old["id"]
               lab_smoke(public,a,"1.0.0",False)
               assert real.active()["id"]==original
