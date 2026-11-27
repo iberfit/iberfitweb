@@ -1,3 +1,9 @@
+## 6.43.34 — Redacción de las páginas locales
+
+- Revisión de las siete comunas en español e inglés. Lenguaje centrado en el servicio, la metodología y la disponibilidad, sin perfiles ni estereotipos geográficos.
+- Se conserva la estructura HTML, los enlaces, el diseño, la accesibilidad de 6.43.33, la oferta y el carácter opcional del Diagnóstico IRI.
+- Actualización de fechas de las catorce páginas locales en el sitemap.
+
 ## 6.43.33 — Accesibilidad y experiencia multidispositivo
 
 - Contraste específico de etiquetas, migas de pan, notas y ayudas sobre fondos claros y oscuros.
