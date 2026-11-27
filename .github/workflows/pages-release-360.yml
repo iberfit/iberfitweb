@@ -2,13 +2,6 @@ name: Pages Release 360
 on:
   pull_request:
     branches: [production/web-iberfit]
-    paths:
-      - '.github/workflows/pages-release-360.yml'
-      - '.github/scripts/pages_release_360.py'
-      - '.github/scripts/test_pages_release_360.py'
-      - '.github/scripts/pages_live_browser_360.mjs'
-      - '.iberfit/pages-release.json'
-      - 'candidate/v628/**'
   push:
     branches: [production/web-iberfit]
     paths: ['.iberfit/pages-release.json']
@@ -145,6 +138,12 @@ jobs:
         with:
           name: certified-pages-${{ needs.certify.outputs.source }}
           path: certified-pages
+      - name: Require protected authoritative branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api 'repos/iberfit/iberfitweb/branches/production%2Fweb-iberfit' --jq '.protected' | grep -qx true
       - name: Prepare fixed deployment tool without credentials
         run: npm install --prefix "$RUNNER_TEMP/wrangler" --no-save --package-lock=false wrangler@4.120.0
       - name: Verify unchanged release request and deploy
@@ -187,7 +186,8 @@ jobs:
           BASE_URL="$(jq -r .url "$evidence")"
           [[ "$BASE_URL" =~ ^https://[a-z0-9-]+\.web-iberfit\.pages\.dev$ ]]
           if [ "$(jq -r .mode "$evidence")" = production ]; then BASE_URL=https://iberfit.cl; fi
-          export BASE_URL
+          EXPECTED_VERSION="$(jq -r .version "$evidence")"
+          export BASE_URL EXPECTED_VERSION
           npm install --prefix "$RUNNER_TEMP/audit" --no-save --package-lock=false playwright@1.56.1 axe-core@4.10.3 --loglevel=notice
           "$RUNNER_TEMP/audit/node_modules/.bin/playwright" install chromium
           cp .github/scripts/pages_live_browser_360.mjs "$RUNNER_TEMP/audit/audit.mjs"
