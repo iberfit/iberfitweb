@@ -196,49 +196,7 @@
     motionChange();
   };
 
-  const initLocalPages = () => {
-    if (!['local','local_en'].includes(document.body.dataset.page || '')) return;
-    const heroText = document.querySelector('.hero .hero-text');
-    if (!heroText || heroText.querySelector('.local-place-badge')) return;
-
-    const eyebrow = heroText.querySelector('.eyebrow');
-    const raw = eyebrow?.textContent?.trim() || '';
-    const match = isEnglish ? raw.match(/IBERFIT\s+in\s+(.+)/i) : raw.match(/IBERFIT\s+en\s+(.+)/i);
-    const fallbackPattern = isEnglish ? /\bin\s+([^,.]+?)(?:\s+without|\s+with|\.|$)/i : /(?:en|de)\s+([^,.]+?)(?:\s+sin|\s+con|$)/i;
-    const place = match?.[1]?.trim() || document.querySelector('h1')?.textContent?.match(fallbackPattern)?.[1]?.trim() || (isEnglish ? 'your area' : 'tu comuna');
-
-    const badge = document.createElement('div');
-    badge.className = 'local-place-badge';
-    badge.innerHTML = `
-      <span class="local-place-pin" aria-hidden="true">⌖</span>
-      <span class="local-place-copy"><small>${isEnglish ? 'Local coverage' : 'Cobertura local'}</small><strong>${place}</strong></span>
-    `;
-    eyebrow?.insertAdjacentElement('afterend', badge);
-
-    const meta = heroText.querySelector('.hero-meta');
-    if (meta && !heroText.querySelector('.local-service-strip')) {
-      const strip = document.createElement('div');
-      strip.className = 'local-service-strip';
-      strip.setAttribute('aria-label', isEnglish ? `Training options in ${place}` : `Opciones de entrenamiento en ${place}`);
-      strip.innerHTML = isEnglish ? `
-        <div class="local-service-chip"><b>01</b><span><strong>Home training</strong><br>We coordinate area and schedule with you.</span></div>
-        <div class="local-service-chip"><b>02</b><span><strong>Condominium gym</strong><br>When the space supports quality training.</span></div>
-        <div class="local-service-chip"><b>03</b><span><strong>Park or green space</strong><br>When the environment and conditions are suitable.</span></div>
-        <div class="local-service-chip"><b>04</b><span><strong>Hybrid</strong><br>When it improves continuity.</span></div>
-      ` : `
-        <div class="local-service-chip"><b>01</b><span><strong>Domicilio</strong><br>Coordinamos sector y horario contigo.</span></div>
-        <div class="local-service-chip"><b>02</b><span><strong>Gimnasio de edificio</strong><br>Si el espacio permite trabajar bien.</span></div>
-        <div class="local-service-chip"><b>03</b><span><strong>Parque o zona verde</strong><br>Cuando el entorno y las condiciones permiten entrenar bien.</span></div>
-        <div class="local-service-chip"><b>04</b><span><strong>Híbrido</strong><br>Cuando mejora la continuidad.</span></div>
-      `;
-      meta.insertAdjacentElement('afterend', strip);
-    }
-
-    document.body.classList.add('local-experience-v629');
-  };
-
   document.addEventListener('DOMContentLoaded', () => {
     initReviews();
-    initLocalPages();
   });
 })();
