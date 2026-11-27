@@ -78,6 +78,14 @@ def main():
             transform = runpy.run_path(".github/scripts/qa_v64332_iri_routes.py")["expected"]
             original = transform(original.decode("utf-8"), path).encode("utf-8")
         assert actual == original, "Frozen page changed beyond the approved commercial scope: " + path
+    # Exact release scope: preserve every HTML byte, IRI content, commercial
+    # path, imagery, analytics, headers and other assets in this maintenance release.
+    if version == "6.43.33":
+        prior = "4f5769613f6b724adf6843f9d6588a9833a89f2c"
+        changed = set(subprocess.check_output(["git", "diff", "--name-only", prior, "HEAD", "--", ROOT.as_posix()], text=True).splitlines())
+        allowed = {str(ROOT / p) for p in ("VERSION", "CHANGELOG.md", "assets/ux.v64322.css", "assets/ux.v64322.js")}
+        assert changed == allowed, (changed - allowed, allowed - changed)
+        print("A11Y_RELEASE_SCOPE_OK", len(changed))
     pages = {}
     missing = []
     for url in urls:
