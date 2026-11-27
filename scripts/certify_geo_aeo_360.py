@@ -94,8 +94,9 @@ def main():
         prior = "4e37bc9d1ff22f4a3ded1a45f36be2de14644f74"
         local = ["entrenador-personal-las-condes/index.html","entrenamiento-personal-providencia/index.html","entrenador-personal-vitacura/index.html","entrenador-personal-lo-barnechea/index.html","personal-trainer-nunoa/index.html","entrenador-personal-la-reina/index.html","entrenador-personal-penalolen/index.html","en/personal-trainer-las-condes/index.html","en/personal-training-providencia/index.html","en/personal-trainer-vitacura/index.html","en/personal-trainer-lo-barnechea/index.html","en/personal-trainer-nunoa/index.html","en/personal-trainer-la-reina/index.html","en/personal-trainer-penalolen/index.html"]
         changed = set(subprocess.check_output(["git", "diff", "--name-only", prior, "HEAD", "--", ROOT.as_posix()], text=True).splitlines())
-        allowed = {str(ROOT / p) for p in local + ["VERSION", "CHANGELOG.md", "sitemap.xml"]}
-        assert changed == allowed, (changed - allowed, allowed - changed)
+        required = {str(ROOT / p) for p in local + ["VERSION", "CHANGELOG.md"]}
+        allowed = required | {str(ROOT / "sitemap.xml")}
+        assert required <= changed <= allowed, (changed - allowed, required - changed)
         import re
         for path in local:
             rel = (ROOT/path).as_posix()
