@@ -7,6 +7,10 @@ const base = new URL(process.env.BASE_URL || 'http://127.0.0.1:4173');
 const out = process.env.QA_OUT || '/tmp/pages-live-qa';
 fs.mkdirSync(out,{recursive:true});
 const origin = base.origin;
+if(process.env.EXPECTED_VERSION){
+  const liveVersion=await fetch(new URL('/VERSION?release_audit='+encodeURIComponent(process.env.GITHUB_RUN_ID||'local'),base));
+  assert(liveVersion.ok && (await liveVersion.text()).trim()===process.env.EXPECTED_VERSION,'published VERSION mismatch');
+}
 const sitemap = await fetch(new URL('/sitemap.xml',base));
 assert(sitemap.ok,'sitemap unavailable');
 const xml=await sitemap.text();
