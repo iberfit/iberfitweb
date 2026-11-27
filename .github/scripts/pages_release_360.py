@@ -152,7 +152,7 @@ def promote(cf, request, directory, smoke_fn=smoke, public_origin=PUBLIC, nonce=
         branch="review-"+source[:12]
         cf.deploy(directory,branch,source,nonce)
         def find():
-            ds=cf.call("/deployments?env=preview&per_page=100")
+            ds=cf.call("/deployments?env=preview")
             valid=[d for d in ds if verified(d,"preview",source,branch) and meta(d).get("commit_message")==nonce]
             require(bool(valid), "No certified preview")
             return valid[0]
