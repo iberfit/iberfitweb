@@ -107,6 +107,20 @@ def get(url):
         require(r.status==200, "HTTP failure")
         return r.read()
 
+def robots_match(actual, expected, exact):
+    if actual==expected: return True
+    if exact: return False
+    # Cloudflare's managed robots overlay prepends a marked block on the
+    # custom domain only. Preserve the complete operator policy verbatim.
+    begin=b"# BEGIN Cloudflare Managed content"
+    end=b"# END Cloudflare Managed Content"
+    if actual.count(begin)!=1 or actual.count(end)!=1: return False
+    prefix,suffix=actual.split(end,1)
+    if begin not in prefix: return False
+    preamble=prefix.split(begin,1)[0]
+    if any(line.strip() and not line.lstrip().startswith(b"#") for line in preamble.splitlines()): return False
+    return suffix.lstrip(b"\r\n")==expected
+
 def smoke(base, root, version, exact=False):
     # Immutable deploys must match the certified bytes for key files; public
     # HTML may be transformed by Cloudflare (email protection, etc.).
@@ -124,7 +138,8 @@ def smoke(base, root, version, exact=False):
             require(body==(root/path.lstrip("/")/"index.html").read_bytes(), "Immutable HTML drift: "+path)
     for f in ("sitemap.xml","robots.txt","assets/styles.v628.css","assets/app.v628.js","assets/analytics.v628.js"):
         if (root/f).is_file():
-            require(get(base+"/"+f+nonce)==(root/f).read_bytes(), "Live asset drift: "+f)
+            actual=get(base+"/"+f+nonce); expected=(root/f).read_bytes()
+            require(robots_match(actual,expected,exact) if f=="robots.txt" else actual==expected, "Live asset drift: "+f)
 
 def wait_for(fn, attempts=6, delay=5):
     last=None
