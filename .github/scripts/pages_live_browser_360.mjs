@@ -66,7 +66,7 @@ try{
         assert(state.domReady!==null && state.domReady<=15000,'DOM readiness budget');
         let accessibility=[];
         if(representative.has(route) && width!==768){
-          await page.addScriptTag({content:axe.source});
+          await page.evaluate(axe.source);
           const report=await page.evaluate(async()=>window.axe.run({runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa']}}));
           accessibility=report.violations.map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.length}));
         }
