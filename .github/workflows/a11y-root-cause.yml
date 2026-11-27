@@ -1,0 +1,69 @@
+name: A11Y 360 · Root cause diagnostic
+on:
+  push:
+    branches: [growth/web-a11y-360]
+    paths: ['.github/workflows/a11y-root-cause.yml']
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Diagnose exact WCAG nodes and computed styles
+        run: |
+          set -euo pipefail
+          npm install --prefix "$RUNNER_TEMP/audit" --no-save --package-lock=false playwright@1.56.1 axe-core@4.10.3 --loglevel=notice
+          "$RUNNER_TEMP/audit/node_modules/.bin/playwright" install chromium
+          python3 -m http.server 4173 --bind 127.0.0.1 --directory candidate/v628 > "$RUNNER_TEMP/http.log" 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break; sleep .5; done
+          cat > "$RUNNER_TEMP/audit/diagnose.mjs" <<'JS'
+          import { chromium } from 'playwright';
+          import axe from 'axe-core';
+          import fs from 'node:fs';
+          const base='http://127.0.0.1:4173';
+          const xml=await (await fetch(base+'/sitemap.xml')).text();
+          const routes=[...xml.matchAll(/<loc>(https:\/\/iberfit\.cl\/[^<]*)<\/loc>/g)].map(x=>new URL(x[1]).pathname);
+          const b=await chromium.launch({headless:true});
+          const records=[];
+          try{
+            for(const width of [390,768,1440]){
+              const ctx=await b.newContext({viewport:{width,height:900}});
+              await ctx.route('**/*',r=>new URL(r.request().url()).origin===base?r.continue():r.abort());
+              await ctx.addInitScript(()=>localStorage.setItem('iberfit_consent_v2',JSON.stringify({version:'2026-07-12-v2',necessary:true,analytics:false,marketing:false})));
+              for(const route of routes){
+                const p=await ctx.newPage();
+                await p.goto(base+route,{waitUntil:'load'});
+                await p.evaluate(()=>document.fonts.ready);
+                await p.evaluate(axe.source);
+                const a=await p.evaluate(()=>window.axe.run({runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa']}}));
+                for(const v of a.violations)for(const n of v.nodes){
+                  records.push({route,width,id:v.id,impact:v.impact,target:n.target,html:n.html,summary:n.failureSummary,checks:[...n.any,...n.all,...n.none].map(c=>({id:c.id,data:c.data}))});
+                }
+                await p.close();
+              }
+              await ctx.close();
+            }
+          }finally{await b.close();}
+          fs.writeFileSync(process.env.RUNNER_TEMP+'/diagnosis.json',JSON.stringify(records,null,2));
+          const groups=new Map();
+          for(const r of records){
+            const k=JSON.stringify({id:r.id,html:r.html.replace(/>[^<>]+</g,'><').slice(0,320),checks:r.checks.map(c=>({id:c.id,data:c.data&&{fgColor:c.data.fgColor,bgColor:c.data.bgColor,contrastRatio:c.data.contrastRatio,expectedContrastRatio:c.data.expectedContrastRatio}}))});
+            if(!groups.has(k))groups.set(k,{count:0,example:r});
+            groups.get(k).count++;
+          }
+          console.log('A11Y_TOTAL='+records.length+' GROUPS='+groups.size);
+          for(const g of groups.values())console.log('A11Y_CAUSE '+JSON.stringify(g));
+          JS
+          node "$RUNNER_TEMP/audit/diagnose.mjs"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: detailed-a11y-diagnosis
+          path: ${{ runner.temp }}/diagnosis.json
