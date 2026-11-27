@@ -77,6 +77,10 @@ def main():
             import runpy
             transform = runpy.run_path(".github/scripts/qa_v64332_iri_routes.py")["expected"]
             original = transform(original.decode("utf-8"), path).encode("utf-8")
+        # 6.43.34 explicitly authorizes editorial text updates on the Las Condes
+        # local landing page only; pin the reviewed bytes, not a relaxed freeze.
+        if tuple(map(int, version.split("."))) >= (6, 43, 34) and path == "entrenador-personal-las-condes/index.html":
+            original = subprocess.check_output(["git", "show", "d8103afe76a8552532ffefc45c5564427ccda8ed:" + (ROOT/path).as_posix()])
         assert actual == original, "Frozen page changed beyond the approved commercial scope: " + path
     # Exact release scope: preserve every HTML byte, IRI content, commercial
     # path, imagery, analytics, headers and other assets in this maintenance release.
@@ -86,6 +90,29 @@ def main():
         allowed = {str(ROOT / p) for p in ("VERSION", "CHANGELOG.md", "assets/ux.v64322.css", "assets/ux.v64322.js")}
         assert changed == allowed, (changed - allowed, allowed - changed)
         print("A11Y_RELEASE_SCOPE_OK", len(changed))
+    if version == "6.43.34":
+        prior = "4e37bc9d1ff22f4a3ded1a45f36be2de14644f74"
+        local = ["entrenador-personal-las-condes/index.html","entrenamiento-personal-providencia/index.html","entrenador-personal-vitacura/index.html","entrenador-personal-lo-barnechea/index.html","personal-trainer-nunoa/index.html","entrenador-personal-la-reina/index.html","entrenador-personal-penalolen/index.html","en/personal-trainer-las-condes/index.html","en/personal-training-providencia/index.html","en/personal-trainer-vitacura/index.html","en/personal-trainer-lo-barnechea/index.html","en/personal-trainer-nunoa/index.html","en/personal-trainer-la-reina/index.html","en/personal-trainer-penalolen/index.html"]
+        changed = set(subprocess.check_output(["git", "diff", "--name-only", prior, "HEAD", "--", ROOT.as_posix()], text=True).splitlines())
+        required = {str(ROOT / p) for p in local + ["VERSION", "CHANGELOG.md"]}
+        allowed = required | {str(ROOT / "sitemap.xml")}
+        assert required <= changed <= allowed, (changed - allowed, required - changed)
+        import re
+        for path in local:
+            rel = (ROOT/path).as_posix()
+            original = subprocess.check_output(["git", "show", prior+":"+rel]).decode("utf-8")
+            actual = (ROOT/path).read_text(encoding="utf-8")
+            approved = subprocess.check_output(["git", "show", "d8103afe76a8552532ffefc45c5564427ccda8ed:"+rel]).decode("utf-8")
+            assert actual == approved, ("Unreviewed editorial text", path)
+            # Only visible text inside main may change; preserve every tag,
+            # attribute, href, head, footer and structured-data byte.
+            def structure(html):
+                match = re.search(r"<main\b[\s\S]*?</main>", html)
+                assert match
+                return (html[:match.start()], re.findall(r"<[^>]+>", match.group()), html[match.end():])
+            assert structure(original) == structure(actual), ("Markup changed", path)
+            assert ("El Diagnóstico IRI es opcional." in actual if not path.startswith("en/") else "The IRI Assessment is optional." in actual)
+        print("LOCAL_EDITORIAL_SCOPE_OK", len(local), "pages; HTML structure and other public assets preserved")
     pages = {}
     missing = []
     for url in urls:
