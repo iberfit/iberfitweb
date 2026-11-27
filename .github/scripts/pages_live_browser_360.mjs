@@ -7,10 +7,13 @@ const base = new URL(process.env.BASE_URL || 'http://127.0.0.1:4173');
 const out = process.env.QA_OUT || '/tmp/pages-live-qa';
 fs.mkdirSync(out,{recursive:true});
 const origin = base.origin;
-if(process.env.EXPECTED_VERSION){
-  const liveVersion=await fetch(new URL('/VERSION?release_audit='+encodeURIComponent(process.env.GITHUB_RUN_ID||'local'),base));
-  assert(liveVersion.ok && (await liveVersion.text()).trim()===process.env.EXPECTED_VERSION,'published VERSION mismatch');
-}
+const versionResponse=await fetch(new URL('/VERSION?release_audit='+encodeURIComponent(process.env.GITHUB_RUN_ID||'local'),base));
+assert(versionResponse.ok,'VERSION unavailable');
+const observedVersion=(await versionResponse.text()).trim();
+assert(/^\d+\.\d+\.\d+$/.test(observedVersion),'invalid VERSION');
+if(process.env.EXPECTED_VERSION)assert.equal(observedVersion,process.env.EXPECTED_VERSION,'published VERSION mismatch');
+const [major,minor,patch]=observedVersion.split('.').map(Number);
+const strictA11y=major>6||(major===6&&(minor>43||(minor===43&&patch>=33)));
 const sitemap = await fetch(new URL('/sitemap.xml',base));
 assert(sitemap.ok,'sitemap unavailable');
 const xml=await sitemap.text();
@@ -69,12 +72,29 @@ try{
         // Broad synthetic failure budgets, not claims of field Core Web Vitals.
         assert(state.domReady!==null && state.domReady<=15000,'DOM readiness budget');
         let accessibility=[];
-        if(representative.has(route) && width!==768){
+        if(strictA11y || (representative.has(route) && width!==768)){
           await page.evaluate(axe.source);
           const report=await page.evaluate(async()=>window.axe.run({runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa']}}));
-          accessibility=report.violations.map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.length}));
+          accessibility=report.violations.map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.length,targets:v.nodes.map(n=>n.target)}));
         }
-        results.push({route,width,...state,accessibility});
+        let keyboardChecks=0;
+        if(strictA11y){
+          const rails=page.locator('[data-a11y-scroll="true"]');
+          for(let i=0;i<await rails.count();i++){
+            const rail=rails.nth(i);
+            await rail.focus();
+            assert(await rail.evaluate(e=>document.activeElement===e && e.tabIndex===0 && !!(e.getAttribute('aria-label')||e.getAttribute('aria-labelledby'))),'rail focus or name');
+            await page.keyboard.press('Home');
+            await page.keyboard.press('ArrowRight');
+            await page.waitForFunction(e=>e.scrollLeft>2,await rail.elementHandle(),{timeout:2000});
+            await page.keyboard.press('End');
+            await page.waitForFunction(e=>e.scrollWidth-e.clientWidth-e.scrollLeft<=3,await rail.elementHandle(),{timeout:2000});
+            await page.keyboard.press('Home');
+            await page.waitForFunction(e=>e.scrollLeft<=3,await rail.elementHandle(),{timeout:2000});
+            keyboardChecks++;
+          }
+        }
+        results.push({route,width,...state,accessibility,keyboardChecks});
       }catch(e){
         failures.push({route,width,error:String(e),errors,assets});
       }finally{await page.close();}
@@ -83,7 +103,11 @@ try{
   }
 }finally{await browser.close();}
 const accessibility=results.flatMap(x=>x.accessibility.map(v=>({route:x.route,width:x.width,...v})));
-const report={origin,routeCount:routes.length,viewportCount:widths.length,results,failures,accessibility,notes:'Synthetic Chromium audit with third-party traffic blocked. Axe violations and timing measurements are reported; this is not a field CWV or manual WCAG certification.'};
+const report={origin,observedVersion,strictA11y,routeCount:routes.length,viewportCount:widths.length,results,failures,accessibility,notes:'Synthetic Chromium audit with third-party traffic blocked. Axe violations and timing measurements are reported; this is not a field CWV or manual WCAG certification.'};
 fs.writeFileSync(out+'/report.json',JSON.stringify(report,null,2));
-console.log('PAGES_BROWSER_360',JSON.stringify({routes:routes.length,checks:results.length,failures:failures.length,axeViolations:accessibility.length,critical:accessibility.filter(x=>x.impact==='critical').length,serious:accessibility.filter(x=>x.impact==='serious').length}));
+console.log('PAGES_BROWSER_360',JSON.stringify({routes:routes.length,checks:results.length,failures:failures.length,keyboardChecks:results.reduce((sum,x)=>sum+x.keyboardChecks,0),axeViolations:accessibility.length,critical:accessibility.filter(x=>x.impact==='critical').length,serious:accessibility.filter(x=>x.impact==='serious').length}));
 if(failures.length)throw new Error(JSON.stringify(failures.slice(0,10)));
+if(strictA11y){
+  assert(results.some(x=>x.keyboardChecks>0),'keyboard checks missing');
+  assert.equal(accessibility.length,0,'Accessibility regression: '+JSON.stringify(accessibility.slice(0,8)));
+}
