@@ -57,8 +57,8 @@ def meta(d):
 def verified(d, environment, source, branch=None):
     return d.get("environment")==environment and d.get("latest_stage", {}).get("status")=="success" and meta(d).get("commit_hash")==source and (branch is None or meta(d).get("branch")==branch)
 
-def owned(d, source, previous):
-    return d.get("id")!=previous and d.get("environment")=="production" and meta(d).get("commit_hash")==source
+def owned(d, source, previous, nonce):
+    return d.get("id")!=previous and d.get("environment")=="production" and meta(d).get("commit_hash")==source and meta(d).get("commit_message")==nonce
 
 def immutable_url(d, project=PROJECT):
     url = d.get("url","")
@@ -84,8 +84,8 @@ class Cloudflare:
         return r
     def active(self):
         return self.project_state()["canonical_deployment"]
-    def deploy(self, directory, branch, source):
-        subprocess.run([os.environ["WRANGLER_BIN"],"pages","deploy",str(directory),"--project-name",self.project,"--branch",branch,"--commit-hash",source,"--commit-dirty=false"],check=True)
+    def deploy(self, directory, branch, source, nonce):
+        subprocess.run([os.environ["WRANGLER_BIN"],"pages","deploy",str(directory),"--project-name",self.project,"--branch",branch,"--commit-hash",source,"--commit-message",nonce,"--commit-dirty=false"],check=True,timeout=300)
     def rollback(self, previous):
         self.call("/deployments/"+previous+"/rollback","POST")
 
@@ -135,7 +135,9 @@ def wait_for(fn, attempts=6, delay=5):
             if i+1<attempts: time.sleep(delay)
     raise RuntimeError("Verification failed") from last
 
-def promote(cf, request, directory, smoke_fn=smoke):
+def promote(cf, request, directory, smoke_fn=smoke, public_origin=PUBLIC, nonce=None):
+    nonce = nonce or ("iberfit-release-"+os.environ["GITHUB_RUN_ID"]+"-"+os.environ.get("GITHUB_RUN_ATTEMPT","1"))
+    require(re.fullmatch(r"iberfit-release-[a-zA-Z0-9-]{1,100}", nonce), "Invalid release attempt identity")
     previous=request["previous_id"]
     source=request["source"]
     version=request["version"]
@@ -144,43 +146,43 @@ def promote(cf, request, directory, smoke_fn=smoke):
     # A rollback target must exist and be a successful production deployment.
     old=cf.call("/deployments/"+previous)
     require(old["id"]==previous and old["environment"]=="production" and old["latest_stage"]["status"]=="success","Rollback target unavailable")
-    old_version=get(PUBLIC+"/VERSION").decode().strip()
+    old_version=get(public_origin+"/VERSION").decode().strip()
     require(VERSION.fullmatch(old_version), "Invalid public baseline")
     if request["mode"]=="preview":
         branch="review-"+source[:12]
-        cf.deploy(directory,branch,source)
+        cf.deploy(directory,branch,source,nonce)
         def find():
             ds=cf.call("/deployments?env=preview&per_page=100")
-            valid=[d for d in ds if verified(d,"preview",source,branch)]
+            valid=[d for d in ds if verified(d,"preview",source,branch) and meta(d).get("commit_message")==nonce]
             require(bool(valid), "No certified preview")
             return valid[0]
         d=wait_for(find)
-        smoke_fn(immutable_url(d),directory,version,True)
+        smoke_fn(immutable_url(d,cf.project),directory,version,True)
         require(cf.active()["id"]==previous,"Production changed concurrently")
         return d
     p=cf.call("/deployments/"+request["preview_id"])
     require(p["id"]==request["preview_id"] and verified(p,"preview",source,"review-"+source[:12]),"Preview does not match approved source")
-    smoke_fn(immutable_url(p),directory,version,True)
+    smoke_fn(immutable_url(p,cf.project),directory,version,True)
     require(cf.active()["id"]==previous,"Production changed during preflight")
     try:
-        cf.deploy(directory,"production",source)
+        cf.deploy(directory,"production",source,nonce)
         def deployed():
             d=cf.active()
-            require(owned(d,source,previous) and verified(d,"production",source,"production"), "Production identity mismatch")
+            require(owned(d,source,previous,nonce) and verified(d,"production",source,"production"), "Production identity mismatch")
             return d
         d=wait_for(deployed)
-        smoke_fn(immutable_url(d),directory,version,True)
-        wait_for(lambda:smoke_fn(PUBLIC,directory,version,False),attempts=4,delay=10)
+        smoke_fn(immutable_url(d,cf.project),directory,version,True)
+        wait_for(lambda:smoke_fn(public_origin,directory,version,False),attempts=4,delay=10)
         require(cf.active()["id"]==d["id"],"Production changed during validation")
         return d
     except Exception:
         # Never revert another release; fail closed on ambiguous state.
         active=cf.active()
-        if owned(active,source,previous):
+        if owned(active,source,previous,nonce):
             cf.rollback(previous)
             def restored():
                 require(cf.active()["id"]==previous,"Rollback deployment not active")
-                require(get(PUBLIC+"/VERSION").decode().strip()==old_version,"Rollback public version mismatch")
+                require(get(public_origin+"/VERSION").decode().strip()==old_version,"Rollback public version mismatch")
             wait_for(restored)
             print("ROLLBACK_CONFIRMED="+previous)
         elif active["id"]==previous:
