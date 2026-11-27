@@ -2,7 +2,7 @@
 
 - Revisión de las siete comunas en español e inglés. Lenguaje centrado en el servicio, la metodología y la disponibilidad, sin perfiles ni estereotipos geográficos.
 - Se conserva la estructura HTML, los enlaces, el diseño, la accesibilidad de 6.43.33, la oferta y el carácter opcional del Diagnóstico IRI.
-- Actualización de fechas de las catorce páginas locales en el sitemap.
+- Fechas de modificación de las catorce páginas locales verificadas en el sitemap; coinciden con la fecha ya registrada.
 
 ## 6.43.33 — Accesibilidad y experiencia multidispositivo
 
