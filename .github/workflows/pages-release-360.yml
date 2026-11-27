@@ -1,0 +1,136 @@
+name: Pages Release 360
+on:
+  pull_request:
+    branches: [production/web-iberfit]
+    paths:
+      - '.github/workflows/pages-release-360.yml'
+      - '.github/scripts/pages_release_360.py'
+      - '.github/scripts/test_pages_release_360.py'
+      - '.iberfit/pages-release.json'
+      - 'candidate/v628/**'
+  push:
+    branches: [production/web-iberfit]
+    paths: ['.iberfit/pages-release.json']
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.event_name == 'push' && 'web-iberfit-production-pages' || format('pages-release-qa-{0}', github.event.pull_request.number) }}
+  cancel-in-progress: false
+jobs:
+  guards:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Isolated release-controller tests
+        run: python3 .github/scripts/test_pages_release_360.py
+      - name: Validate release request
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/production/web-iberfit
+          python3 .github/scripts/pages_release_360.py .iberfit/pages-release.json --validate-only
+  certify:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/production/web-iberfit'
+    needs: guards
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      mode: ${{ steps.request.outputs.mode }}
+      source: ${{ steps.request.outputs.source }}
+      version: ${{ steps.request.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: request
+        name: Resolve exact integrated source
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/pages_release_360.py .iberfit/pages-release.json --validate-only > "$RUNNER_TEMP/request.json"
+          mode="$(jq -r .mode "$RUNNER_TEMP/request.json")"
+          source="$(jq -r .source "$RUNNER_TEMP/request.json")"
+          version="$(jq -r .version "$RUNNER_TEMP/request.json")"
+          git merge-base --is-ancestor "$source" "$GITHUB_SHA"
+          test "$(git rev-parse "$source^{commit}")" = "$source"
+          git worktree add --detach "$RUNNER_TEMP/source" "$source"
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "source=$source" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Certify exact source, with full history and package integrity
+        env:
+          VERSION: ${{ steps.request.outputs.version }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/source"
+          python3 scripts/certify_geo_aeo_360.py --version "$VERSION"
+          node .github/scripts/qa_bilingual_architecture.cjs
+          python3 .github/scripts/qa_v64330_commercial_authority.py
+          python3 .github/scripts/qa_v64331_acquisition_scope.py
+          if [ "$VERSION" = 6.43.32 ]; then python3 .github/scripts/qa_v64332_iri_routes.py; fi
+          git diff --exit-code -- candidate/v628
+      - name: Browser journey on mobile, tablet and desktop
+        run: |
+          set -euo pipefail
+          npm install --prefix "$RUNNER_TEMP/browser" --no-save --package-lock=false playwright@1.56.1 --loglevel=notice
+          "$RUNNER_TEMP/browser/node_modules/.bin/playwright" install chromium
+          cp "$RUNNER_TEMP/source/.github/scripts/qa_v64330_commercial_browser.mjs" "$RUNNER_TEMP/browser/qa.mjs"
+          python3 -m http.server 4173 --bind 127.0.0.1 --directory "$RUNNER_TEMP/source/candidate/v628" > "$RUNNER_TEMP/http.log" 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break; sleep .5; done
+          QA_OUT="$RUNNER_TEMP/browser-evidence" node "$RUNNER_TEMP/browser/qa.mjs"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: certified-pages-${{ steps.request.outputs.source }}
+          path: ${{ runner.temp }}/source/release-web/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pages-browser-evidence
+          path: ${{ runner.temp }}/browser-evidence/
+          if-no-files-found: warn
+  publish:
+    needs: certify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/production/web-iberfit'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: ${{ needs.certify.outputs.mode == 'production' && 'web-production' || 'web-preview' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: certified-pages-${{ needs.certify.outputs.source }}
+          path: certified-pages
+      - name: Prepare fixed deployment tool without credentials
+        run: npm install --prefix "$RUNNER_TEMP/wrangler" --no-save --package-lock=false wrangler@4.120.0
+      - name: Verify unchanged release request and deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 5b03d387427d367674b9d05b8bdf7c84
+          WRANGLER_BIN: ${{ runner.temp }}/wrangler/node_modules/.bin/wrangler
+          VERSION: ${{ needs.certify.outputs.version }}
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/production/web-iberfit | cut -f1)" = "$GITHUB_SHA"
+          python3 .github/scripts/pages_release_360.py .iberfit/pages-release.json --package "certified-pages/IBERFIT-WEB-$VERSION.zip" --hashes certified-pages/SHA256.json --dest "$RUNNER_TEMP/site"
+          cat pages-release-evidence.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pages-release-evidence
+          path: pages-release-evidence.json
+          if-no-files-found: warn
