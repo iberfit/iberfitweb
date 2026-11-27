@@ -1,3 +1,10 @@
+## 6.43.33 — Accesibilidad y experiencia multidispositivo
+
+- Contraste específico de etiquetas, migas de pan, notas y ayudas sobre fondos claros y oscuros.
+- Regiones horizontales con foco visible, nombre accesible bilingüe y navegación mediante flechas, Inicio y Fin; sin introducir paradas de tabulación cuando no hay desplazamiento.
+- Ayudas de desplazamiento adaptadas al espacio disponible; sin cambios de HTML, tarifas, modalidades, contenido IRI ni analítica.
+- Se mantienen los activos compartidos no inmutables con revalidación de caché.
+
 ## 6.43.32 — Orientación comercial e IRI independiente
 
 - Cabecera y pie orientados al contacto general en 30 rutas ES/EN; se conserva el contexto de WhatsApp de cada modalidad y comuna cuando existe.

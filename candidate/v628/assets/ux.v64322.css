@@ -168,3 +168,60 @@ p,li{ text-wrap:pretty; }
 @media(prefers-reduced-motion:reduce){
   .review-pair{ scroll-behavior:auto!important; }
 }
+
+/* 6.43.33 — WEB A11Y 360. These existing shared assets are revalidated,
+   not immutable; keep HTML, URLs, editorial content and public journeys intact. */
+.modality-row--guided > div:first-child > span{
+  color:var(--gold-text-strong,#806216);
+}
+.page-breadcrumbs a{
+  color:var(--text-tertiary,#5a6a61);
+}
+.answer-source-note{
+  opacity:1;
+  color:var(--text-secondary,#44564c);
+}
+.answer-source-note a{
+  color:var(--green,#1f3d2b);
+  text-decoration:underline;
+  text-underline-offset:.16em;
+}
+.app-story .mobile-swipe-hint{
+  color:var(--gold-light,#d9b568);
+}
+.app-story .mobile-swipe-hint::after{color:currentColor}
+.mobile-swipe-hint[hidden]{display:none!important}
+[data-a11y-scroll="true"]:focus-visible{
+  outline:3px solid var(--green,#1f3d2b);
+  outline-offset:-3px;
+  box-shadow:inset 0 0 0 6px #fffdf8;
+}
+.app-story [data-a11y-scroll="true"]:focus-visible{
+  outline-color:var(--gold-light,#d9b568);
+  box-shadow:inset 0 0 0 6px #041610;
+}
+@media(forced-colors:active){
+  [data-a11y-scroll="true"]:focus-visible{
+    outline:3px solid Highlight;
+    box-shadow:none;
+  }
+}
+
+/* Interactive text must remain readable during the step transition itself. */
+@keyframes iberfitStepAccessibleIn{
+  from{transform:translateY(4px)}
+  to{transform:translateY(0)}
+}
+.orientador-step,.orientador-result{animation-name:iberfitStepAccessibleIn}
+@media(prefers-reduced-motion:reduce){
+  .orientador-step,.orientador-result{animation:none}
+}
+.method-proof .mobile-swipe-hint,
+.review-proof .mobile-swipe-hint{color:var(--gold-light,#d9b568)}
+.method-proof .mobile-swipe-hint::after,
+.review-proof .mobile-swipe-hint::after{color:currentColor}
+.method-proof [data-a11y-scroll="true"]:focus-visible,
+.review-proof [data-a11y-scroll="true"]:focus-visible{
+  outline-color:var(--gold-light,#d9b568);
+  box-shadow:inset 0 0 0 6px #041610;
+}
