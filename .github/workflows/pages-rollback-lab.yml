@@ -1,0 +1,89 @@
+name: Pages Release 360 · Real rollback laboratory
+on:
+  push:
+    branches: [infra/pages-release-rollback-lab]
+    paths: ['.github/workflows/pages-rollback-lab.yml']
+permissions:
+  contents: read
+concurrency:
+  group: web-iberfit-production-pages
+  cancel-in-progress: false
+jobs:
+  isolated:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_ACCOUNT_ID: 5b03d387427d367674b9d05b8bdf7c84
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --prefix "$RUNNER_TEMP/wrangler" --no-save --package-lock=false wrangler@4.120.0
+      - name: Real isolated recovery exercise (synthetic pages only)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          WRANGLER_BIN: ${{ runner.temp }}/wrangler/node_modules/.bin/wrangler
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util,json,os,urllib.request
+          from pathlib import Path
+          spec=importlib.util.spec_from_file_location("release",".github/scripts/pages_release_360.py")
+          m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+          token=os.environ["CLOUDFLARE_API_TOKEN"]
+          real=m.Cloudflare(token)
+          original=real.active()["id"]
+          name="iberfit-rollback-lab-"+os.environ["GITHUB_RUN_ID"]+"-"+os.environ["GITHUB_RUN_ATTEMPT"]
+          assert name.startswith("iberfit-rollback-lab-") and name!=m.PROJECT
+          api=f"https://api.cloudflare.com/client/v4/accounts/{m.ACCOUNT}/pages/projects"
+          req=urllib.request.Request(api,data=json.dumps({"name":name,"production_branch":"production"}).encode(),headers={"Authorization":"Bearer "+token,"Content-Type":"application/json"},method="POST")
+          with urllib.request.urlopen(req,timeout=30) as r: created=json.load(r)
+          assert created["success"] and created["result"]["name"]==name
+          lab=m.Cloudflare(token,name)
+          public=f"https://{name}.pages.dev"
+          a=Path(os.environ["RUNNER_TEMP"])/"lab-a";b=Path(os.environ["RUNNER_TEMP"])/"lab-b"
+          for root,version in [(a,"1.0.0"),(b,"1.0.1")]:
+              root.mkdir()
+              (root/"VERSION").write_text(version+"\n")
+              (root/"index.html").write_text("<!doctype html><title>IBERFIT isolated synthetic laboratory</title><h1>"+version+"</h1>")
+              (root/"_headers").write_text("/*\n  X-Robots-Tag: noindex, nofollow\n")
+          def lab_smoke(base,root,version,exact):
+              assert m.get(base+"/VERSION").decode().strip()==version
+              assert version in m.get(base+"/").decode()
+          try:
+              state=lab.project_state()
+              assert all(d==name+".pages.dev" for d in state.get("domains",[]))
+              lab.deploy(a,"production","a"*40,"iberfit-release-lab-baseline")
+              def baseline():
+                  d=lab.active()
+                  assert m.verified(d,"production","a"*40,"production")
+                  lab_smoke(public,a,"1.0.0",False)
+                  return d
+              old=m.wait_for(baseline)
+              preview={"schema":1,"mode":"preview","source":"b"*40,"version":"1.0.1","previous_id":old["id"]}
+              p=m.promote(lab,preview,b,lab_smoke,public,"iberfit-release-lab-preview")
+              approved=dict(preview,mode="production",preview_id=p["id"],approval="Synthetic isolated exercise only")
+              def injected(base,root,version,exact):
+                  lab_smoke(base,root,version,exact)
+                  if base==public:raise RuntimeError("INTENTIONAL_POST_DEPLOY_FAILURE")
+              try:
+                  m.promote(lab,approved,b,injected,public,"iberfit-release-lab-fault")
+                  raise AssertionError("Fault did not trigger")
+              except RuntimeError as exc:
+                  assert "Verification failed" in str(exc), str(exc)
+              assert lab.active()["id"]==old["id"]
+              lab_smoke(public,a,"1.0.0",False)
+              assert real.active()["id"]==original
+              print("REAL_ROLLBACK_LAB_PASS: actual isolated deployment, deliberate post-deploy failure, actual rollback, original public production preserved")
+          finally:
+              # Delete only the ephemeral project created by this exact run;
+              # never delete if a custom domain or unexpected project is present.
+              s=lab.project_state()
+              assert s["name"]==name and all(d==name+".pages.dev" for d in s.get("domains",[]))
+              lab.call(method="DELETE")
+              assert real.active()["id"]==original
+              print("ISOLATED_PROJECT_CLEANED; PRODUCTION_UNCHANGED")
+          PY
