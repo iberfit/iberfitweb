@@ -1,0 +1,90 @@
+name: WEB 6.43.32 · Preview aislada
+on:
+  push:
+    branches: [preview/v64332-cloudflare]
+    paths: ['.github/workflows/preview-v64332-cloudflare.yml']
+permissions:
+  contents: read
+concurrency:
+  group: web-v64332-preview-only
+  cancel-in-progress: false
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_ACCOUNT_ID: 5b03d387427d367674b9d05b8bdf7c84
+      PROJECT: web-iberfit
+      PREVIEW_BRANCH: review-v64332-20261127
+      CANDIDATE: d0fdfc5c4a95fce8198b50355b1cb4387d17415d
+    steps:
+      - name: Acceso y protección de producción
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN_MISSING; no deployment attempted"
+            exit 41
+          fi
+          url="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT"
+          curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$url" -o "$RUNNER_TEMP/cf-before.json"
+          python3 - <<'PY'
+          import json,os
+          p=json.load(open(os.environ['RUNNER_TEMP']+'/cf-before.json'))
+          assert p['success'] is True
+          r=p['result']
+          assert r['name']==os.environ['PROJECT']
+          assert r.get('production_branch') and r['production_branch']!=os.environ['PREVIEW_BRANCH']
+          assert r.get('canonical_deployment',{}).get('id'), 'No confirmed production deployment; stop'
+          print('PREVIEW_ONLY_PREFLIGHT_OK')
+          PY
+      - uses: actions/checkout@v4
+        with:
+          ref: d0fdfc5c4a95fce8198b50355b1cb4387d17415d
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Desplegar exclusivamente preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE"
+          test "$(tr -d '\r\n ' < candidate/v628/VERSION)" = "6.43.32"
+          npx --yes wrangler@4.120.0 pages deploy candidate/v628 --project-name "$PROJECT" --branch "$PREVIEW_BRANCH" --commit-hash "$CANDIDATE" --commit-dirty=false
+      - name: Verificar entorno, contenido y preservación de producción
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          url="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT"
+          curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$url" -o "$RUNNER_TEMP/cf-after.json"
+          curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$url/deployments?env=preview" -o "$RUNNER_TEMP/cf-previews.json"
+          python3 - <<'PY'
+          import json,os,re
+          from pathlib import Path
+          p=Path(os.environ['RUNNER_TEMP'])
+          before=json.loads((p/'cf-before.json').read_text())['result']
+          after=json.loads((p/'cf-after.json').read_text())['result']
+          assert before['canonical_deployment']['id']==after['canonical_deployment']['id'], 'Production changed; stop'
+          ds=json.loads((p/'cf-previews.json').read_text())['result']
+          valid=[d for d in ds if d['environment']=='preview' and d.get('deployment_trigger',{}).get('metadata',{}).get('branch')==os.environ['PREVIEW_BRANCH'] and d.get('deployment_trigger',{}).get('metadata',{}).get('commit_hash')==os.environ['CANDIDATE'] and d.get('latest_stage',{}).get('status')=='success']
+          assert valid, 'No verified preview deployment'
+          u=valid[0]['url']
+          assert re.fullmatch(r'https://[a-z0-9-]+\.[a-z0-9-]+\.pages\.dev',u)
+          (p/'preview-url.txt').write_text(u)
+          PY
+          preview="$(cat "$RUNNER_TEMP/preview-url.txt")"
+          for route in / /metodo/ /en/ /en/method/ /diagnostico-iri/ /en/iri-assessment/; do
+            curl -fsS --retry 3 "$preview$route" -o "$RUNNER_TEMP/preview-page.html"
+            grep -q IBERFIT "$RUNNER_TEMP/preview-page.html"
+            case "$route" in
+              /|/metodo/) grep -q 'Puedes comenzar a entrenar sin contratar el Diagnóstico IRI' "$RUNNER_TEMP/preview-page.html" ;;
+              /en/|/en/method/) grep -q 'You can start training without purchasing the IRI Assessment' "$RUNNER_TEMP/preview-page.html" ;;
+            esac
+          done
+          echo "PREVIEW_VERIFIED=$preview"
+          echo "Production deployment unchanged." >> "$GITHUB_STEP_SUMMARY"
+          echo "$preview" >> "$GITHUB_STEP_SUMMARY"
