@@ -63,6 +63,9 @@ try{
             cls:Number(window.__releaseVitals.cls.toFixed(4))
           };
         });
+        if (major>6||(major===6&&(minor>43||(minor===43&&patch>=35)))) {
+          assert.equal(await page.locator('.local-place-badge').count(),0,'obsolete local badge');
+        }
         assert.equal(state.h1,1,'H1 count');
         assert.equal(state.lang,route.startsWith('/en/')?'en':'es','language');
         assert(state.overflow<=2,'horizontal overflow: '+state.overflow);

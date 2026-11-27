@@ -81,6 +81,8 @@ def main():
         # local landing page only; pin the reviewed bytes, not a relaxed freeze.
         if tuple(map(int, version.split("."))) >= (6, 43, 34) and path == "entrenador-personal-las-condes/index.html":
             original = subprocess.check_output(["git", "show", "d8103afe76a8552532ffefc45c5564427ccda8ed:" + (ROOT/path).as_posix()])
+        if tuple(map(int, version.split("."))) >= (6, 43, 35) and path == "entrenador-personal-las-condes/index.html":
+            original = subprocess.check_output(["git", "show", "a52da6e642d9d017a0a32878561a166ebe25f17b:" + (ROOT/path).as_posix()])
         assert actual == original, "Frozen page changed beyond the approved commercial scope: " + path
     # Exact release scope: preserve every HTML byte, IRI content, commercial
     # path, imagery, analytics, headers and other assets in this maintenance release.
@@ -113,6 +115,21 @@ def main():
             assert structure(original) == structure(actual), ("Markup changed", path)
             assert ("El Diagnóstico IRI es opcional." in actual if not path.startswith("en/") else "The IRI Assessment is optional." in actual)
         print("LOCAL_EDITORIAL_SCOPE_OK", len(local), "pages; HTML structure and other public assets preserved")
+    if version == "6.43.35":
+        prior = "9a187d4281f7aa51fb42a97dbf2301c2d2bf9e68"
+        local = ["entrenador-personal-las-condes/index.html","entrenamiento-personal-providencia/index.html","entrenador-personal-vitacura/index.html","entrenador-personal-lo-barnechea/index.html","personal-trainer-nunoa/index.html","entrenador-personal-la-reina/index.html","entrenador-personal-penalolen/index.html","en/personal-trainer-las-condes/index.html","en/personal-training-providencia/index.html","en/personal-trainer-vitacura/index.html","en/personal-trainer-lo-barnechea/index.html","en/personal-trainer-nunoa/index.html","en/personal-trainer-la-reina/index.html","en/personal-trainer-penalolen/index.html"]
+        approved_sha = "a52da6e642d9d017a0a32878561a166ebe25f17b"
+        changed = set(subprocess.check_output(["git", "diff", "--name-only", prior, "HEAD", "--", ROOT.as_posix()], text=True).splitlines())
+        required = {str(ROOT / p) for p in local + ["VERSION", "CHANGELOG.md", "assets/experience.v64322.js"]}
+        allowed = required | {str(ROOT / "sitemap.xml")}
+        assert required <= changed <= allowed, (changed - allowed, required - changed)
+        for path in local + ["assets/experience.v64322.js"]:
+            rel = (ROOT/path).as_posix()
+            actual = (ROOT/path).read_bytes()
+            approved = subprocess.check_output(["git", "show", approved_sha+":"+rel])
+            assert actual == approved, ("Unexpected edit", path)
+            assert b"local-place-badge" not in actual, ("Obsolete badge", path)
+        print("LOCAL_FINAL_SCOPE_OK", len(local), "pages, verified local copy and badge removed")
     pages = {}
     missing = []
     for url in urls:

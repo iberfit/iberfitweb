@@ -1,3 +1,9 @@
+## 6.43.35 — Ajuste editorial final de comunas
+
+- Retira la insignia redundante de disponibilidad en las 14 páginas locales y su generador histórico, evitando reaparición por JavaScript.
+- Incorpora una referencia geográfica breve y comprobada por comuna, sin perfiles de residentes ni garantías de atención en recintos públicos. Resto de textos y diseño de 6.43.34 conservados.
+- Fuentes municipales: https://www.lascondes.cl/vive-las-condes/turismo-atractivos-turisticos-parques-urbanos/ ; https://patrimonio.providencia.cl/provi/explora/turismo/conocenos/parque-bustamante ; https://vitacura.cl/parque-bicentenario/parquebicentenario/ ; https://lobarnechea.cl/disfruta-lo-barnechea/que-hacer/parques/ ; https://nunoa.cl/nunoapatrimonial/plaza-nunoa/ ; https://lareina.cl/oficina-de-turismo/ ; https://www.penalolen.cl/medio-ambiente/parque-penalolen/ .
+
 ## 6.43.34 — Redacción de las páginas locales
 
 - Revisión de las siete comunas en español e inglés. Lenguaje centrado en el servicio, la metodología y la disponibilidad, sin perfiles ni estereotipos geográficos.
