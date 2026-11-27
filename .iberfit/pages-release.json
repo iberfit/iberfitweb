@@ -1,7 +1,9 @@
 {
   "schema": 1,
-  "mode": "preview",
+  "mode": "production",
   "source": "66b271ac6a6541fd3b1c845b5a2df0080d1772a5",
   "version": "6.43.35",
-  "previous_id": "b2417693-6589-4af3-af75-d7b85f362ef7"
+  "previous_id": "b2417693-6589-4af3-af75-d7b85f362ef7",
+  "preview_id": "eb60b6b0-74b0-483d-ab82-4b740d6dde35",
+  "approval": "Cierre editorial solicitado por propietario; preview certificada en Actions 46074223614. Autorización efectiva mediante revisión protegida web-production."
 }
