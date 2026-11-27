@@ -198,20 +198,25 @@ def promote(cf, request, directory, smoke_fn=smoke, public_origin=PUBLIC, nonce=
         require(cf.active()["id"]==d["id"],"Production changed during validation")
         return d
     except Exception:
-        # Never revert another release; fail closed on ambiguous state.
-        active=cf.active()
-        if owned(active,source,previous,nonce):
-            cf.rollback(previous)
-            def restored():
-                require(cf.active()["id"]==previous,"Rollback deployment not active")
-                require(get(public_origin+"/VERSION").decode().strip()==old_version,"Rollback public version mismatch")
-            wait_for(restored)
-            print("ROLLBACK_CONFIRMED="+previous)
-        elif active["id"]==previous:
-            print("PRODUCTION_UNCHANGED")
-        else:
-            print("MANUAL_RECOVERY_REQUIRED: unrelated deployment active")
+        recover_owned(cf,source,previous,nonce,old_version,public_origin)
         raise
+
+def recover_owned(cf,source,previous,nonce,old_version,public_origin):
+    # Never revert another release; fail closed on ambiguous state.
+    active=cf.active()
+    if owned(active,source,previous,nonce):
+        cf.rollback(previous)
+        def restored():
+            require(cf.active()["id"]==previous,"Rollback deployment not active")
+            require(get(public_origin+"/VERSION").decode().strip()==old_version,"Rollback public version mismatch")
+        wait_for(restored)
+        print("ROLLBACK_CONFIRMED="+previous)
+        return True
+    if active["id"]==previous:
+        print("PRODUCTION_UNCHANGED")
+    else:
+        print("MANUAL_RECOVERY_REQUIRED: unrelated deployment active")
+    return False
 
 def main():
     a=argparse.ArgumentParser()
