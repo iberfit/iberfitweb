@@ -38,7 +38,7 @@ class Fake:
 class ReleaseTests(unittest.TestCase):
     def setUp(self):
         self.cf=Fake()
-        self.mock=patch.object(m,"get",return_value=b"6.43.31")
+        self.mock=patch.object(m,"get",side_effect=lambda url:b"6.43.31" if url.startswith(m.PUBLIC) else b"6.43.32")
         self.mock.start();self.addCleanup(self.mock.stop)
         self.wait=patch.object(m.time,"sleep");self.wait.start();self.addCleanup(self.wait.stop)
     def run_release(self,request=None,smoke=None):
