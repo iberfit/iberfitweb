@@ -63,6 +63,52 @@ try {
     await context.close();
   }
 
+  // Check the actual Norte editorial layout, including intermediate desktop widths.
+  // Preserve the historical audit when certifying a previously published version.
+  const version = (await (await fetch(base+'/VERSION')).text()).trim();
+  const versionParts = version.split('.').map(Number);
+  const norteEditorial = versionParts[0]>6 || (versionParts[0]===6 && (versionParts[1]>43 || (versionParts[1]===43 && versionParts[2]>=37)));
+  if(norteEditorial){
+    for(const width of [360,390,768,901,1024,1440]){
+      const ctx=await browser.newContext({viewport:{width,height:900},deviceScaleFactor:1,reducedMotion:'reduce'});
+      await ctx.route('**/*',r=>new URL(r.request().url()).origin===new URL(base).origin?r.continue():r.abort());
+      await ctx.addInitScript(()=>localStorage.setItem('iberfit_consent_v2',JSON.stringify({version:'2026-07-12-v2',necessary:true,analytics:false,marketing:false})));
+      try{
+        for(const route of ['/','/en/']){
+          const page=await ctx.newPage();
+          try{
+            const errors=[];
+            page.on('pageerror',e=>errors.push(String(e)));
+            const response=await page.goto(base+route,{waitUntil:'load'});
+            assert(response?.ok(),route);
+            await page.evaluate(()=>document.fonts.ready);
+            const cover=page.locator('.editorial-hero');
+            const img=cover.locator('.editorial-hero-media img');
+            await img.evaluate(e=>e.decode());
+            const layout=await cover.evaluate(el=>{
+              const get=s=>{const e=el.querySelector(s),r=e.getBoundingClientRect(),c=getComputedStyle(e);return {x:r.x,y:r.y,width:r.width,height:r.height,bottom:r.bottom,right:r.right,display:c.display,visibility:c.visibility}};
+              const i=el.querySelector('.editorial-hero-media img');
+              return {heading:get('h1'),text:get('.hero-text'),media:get('.editorial-hero-media'),image:get('.editorial-hero-media img'),actions:get('.hero-actions'),meta:get('.hero-meta'),caption:get('figcaption'),naturalWidth:i.naturalWidth,naturalHeight:i.naturalHeight,overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth};
+            });
+            assert(layout.overflow<=2,route+' '+width+' cover overflow');
+            assert(layout.naturalWidth>0&&layout.naturalHeight>0,route+' cover image');
+            assert(layout.media.y>=layout.text.bottom-2,route+' cover must follow text');
+            assert(layout.image.width>0&&layout.image.height>0&&layout.caption.height>0,route+' photo/caption');
+            assert(layout.actions.height>0&&layout.meta.height>0,route+' contact and service context visible');
+            assert(layout.media.right<=width+2&&layout.heading.right<=width+2,route+' clipping');
+            for(const cta of await cover.locator('.hero-actions a').all()){
+              const box=await cta.boundingBox();
+              assert(box&&box.height>=44&&box.x>=-1&&box.x+box.width<=width+2,route+' CTA touch/width');
+            }
+            assert.equal(errors.length,0,route+' '+errors.join(' | '));
+            await page.screenshot({path:out+'/editorial-'+(route==='/en/'?'en':'es')+'-'+width+'.png',fullPage:width===390||width===1440});
+            results.push({route,width,editorial:layout});
+          }finally{await page.close();}
+        }
+      }finally{await ctx.close();}
+    }
+  }
+
   const origin=new URL(base).origin;
   const ctx=await browser.newContext();
   await ctx.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());

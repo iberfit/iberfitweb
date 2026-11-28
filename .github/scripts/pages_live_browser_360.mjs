@@ -14,6 +14,7 @@ assert(/^\d+\.\d+\.\d+$/.test(observedVersion),'invalid VERSION');
 if(process.env.EXPECTED_VERSION)assert.equal(observedVersion,process.env.EXPECTED_VERSION,'published VERSION mismatch');
 const [major,minor,patch]=observedVersion.split('.').map(Number);
 const identity2027=major>6||(major===6&&(minor>43||(minor===43&&patch>=36)));
+const identityNorte=major>6||(major===6&&(minor>43||(minor===43&&patch>=37)));
 const strictA11y=major>6||(major===6&&(minor>43||(minor===43&&patch>=33)));
 const sitemap = await fetch(new URL('/sitemap.xml',base));
 assert(sitemap.ok,'sitemap unavailable');
@@ -73,7 +74,7 @@ try{
           for(let i=0;i<await marks.count();i++){
             const mark=marks.nth(i);
             await mark.evaluate(e=>e.decode());
-            assert(await mark.evaluate(e=>e.complete&&e.naturalWidth===e.naturalHeight&&new URL(e.currentSrc).pathname==='/assets/iberfit-isotipo-2027.svg'&&getComputedStyle(e).objectFit==='contain'),'new mark geometry or source');
+            assert(await mark.evaluate((e,norte)=>{const path=new URL(e.currentSrc).pathname;return e.complete&&e.naturalWidth>0&&e.naturalHeight>0&&getComputedStyle(e).objectFit==='contain'&&(norte?Math.abs(e.naturalWidth/e.naturalHeight-660/140)<.05&&path==='/assets/iberfit-firma-norte-'+(e.closest('.site-footer')?'oscuro':'claro')+'.svg':e.naturalWidth===e.naturalHeight&&path==='/assets/iberfit-isotipo-2027.svg')},identityNorte),'brand geometry or source');
           }
           if(route==='/'&&width===390){
             const icons=await page.evaluate(async()=>{
@@ -81,11 +82,12 @@ try{
               return Promise.all(m.icons.map(async i=>{
                 const r=await fetch(i.src);if(!r.ok)throw Error(i.src);
                 const b=await createImageBitmap(await r.blob());
-                const size=b.width+'x'+b.height;b.close();return [i.src,size,i.sizes];
+                const size=b.width+'x'+b.height;b.close();return [i.src,size,i.sizes,i.purpose];
               }));
             });
-            assert.equal(icons.length,2);
-            for(const [src,size,declared] of icons){assert(src.includes('favicon-2027-'));assert.equal(size,declared)}
+            assert.equal(icons.length,identityNorte?4:2);
+            for(const [src,size,declared,purpose] of icons){assert(identityNorte?/\/(?:favicon-norte-|icon-norte-maskable-)/.test(src):src.includes('favicon-2027-'));assert.equal(size,declared);if(identityNorte)assert(['any','maskable'].includes(purpose))}
+            if(identityNorte)assert.equal(icons.filter(i=>i[3]==='maskable').length,2);
           }
         }
         assert.equal(state.h1,1,'H1 count');

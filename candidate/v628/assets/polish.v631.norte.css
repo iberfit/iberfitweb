@@ -1,55 +1,37 @@
 /* IBERFIT WEB · V6.31 visual polish
    Objetivo: separar cabecera/contenido, calidez de superficie y menor densidad superior. */
 :root{
-  --v631-canvas:#faf7f1;
-  --v631-canvas-soft:#f7f1e8;
+  --v631-canvas:var(--cream);
   --v631-surface:#fffdf9;
-  --v631-header:#eadbc6;
-  --v631-header-line:rgba(31,61,43,.20);
+  --v631-header:var(--cream-2);
+  --v631-header-line:rgba(31,61,43,.18);
 }
 
 /* Lienzo más cálido, sin perder la identidad crema IBERFIT. */
-body{
-  background:
-    radial-gradient(circle at 8% 0%,rgba(184,151,58,.045),transparent 30rem),
-    linear-gradient(180deg,var(--v631-canvas-soft) 0,var(--v631-canvas) 34rem,#fbf8f3 100%);
-}
-main{background:#fbf8f3}
+body,main{background:var(--v631-canvas)}
 .section-cream{
-  background:linear-gradient(180deg,#efe3d3 0,#f6eee4 58%,#f8f3ec 100%)!important;
-  border-block:1px solid rgba(184,151,58,.14)!important;
+  background:var(--v631-header)!important;
+  border-block:1px solid rgba(31,61,43,.12)!important;
 }
 
 /* Cabecera inequívocamente separada del contenido. */
 .site-header{
-  background:rgba(234,219,198,.985)!important;
+  background:var(--v631-header)!important;
   border-bottom:1px solid var(--v631-header-line)!important;
-  box-shadow:
-    inset 0 -1px 0 rgba(184,151,58,.18),
-    0 9px 26px rgba(20,44,31,.09)!important;
-  backdrop-filter:blur(18px) saturate(145%)!important;
-  -webkit-backdrop-filter:blur(18px) saturate(145%)!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
 }
 .site-header.scrolled{
-  background:rgba(231,214,191,.99)!important;
-  box-shadow:
-    inset 0 -1px 0 rgba(184,151,58,.22),
-    0 13px 34px rgba(20,44,31,.13)!important;
+  background:var(--v631-header)!important;
+  box-shadow:0 4px 18px rgba(11,19,16,.09)!important;
 }
 .site-header .nav{min-height:74px}
-.site-header .brand{gap:.78rem}
-.site-header .brand-mark{
-  width:44px!important;height:44px!important;
-  padding:0!important;
-  background:transparent!important;
-  border:0!important;
-  border-radius:0!important;
-  box-shadow:none!important;
-  filter:drop-shadow(0 2px 3px rgba(31,61,43,.13));
-}
-.site-header .brand-text{padding-left:0!important}
-.site-header .brand-text span{font-size:1.42rem!important}
-.site-header .brand-text small{font-size:.65rem!important;letter-spacing:.065em!important}
+
+
+
+
+
 .site-header .navlinks{gap:1.05rem;font-size:.88rem}
 .site-header .nav-actions{gap:.55rem}
 .site-header .lang-switch{font-size:.76rem}
@@ -57,9 +39,7 @@ main{background:#fbf8f3}
 
 /* Primer bloque: más respiración y un límite visual claro frente a la cabecera. */
 .hero{
-  background:
-    radial-gradient(circle at 82% 12%,rgba(184,151,58,.075),transparent 28rem),
-    linear-gradient(180deg,#f7efe4 0,#fbf8f3 100%);
+  background:var(--v631-canvas);
   border-bottom:1px solid rgba(31,61,43,.10);
 }
 .hero-grid.hero-grid-no-media{max-width:1080px}
@@ -73,6 +53,18 @@ main{background:#fbf8f3}
 .hero-grid-no-media .hero-support{max-width:41rem!important}
 .hero-grid-no-media .hero-actions{margin-top:2.15rem!important}
 .hero-grid-no-media .hero-meta{max-width:44rem!important}
+
+/* Method and service chapters: asymmetric editorial openings, not duplicate home layouts. */
+@media(min-width:901px){
+ :is(body[data-page="method"],body[data-page="modality_in_person"],body[data-page="modality_hybrid"],body[data-page="modality_online"]) .hero-grid.hero-grid-no-media{max-width:1180px}
+ :is(body[data-page="method"],body[data-page="modality_in_person"],body[data-page="modality_hybrid"],body[data-page="modality_online"]) .hero-grid-no-media .hero-text{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);max-width:none;column-gap:clamp(2rem,4.5vw,4.5rem);row-gap:.65rem;align-items:start}
+ :is(body[data-page="method"],body[data-page="modality_in_person"],body[data-page="modality_hybrid"],body[data-page="modality_online"]) .hero-grid-no-media .eyebrow{grid-column:1;grid-row:1}
+ :is(body[data-page="method"],body[data-page="modality_in_person"],body[data-page="modality_hybrid"],body[data-page="modality_online"]) .hero-grid-no-media h1{grid-column:1;grid-row:2/6;font-size:clamp(2.8rem,4.5vw,4.55rem)!important;line-height:1.03!important;max-width:15ch!important;text-wrap:balance}
+ :is(body[data-page="method"],body[data-page="modality_in_person"],body[data-page="modality_hybrid"],body[data-page="modality_online"]) .hero-grid-no-media .lead{grid-column:2;grid-row:2;margin-top:0}
+ :is(body[data-page="method"],body[data-page="modality_in_person"],body[data-page="modality_hybrid"],body[data-page="modality_online"]) .hero-grid-no-media .hero-support{grid-column:2;grid-row:3;margin-top:0}
+ :is(body[data-page="method"],body[data-page="modality_in_person"],body[data-page="modality_hybrid"],body[data-page="modality_online"]) .hero-grid-no-media .hero-actions{grid-column:2;grid-row:4;margin:1rem 0 .5rem!important}
+ :is(body[data-page="method"],body[data-page="modality_in_person"],body[data-page="modality_hybrid"],body[data-page="modality_online"]) .hero-grid-no-media .hero-meta{grid-column:2;grid-row:5}
+}
 
 /* Superficies marfil en lugar de blanco puro. */
 .card:not(.card-dark),
@@ -92,8 +84,8 @@ main{background:#fbf8f3}
 
 /* Menos ruido en cabeceras medianas: conservar todas las rutas, pero agruparlas en menú. */
 @media (max-width:1380px){
-  .site-header .brand-text small{display:none!important}
-  .site-header .brand-text{padding-left:.62rem!important}
+  
+  
 }
 @media (min-width:861px) and (max-width:1380px){
   body.nav-panel-open{overflow:hidden;overscroll-behavior:none}
@@ -181,7 +173,7 @@ main{background:#fbf8f3}
 }
 @media (max-width:720px){
   .site-header .nav{min-height:64px}
-  .site-header .brand-mark{width:42px!important;height:42px!important;padding:0!important;border-radius:0!important}
+  
   .hero{padding-block:3.35rem 3rem!important}
   .hero-grid-no-media h1{font-size:clamp(2.65rem,13vw,3.9rem)!important}
 }
@@ -227,30 +219,13 @@ html:not(.js-v631) .menu-toggle{display:none!important}
 
 
 /* V6.31 mobile refinement: readable hero + premium logo support. */
-.site-header .brand-mark{
-  width:48px!important;
-  height:48px!important;
-  padding:5px!important;
-  background:rgba(255,252,246,.94)!important;
-  border:1px solid rgba(184,151,58,.24)!important;
-  border-radius:15px!important;
-  box-shadow:0 6px 18px rgba(31,61,43,.09)!important;
-  object-fit:contain!important;
-}
+
 @media (max-width:720px){
   .site-header .nav{min-height:66px}
-  .site-header .brand{gap:.68rem}
-  .site-header .brand-mark{
-    width:46px!important;
-    height:46px!important;
-    padding:5px!important;
-    border-radius:14px!important;
-    background:rgba(255,252,246,.96)!important;
-    border:1px solid rgba(184,151,58,.26)!important;
-    box-shadow:0 5px 14px rgba(31,61,43,.09)!important;
-  }
-  .site-header .brand-text{padding-left:0!important}
-  .site-header .brand-text span{font-size:1.30rem!important}
+  
+  
+  
+  
   .hero-grid-no-media .hero-text{max-width:100%!important;padding-left:.82rem!important}
   .hero-grid-no-media h1{
     max-width:100%!important;
@@ -264,21 +239,14 @@ html:not(.js-v631) .menu-toggle{display:none!important}
 }
 @media (max-width:420px){
   .hero-grid-no-media h1{font-size:clamp(2.08rem,10vw,2.62rem)!important}
-  .site-header .brand-text span{font-size:1.23rem!important}
+  
 }
 
 
 /* V6.31 mobile-safe typography + isolated brand mark. */
-.site-header .brand{gap:.70rem}
-.site-header .brand-text{padding-left:0!important}
-.site-header .brand-mark{
-  border-radius:50%!important;
-  background:rgba(255,252,246,.96)!important;
-  border:1px solid rgba(184,151,58,.30)!important;
-  box-shadow:
-    0 6px 18px rgba(31,61,43,.09),
-    inset 0 0 0 1px rgba(255,255,255,.48)!important;
-}
+
+
+
 @media (max-width:720px){
   .hero-grid,.hero-text,.page-hero .container{min-width:0;width:100%}
   .hero h1,.page-hero h1,.hero-grid-no-media h1,h2,h3,h4{
@@ -302,17 +270,12 @@ html:not(.js-v631) .menu-toggle{display:none!important}
     white-space:normal;
     line-height:1.35;
   }
-  .site-header .brand-mark{
-    width:46px!important;
-    height:46px!important;
-    padding:5px!important;
-    border-radius:50%!important;
-  }
+  
 }
 @media (max-width:360px){
-  .site-header .brand{gap:.56rem}
-  .site-header .brand-mark{width:44px!important;height:44px!important;padding:4px!important}
-  .site-header .brand-text span{font-size:1.17rem!important}
+  
+  
+  
   .hero h1,.page-hero h1,.hero-grid-no-media h1{font-size:clamp(2.02rem,10.1vw,2.42rem)!important}
   .hero-grid-no-media .hero-text{padding-left:.52rem!important}
 }

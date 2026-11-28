@@ -76,7 +76,7 @@ p,li{ text-wrap:pretty; }
     padding:42px 0 22px;
   }
   .site-footer .footer-grid{ gap:1.35rem; }
-  .site-footer .footer-brand{ margin-bottom:.75rem; }
+  
   .site-footer p{ margin-bottom:.6rem; }
   .site-footer .footer-links{
     grid-template-columns:repeat(2,minmax(0,1fr));
@@ -226,6 +226,6 @@ p,li{ text-wrap:pretty; }
   box-shadow:inset 0 0 0 6px #041610;
 }
 
-/* 6.43.36 — approved identity 2027. Preserve existing logo box and header layout. */
-.brand-mark[src="/assets/iberfit-isotipo-2027.svg"]{aspect-ratio:1!important;object-fit:contain!important}
-.cta-panel-inner:after{background-image:url('/assets/iberfit-isotipo-2027-dorado.svg');aspect-ratio:1}
+/* Norte: decorative vector derived from the corporate source. */
+
+.cta-panel-inner:after{background-image:url('/assets/iberfit-isotipo-norte-dorado.svg');aspect-ratio:1}

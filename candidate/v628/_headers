@@ -12,7 +12,7 @@
   Cache-Control: no-store
   Content-Type: text/javascript; charset=utf-8
 
-/assets/styles.v628.css
+/assets/styles.v628.norte.css
   ! Cache-Control
   Cache-Control: public, max-age=31536000, immutable
   Content-Type: text/css; charset=utf-8
@@ -22,7 +22,7 @@
   Cache-Control: public, max-age=31536000, immutable
   Content-Type: text/css; charset=utf-8
 
-/assets/hardening.v630.css
+/assets/hardening.v630.norte.css
   ! Cache-Control
   Cache-Control: public, max-age=31536000, immutable
   Content-Type: text/css; charset=utf-8
@@ -32,12 +32,12 @@
   Cache-Control: public, max-age=31536000, immutable
   Content-Type: text/css; charset=utf-8
 
-/assets/polish.v631.css
+/assets/polish.v631.norte.css
   ! Cache-Control
   Cache-Control: public, max-age=31536000, immutable
   Content-Type: text/css; charset=utf-8
 
-/assets/quality.v632.css
+/assets/quality.v632.norte.css
   ! Cache-Control
   Cache-Control: public, max-age=31536000, immutable
   Content-Type: text/css; charset=utf-8
@@ -188,3 +188,8 @@
 
 /assets/app-online-plan-v6433.webp
   Cache-Control: public, max-age=31536000, immutable
+
+/assets/ux.v64322.norte.css
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: text/css; charset=utf-8
