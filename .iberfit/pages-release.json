@@ -1,7 +1,9 @@
 {
   "schema": 1,
-  "mode": "preview",
+  "mode": "production",
   "source": "f2971953b6be610571145a60bf8d0a513fccb4d3",
   "version": "6.43.36",
-  "previous_id": "60c77612-8166-49a5-8a7d-2f3102415663"
+  "previous_id": "60c77612-8166-49a5-8a7d-2f3102415663",
+  "preview_id": "48427b85-b32e-4ac9-9f44-31078069cadf",
+  "approval": "Identidad aprobada por propietario; integración universal solicitada. Preview certificada en Actions 46089542939. Autorización efectiva mediante entorno protegido web-production."
 }
