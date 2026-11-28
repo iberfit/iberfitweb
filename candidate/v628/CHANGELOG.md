@@ -1,3 +1,9 @@
+## 6.43.37 — Norte y Huella óptica (candidata)
+
+- Sustitución de firma en 33 documentos HTML; variantes de contraste, iconos y manifest coordinados.
+- Consolidación de estilos de marca en una única definición versionada; sin cambios de navegación ni oferta.
+- Validación de geometría, identidad y referencias en CI. Publicación sujeta a certificación y aprobación final.
+
 ## 6.43.36 — Identidad visual IBERFIT 2027
 
 - Isotipo plano aprobado en todas las cabeceras, pies e informes ilustrativos que referencian el activo; favicon, Apple Touch y manifest actualizados con rutas versionadas.

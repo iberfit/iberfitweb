@@ -135,6 +135,8 @@ def main():
         print("LOCAL_FINAL_SCOPE_OK", len(local), "pages, verified local copy and badge removed")
     if version == "6.43.36":
         subprocess.run(["python3", ".github/scripts/qa_identity_2027.py"], check=True)
+    if tuple(map(int, version.split("."))) >= (6, 43, 37):
+        subprocess.run(["python3", ".github/scripts/qa_identity_norte.py"], check=True)
     pages = {}
     missing = []
     for url in urls:

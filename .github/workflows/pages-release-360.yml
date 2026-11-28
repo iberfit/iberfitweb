@@ -21,6 +21,8 @@ jobs:
           persist-credentials: false
       - name: Isolated release-controller tests
         run: python3 .github/scripts/test_pages_release_360.py
+      - name: Validate Norte identity contract
+        run: python3 .github/scripts/qa_identity_norte.py
       - name: Validate release request
         if: github.event_name == 'push'
         run: |
