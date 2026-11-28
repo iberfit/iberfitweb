@@ -54,6 +54,18 @@ body,main{background:var(--v631-canvas)}
 .hero-grid-no-media .hero-actions{margin-top:2.15rem!important}
 .hero-grid-no-media .hero-meta{max-width:44rem!important}
 
+/* Method and service chapters: asymmetric editorial openings, not duplicate home layouts. */
+@media(min-width:901px){
+ :is(body[data-page="method"],body[data-page="modality_in_person"],body[data-page="modality_hybrid"],body[data-page="modality_online"]) .hero-grid.hero-grid-no-media{max-width:1180px}
+ :is(body[data-page="method"],body[data-page="modality_in_person"],body[data-page="modality_hybrid"],body[data-page="modality_online"]) .hero-grid-no-media .hero-text{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);max-width:none;column-gap:clamp(2rem,4.5vw,4.5rem);row-gap:.65rem;align-items:start}
+ :is(body[data-page="method"],body[data-page="modality_in_person"],body[data-page="modality_hybrid"],body[data-page="modality_online"]) .hero-grid-no-media .eyebrow{grid-column:1;grid-row:1}
+ :is(body[data-page="method"],body[data-page="modality_in_person"],body[data-page="modality_hybrid"],body[data-page="modality_online"]) .hero-grid-no-media h1{grid-column:1;grid-row:2/6;font-size:clamp(2.8rem,4.5vw,4.55rem)!important;line-height:1.03!important;max-width:15ch!important;text-wrap:balance}
+ :is(body[data-page="method"],body[data-page="modality_in_person"],body[data-page="modality_hybrid"],body[data-page="modality_online"]) .hero-grid-no-media .lead{grid-column:2;grid-row:2;margin-top:0}
+ :is(body[data-page="method"],body[data-page="modality_in_person"],body[data-page="modality_hybrid"],body[data-page="modality_online"]) .hero-grid-no-media .hero-support{grid-column:2;grid-row:3;margin-top:0}
+ :is(body[data-page="method"],body[data-page="modality_in_person"],body[data-page="modality_hybrid"],body[data-page="modality_online"]) .hero-grid-no-media .hero-actions{grid-column:2;grid-row:4;margin:1rem 0 .5rem!important}
+ :is(body[data-page="method"],body[data-page="modality_in_person"],body[data-page="modality_hybrid"],body[data-page="modality_online"]) .hero-grid-no-media .hero-meta{grid-column:2;grid-row:5}
+}
+
 /* Superficies marfil en lugar de blanco puro. */
 .card:not(.card-dark),
 .explore-card,

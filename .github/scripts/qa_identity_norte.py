@@ -27,6 +27,8 @@ def transform(html):
         html = html.replace("/assets/"+name+".css","/assets/"+name+".norte.css")
     for old,new in (("favicon-2027.ico","favicon-norte.ico"),("favicon-2027-48x48.png","favicon-norte-48x48.png"),("favicon-2027-96x96.png","favicon-norte-96x96.png"),("favicon-2027-192x192.png","favicon-norte-192x192.png"),("favicon-2027-512x512.png","favicon-norte-512x512.png"),("apple-touch-icon-2027.png","apple-touch-icon-norte.png")):
         html = html.replace(old,new)
+    # The editorial cover now spans the content width; choose an appropriately sized photograph.
+    html = html.replace('sizes="(max-width: 1100px) calc(100vw - 48px), 46vw"', 'sizes="(max-width: 1100px) calc(100vw - 40px), min(1280px, calc(100vw - 48px))"')
     return html
 
 def check():
