@@ -4,6 +4,7 @@
 - Consolidación de estilos de marca en una única definición versionada; sin cambios de navegación ni oferta.
 - Consolidación editorial: crema y piedra del sistema maestro, cabecera sin efectos superpuestos, fondo profundo en el pie, CTA verde sólido y tipografía/composición editorial ajustada; sin fuentes remotas ni cambios de fotografía.
 - Portada editorial bilingüe de apertura panorámica; capítulos de método y modalidades con jerarquía asimétrica en escritorio. Se conservan contenido, CTA, fotografías y orden móvil; se actualiza la selección responsive del recurso hero.
+- Método: numeración editorial de etapas, superficies sin gradientes innecesarios, información de cobertura visible en móvil y eliminación del desplazamiento lateral de las filas al pasar el cursor. Pruebas de composición y capturas bilingües en seis anchuras.
 - Validación de geometría, identidad y referencias en CI. Publicación sujeta a certificación y aprobación final.
 
 ## 6.43.36 — Identidad visual IBERFIT 2027
