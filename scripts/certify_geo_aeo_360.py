@@ -86,6 +86,8 @@ def main():
         if tuple(map(int, version.split("."))) >= (6, 43, 36):
             import runpy
             original = runpy.run_path(".github/scripts/qa_identity_2027.py")["transform"](original.decode("utf-8")).encode("utf-8")
+        if tuple(map(int, version.split("."))) >= (6, 43, 37):
+            original = runpy.run_path(".github/scripts/qa_identity_norte.py")["transform"](original.decode("utf-8")).encode("utf-8")
         assert actual == original, "Frozen page changed beyond the approved commercial scope: " + path
     # Exact release scope: preserve every HTML byte, IRI content, commercial
     # path, imagery, analytics, headers and other assets in this maintenance release.
