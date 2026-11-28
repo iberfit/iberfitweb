@@ -2,6 +2,7 @@
 
 - Sustitución de firma en 33 documentos HTML; variantes de contraste, iconos y manifest coordinados.
 - Consolidación de estilos de marca en una única definición versionada; sin cambios de navegación ni oferta.
+- Consolidación editorial: crema y piedra del sistema maestro, cabecera sin efectos superpuestos, fondo profundo en el pie, CTA verde sólido y tipografía/composición editorial ajustada; sin fuentes remotas ni cambios de fotografía.
 - Validación de geometría, identidad y referencias en CI. Publicación sujeta a certificación y aprobación final.
 
 ## 6.43.36 — Identidad visual IBERFIT 2027

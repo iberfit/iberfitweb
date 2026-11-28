@@ -1,40 +1,30 @@
 /* IBERFIT WEB · V6.31 visual polish
    Objetivo: separar cabecera/contenido, calidez de superficie y menor densidad superior. */
 :root{
-  --v631-canvas:#faf7f1;
-  --v631-canvas-soft:#f7f1e8;
+  --v631-canvas:var(--cream);
   --v631-surface:#fffdf9;
-  --v631-header:#eadbc6;
-  --v631-header-line:rgba(31,61,43,.20);
+  --v631-header:var(--cream-2);
+  --v631-header-line:rgba(31,61,43,.18);
 }
 
 /* Lienzo más cálido, sin perder la identidad crema IBERFIT. */
-body{
-  background:
-    radial-gradient(circle at 8% 0%,rgba(184,151,58,.045),transparent 30rem),
-    linear-gradient(180deg,var(--v631-canvas-soft) 0,var(--v631-canvas) 34rem,#fbf8f3 100%);
-}
-main{background:#fbf8f3}
+body,main{background:var(--v631-canvas)}
 .section-cream{
-  background:linear-gradient(180deg,#efe3d3 0,#f6eee4 58%,#f8f3ec 100%)!important;
-  border-block:1px solid rgba(184,151,58,.14)!important;
+  background:var(--v631-header)!important;
+  border-block:1px solid rgba(31,61,43,.12)!important;
 }
 
 /* Cabecera inequívocamente separada del contenido. */
 .site-header{
-  background:rgba(234,219,198,.985)!important;
+  background:var(--v631-header)!important;
   border-bottom:1px solid var(--v631-header-line)!important;
-  box-shadow:
-    inset 0 -1px 0 rgba(184,151,58,.18),
-    0 9px 26px rgba(20,44,31,.09)!important;
-  backdrop-filter:blur(18px) saturate(145%)!important;
-  -webkit-backdrop-filter:blur(18px) saturate(145%)!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
 }
 .site-header.scrolled{
-  background:rgba(231,214,191,.99)!important;
-  box-shadow:
-    inset 0 -1px 0 rgba(184,151,58,.22),
-    0 13px 34px rgba(20,44,31,.13)!important;
+  background:var(--v631-header)!important;
+  box-shadow:0 4px 18px rgba(11,19,16,.09)!important;
 }
 .site-header .nav{min-height:74px}
 
@@ -49,9 +39,7 @@ main{background:#fbf8f3}
 
 /* Primer bloque: más respiración y un límite visual claro frente a la cabecera. */
 .hero{
-  background:
-    radial-gradient(circle at 82% 12%,rgba(184,151,58,.075),transparent 28rem),
-    linear-gradient(180deg,#f7efe4 0,#fbf8f3 100%);
+  background:var(--v631-canvas);
   border-bottom:1px solid rgba(31,61,43,.10);
 }
 .hero-grid.hero-grid-no-media{max-width:1080px}
