@@ -83,6 +83,9 @@ def main():
             original = subprocess.check_output(["git", "show", "d8103afe76a8552532ffefc45c5564427ccda8ed:" + (ROOT/path).as_posix()])
         if tuple(map(int, version.split("."))) >= (6, 43, 35) and path == "entrenador-personal-las-condes/index.html":
             original = subprocess.check_output(["git", "show", "a52da6e642d9d017a0a32878561a166ebe25f17b:" + (ROOT/path).as_posix()])
+        if tuple(map(int, version.split("."))) >= (6, 43, 36):
+            import runpy
+            original = runpy.run_path(".github/scripts/qa_identity_2027.py")["transform"](original.decode("utf-8")).encode("utf-8")
         assert actual == original, "Frozen page changed beyond the approved commercial scope: " + path
     # Exact release scope: preserve every HTML byte, IRI content, commercial
     # path, imagery, analytics, headers and other assets in this maintenance release.
@@ -130,6 +133,8 @@ def main():
             assert actual == approved, ("Unexpected edit", path)
             assert b"local-place-badge" not in actual, ("Obsolete badge", path)
         print("LOCAL_FINAL_SCOPE_OK", len(local), "pages, verified local copy and badge removed")
+    if version == "6.43.36":
+        subprocess.run(["python3", ".github/scripts/qa_identity_2027.py"], check=True)
     pages = {}
     missing = []
     for url in urls:

@@ -13,6 +13,7 @@ const observedVersion=(await versionResponse.text()).trim();
 assert(/^\d+\.\d+\.\d+$/.test(observedVersion),'invalid VERSION');
 if(process.env.EXPECTED_VERSION)assert.equal(observedVersion,process.env.EXPECTED_VERSION,'published VERSION mismatch');
 const [major,minor,patch]=observedVersion.split('.').map(Number);
+const identity2027=major>6||(major===6&&(minor>43||(minor===43&&patch>=36)));
 const strictA11y=major>6||(major===6&&(minor>43||(minor===43&&patch>=33)));
 const sitemap = await fetch(new URL('/sitemap.xml',base));
 assert(sitemap.ok,'sitemap unavailable');
@@ -66,6 +67,27 @@ try{
         if (major>6||(major===6&&(minor>43||(minor===43&&patch>=35)))) {
           assert.equal(await page.locator('.local-place-badge').count(),0,'obsolete local badge');
         }
+        if(identity2027){
+          const marks=page.locator('img.brand-mark');
+          assert.equal(await marks.count(),2,'header/footer marks');
+          for(let i=0;i<await marks.count();i++){
+            const mark=marks.nth(i);
+            await mark.evaluate(e=>e.decode());
+            assert(await mark.evaluate(e=>e.complete&&e.naturalWidth===e.naturalHeight&&new URL(e.currentSrc).pathname==='/assets/iberfit-isotipo-2027.svg'&&getComputedStyle(e).objectFit==='contain'),'new mark geometry or source');
+          }
+          if(route==='/'&&width===390){
+            const icons=await page.evaluate(async()=>{
+              const m=await (await fetch('/manifest.webmanifest')).json();
+              return Promise.all(m.icons.map(async i=>{
+                const r=await fetch(i.src);if(!r.ok)throw Error(i.src);
+                const b=await createImageBitmap(await r.blob());
+                const size=b.width+'x'+b.height;b.close();return [i.src,size,i.sizes];
+              }));
+            });
+            assert.equal(icons.length,2);
+            for(const [src,size,declared] of icons){assert(src.includes('favicon-2027-'));assert.equal(size,declared)}
+          }
+        }
         assert.equal(state.h1,1,'H1 count');
         assert.equal(state.lang,route.startsWith('/en/')?'en':'es','language');
         assert(state.overflow<=2,'horizontal overflow: '+state.overflow);
@@ -96,6 +118,10 @@ try{
             await page.waitForFunction(e=>e.scrollLeft<=3,await rail.elementHandle(),{timeout:2000});
             keyboardChecks++;
           }
+        }
+        if(identity2027&&route==='/'&&(width===390||width===1440)){
+          await page.locator('.site-header .brand').screenshot({path:out+'/brand-'+width+'.png'});
+          await page.locator('.site-footer .footer-brand').screenshot({path:out+'/footer-brand-'+width+'.png'});
         }
         results.push({route,width,...state,accessibility,keyboardChecks});
       }catch(e){

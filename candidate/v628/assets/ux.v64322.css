@@ -225,3 +225,7 @@ p,li{ text-wrap:pretty; }
   outline-color:var(--gold-light,#d9b568);
   box-shadow:inset 0 0 0 6px #041610;
 }
+
+/* 6.43.36 — approved identity 2027. Preserve existing logo box and header layout. */
+.brand-mark[src="/assets/iberfit-isotipo-2027.svg"]{aspect-ratio:1!important;object-fit:contain!important}
+.cta-panel-inner:after{background-image:url('/assets/iberfit-isotipo-2027-dorado.svg');aspect-ratio:1}

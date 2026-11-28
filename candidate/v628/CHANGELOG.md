@@ -1,3 +1,9 @@
+## 6.43.36 — Identidad visual IBERFIT 2027
+
+- Isotipo plano aprobado en todas las cabeceras, pies e informes ilustrativos que referencian el activo; favicon, Apple Touch y manifest actualizados con rutas versionadas.
+- Geometría vectorial única, iconos generados desde los ocho contornos y contraste dorado sobre verde. No se modifican textos, enlaces, rutas ni fotografías existentes.
+- Se conservan los activos anteriores para compatibilidad y recuperación. Las imágenes históricas con el símbolo impreso se revisarán aparte.
+
 ## 6.43.35 — Ajuste editorial final de comunas
 
 - Retira la insignia redundante de disponibilidad en las 14 páginas locales y su generador histórico, evitando reaparición por JavaScript.
